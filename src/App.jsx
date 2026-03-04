@@ -325,20 +325,23 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 // ============================================================
 // SETTINGS MODAL
 // ============================================================
-function ListEditor({ label, color, list, setList, nv, setNv }) {
+function ListEditor({ label, color, list, setList, nv, setNv, isDark }) {
   const add = () => { const v = nv.trim(); if (v && !list.includes(v)) { setList([...list, v]); setNv(""); } };
   const rem = (v) => setList(list.filter(x => x !== v));
+  const itemBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
+  const itemBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const itemText = isDark ? "#e2e8f0" : "#1e293b";
   return (
     <div style={{ flex: 1 }}>
       <div style={{ color, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: `3px solid ${color}`, paddingLeft: 8 }}>{label}</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <input value={nv} onChange={e => setNv(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
-          placeholder="Přidat..." style={{ ...inputSx, flex: 1, fontSize: 12 }} />
+          placeholder="Přidat..." style={{ ...inputSx, flex: 1, fontSize: 12, background: isDark ? "#0f172a" : "#f8fafc", color: itemText, border: `1px solid ${itemBorder}` }} />
         <button onClick={add} style={{ padding: "8px 12px", background: `${color}33`, border: `1px solid ${color}55`, borderRadius: 7, color, cursor: "pointer", fontWeight: 700 }}>+</button>
       </div>
       {list.map(v => (
-        <div key={v} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: "rgba(255,255,255,0.04)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <span style={{ color: "#e2e8f0", fontSize: 13 }}>{v}</span>
+        <div key={v} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${itemBorder}` }}>
+          <span style={{ color: itemText, fontSize: 13 }}>{v}</span>
           <button onClick={() => rem(v)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14 }}>✕</button>
         </div>
       ))}
@@ -346,10 +349,13 @@ function ListEditor({ label, color, list, setList, nv, setNv }) {
   );
 }
 
-function FirmyEditor({ list, setList }) {
+function FirmyEditor({ list, setList, isDark }) {
   const [newNazev, setNewNazev] = useState("");
   const [newBarva, setNewBarva] = useState("#3b82f6");
   const PRESET_COLORS = ["#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899","#f59e0b","#6366f1"];
+  const itemBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
+  const itemBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const itemText = isDark ? "#e2e8f0" : "#1e293b";
 
   const add = () => {
     const v = newNazev.trim();
@@ -367,7 +373,7 @@ function FirmyEditor({ list, setList }) {
       <div style={{ color: "#60a5fa", fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: "3px solid #60a5fa", paddingLeft: 8 }}>Firmy</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
         <input value={newNazev} onChange={e => setNewNazev(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
-          placeholder="Název firmy..." style={{ ...inputSx, flex: 1, fontSize: 12 }} />
+          placeholder="Název firmy..." style={{ ...inputSx, flex: 1, fontSize: 12, background: isDark ? "#0f172a" : "#f8fafc", color: itemText, border: `1px solid ${itemBorder}` }} />
         <input type="color" value={newBarva} onChange={e => setNewBarva(e.target.value)}
           style={{ width: 36, height: 36, border: "none", borderRadius: 6, cursor: "pointer", background: "none", padding: 2 }} />
         <button onClick={add} style={{ padding: "8px 12px", background: "rgba(37,99,235,0.3)", border: "1px solid rgba(37,99,235,0.5)", borderRadius: 7, color: "#60a5fa", cursor: "pointer", fontWeight: 700 }}>+</button>
@@ -378,10 +384,10 @@ function FirmyEditor({ list, setList }) {
         ))}
       </div>
       {list.map(f => (
-        <div key={f.hodnota} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: "rgba(255,255,255,0.04)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div key={f.hodnota} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${itemBorder}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 14, height: 14, borderRadius: 3, background: f.barva || "#3b82f6" }} />
-            <span style={{ color: "#e2e8f0", fontSize: 13 }}>{f.hodnota}</span>
+            <span style={{ color: itemText, fontSize: 13 }}>{f.hodnota}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <input type="color" value={f.barva || "#3b82f6"} onChange={e => changeBarva(f.hodnota, e.target.value)}
@@ -445,39 +451,46 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
     ...(isAdmin ? [{ key: "log", label: "📜 Log aktivit" }] : []),
   ];
 
+  const modalBg = isDark ? "#1e293b" : "#ffffff";
+  const modalBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+  const modalText = isDark ? "#fff" : "#1e293b";
+  const modalMuted = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
+  const modalDivider = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const modalCardBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "#1e293b", borderRadius: 16, width: 780, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+      <div style={{ background: modalBg, borderRadius: 16, width: 780, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
 
         {/* header */}
-        <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ color: "#fff", margin: 0, fontSize: 17 }}>⚙️ Nastavení</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
+        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${modalDivider}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ color: modalText, margin: 0, fontSize: 17 }}>⚙️ Nastavení</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: modalMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
         </div>
 
         {/* tabs */}
-        <div style={{ display: "flex", gap: 4, padding: "10px 24px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ display: "flex", gap: 4, padding: "10px 24px 0", borderBottom: `1px solid ${modalDivider}` }}>
           {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 18px", background: tab === t.key ? "rgba(37,99,235,0.2)" : "transparent", border: "none", borderBottom: tab === t.key ? "2px solid #2563eb" : "2px solid transparent", borderRadius: "6px 6px 0 0", color: tab === t.key ? "#60a5fa" : "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, fontWeight: tab === t.key ? 700 : 400 }}>
+            <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 18px", background: tab === t.key ? "rgba(37,99,235,0.2)" : "transparent", border: "none", borderBottom: tab === t.key ? "2px solid #2563eb" : "2px solid transparent", borderRadius: "6px 6px 0 0", color: tab === t.key ? "#60a5fa" : modalMuted, cursor: "pointer", fontSize: 13, fontWeight: tab === t.key ? 700 : 400 }}>
               {t.label}
             </button>
           ))}
         </div>
 
         {/* body */}
-        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
+        <div style={{ padding: 24, overflowY: "auto", flex: 1, background: modalBg }}>
           {tab === "ciselniky" && (
             <div style={{ display: "flex", gap: 20 }}>
-              <FirmyEditor list={f} setList={setF} />
-              <ListEditor label="Objednatelé" color="#34d399" list={o} setList={setO} nv={newO} setNv={setNewO} />
-              <ListEditor label="Stavbyvedoucí" color="#f472b6" list={s} setList={setS} nv={newS} setNv={setNewS} />
+              <FirmyEditor list={f} setList={setF} isDark={isDark} />
+              <ListEditor label="Objednatelé" color="#34d399" list={o} setList={setO} nv={newO} setNv={setNewO} isDark={isDark} />
+              <ListEditor label="Stavbyvedoucí" color="#f472b6" list={s} setList={setS} nv={newS} setNv={setNewS} isDark={isDark} />
             </div>
           )}
 
           {tab === "uzivatele" && (
             <div>
               {/* Přidat uživatele */}
-              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ background: modalCardBg, border: `1px solid ${modalBorder}`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
                 <div style={{ color: "#60a5fa", fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 12, borderLeft: "3px solid #2563eb", paddingLeft: 8 }}>PŘIDAT UŽIVATELE</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 120px", gap: 10, marginBottom: 10 }}>
                   <div><Lbl>Jméno</Lbl><input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Jan Novák" style={inputSx} /></div>
@@ -507,7 +520,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                       {u.role === "admin" ? "👑" : "👤"}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{u.name}</div>
+                      <div style={{ color: modalText, fontSize: 13, fontWeight: 600 }}>{u.name}</div>
                       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>{u.email}</div>
                     </div>
                     <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.15)", color: u.role === "admin" ? "#fbbf24" : "#94a3b8" }}>{u.role === "admin" ? "ADMIN" : "USER"}</span>
@@ -555,8 +568,8 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
         </div>
 
         {/* footer */}
-        <div style={{ padding: "14px 24px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: "9px 18px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13 }}>Zrušit</button>
+        <div style={{ padding: "14px 24px", borderTop: `1px solid ${modalDivider}`, display: "flex", gap: 10, justifyContent: "flex-end", background: modalBg }}>
+          <button onClick={onClose} style={{ padding: "9px 18px", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${modalBorder}`, borderRadius: 8, color: modalText, cursor: "pointer", fontSize: 13 }}>Zrušit</button>
           {tab !== "log" && <button onClick={() => { onChange(f, o, s); onChangeUsers(uList); onClose(); }} style={{ padding: "9px 22px", background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Uložit vše</button>}
         </div>
       </div>
