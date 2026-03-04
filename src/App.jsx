@@ -815,7 +815,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} ${!isDark ? "table td, table td *, table td span { color: #1e293b !important; } table td span.firma-badge { color: inherit !important; }" : ""}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} ${!isDark ? "table td:not(.colored-cell), table td:not(.colored-cell) * { color: #1e293b !important; } .firma-badge { color: inherit !important; }" : ""}`}</style>
 
       {/* HEADER */}
       <div style={{ background: T.headerBg, borderBottom: `1px solid ${T.headerBorder}`, padding: "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -899,6 +899,7 @@ export default function App() {
                   return (
                     <td key={col.key}
                       onClick={() => canEdit && !isEditing && startCell(row, col)}
+                      className={col.key === "rozdil" || col.type === "number" ? "colored-cell" : ""}
                       style={{ padding: isEditing ? 0 : "7px 11px", whiteSpace: "nowrap", textAlign: align, border: `1px solid ${T.cellBorder}`, cursor: canEdit ? "pointer" : "default", outline: isEditing ? "2px solid #2563eb" : "none", color: col.key === "rozdil" ? (Number(row[col.key]) >= 0 ? "#4ade80" : "#f87171") : col.type === "number" ? T.numColor : T.text }}
                     >
                       {isEditing && isSelectCol
