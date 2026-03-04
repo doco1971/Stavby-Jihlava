@@ -152,11 +152,15 @@ function Login({ onLogin, users, onLogAction }) {
 // ============================================================
 const FIRMA_COLORS = ["#2563eb","#ca8a04","#16a34a","#7c3aed","#e11d48","#0891b2","#d97706","#059669","#9333ea","#dc2626"];
 
-function SummaryCards({ data, firmy }) {
+function SummaryCards({ data, firmy, isDark }) {
   const sum = (firma, fields) => data.filter(r => r.firma === firma).reduce((a, r) => { fields.forEach(f => a += Number(r[f])||0); return a; }, 0);
+  const bg = isDark ? "#0f172a" : "#f1f5f9";
+  const cardBg = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
+  const textMuted = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.45)";
+  const textMain = isDark ? "#fff" : "#1e293b";
 
   return (
-    <div style={{ overflowX: "auto", background: "#0f172a", padding: "14px 18px" }}>
+    <div style={{ overflowX: "auto", background: bg, padding: "14px 18px" }}>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${firmy.length * 3}, minmax(140px, 1fr))`, gap: 10, minWidth: firmy.length * 3 * 150 }}>
         {firmy.map((firma, fi) => {
           const color = FIRMA_COLORS[fi % FIRMA_COLORS.length];
@@ -165,17 +169,17 @@ function SummaryCards({ data, firmy }) {
           const katII = sum(firma, ["ps_ii","bo_ii","poruch"]);
           const celkem = katI + katII;
           return [
-            <div key={`${firma}-I`} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, marginBottom: 5 }}>{firma} – Kat. I</div>
-              <div style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{fmt(katI)}</div>
+            <div key={`${firma}-I`} style={{ background: cardBg, border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>{firma} – Kat. I</div>
+              <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(katI)}</div>
             </div>,
-            <div key={`${firma}-II`} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${colorDark}33`, borderLeft: `3px solid ${colorDark}`, borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, marginBottom: 5 }}>{firma} – Kat. II</div>
-              <div style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>{fmt(katII)}</div>
+            <div key={`${firma}-II`} style={{ background: cardBg, border: `1px solid ${colorDark}33`, borderLeft: `3px solid ${colorDark}`, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>{firma} – Kat. II</div>
+              <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(katII)}</div>
             </div>,
-            <div key={`${firma}-C`} style={{ background: `linear-gradient(135deg,${color}22,${color}0a)`, border: `1px solid ${color}44`, borderLeft: `3px solid ${color}`, borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600, marginBottom: 5 }}>Celkem {firma}</div>
-              <div style={{ color: "#fff", fontSize: 15, fontWeight: 800 }}>{fmt(celkem)}</div>
+            <div key={`${firma}-C`} style={{ background: isDark ? `linear-gradient(135deg,${color}22,${color}0a)` : `${color}18`, border: `1px solid ${color}44`, borderLeft: `3px solid ${color}`, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>Celkem {firma}</div>
+              <div style={{ color: textMain, fontSize: 15, fontWeight: 800 }}>{fmt(celkem)}</div>
             </div>,
           ];
         })}
@@ -832,13 +836,13 @@ export default function App() {
       </div>
 
       {/* SUMMARY */}
-      <SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} />
+      <SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} isDark={isDark} />
 
       {/* FILTERS */}
       <div style={{ padding: "10px 18px", display: "flex", gap: 10, alignItems: "center", background: T.filterBg, borderBottom: `1px solid ${T.cellBorder}`, flexWrap: "wrap" }}>
         <input placeholder="🔍 Hledat stavbu / číslo..." value={filterText} onChange={e => setFilterText(e.target.value)} style={{ ...inputSx, width: 230, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text }} />
-        <NativeSelect value={filterFirma} onChange={setFilterFirma} options={["Všechny firmy", ...firmy.map(f => f.hodnota)]} style={{ width: 170 }} />
-        <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} style={{ width: 190 }} />
+        <NativeSelect value={filterFirma} onChange={setFilterFirma} options={["Všechny firmy", ...firmy.map(f => f.hodnota)]} style={{ width: 170, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
+        <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} style={{ width: 190, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>{filtered.length} záznamů</span>
           <div style={{ position: "relative" }}>
