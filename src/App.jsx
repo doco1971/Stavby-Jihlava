@@ -661,10 +661,15 @@ export default function App() {
   const handleAdd = async (newRow) => {
     const { id, nabidka, rozdil, ...fields } = newRow;
     try {
-      await sb("stavby", { method: "POST", body: JSON.stringify(fields) });
+      console.log("Přidávám stavbu:", JSON.stringify(fields));
+      const result = await sb("stavby", { method: "POST", body: JSON.stringify(fields) });
+      console.log("Výsledek:", result);
       await logAkce(user?.email, "Přidání stavby", fields.nazev_stavby);
       await loadAll();
-    } catch (e) { alert("Chyba přidání: " + e.message); }
+    } catch (e) { 
+      console.error("Chyba přidání stavby:", e);
+      alert("Chyba přidání: " + e.message); 
+    }
     setAdding(false);
   };
 
