@@ -906,9 +906,9 @@ export default function App() {
                             {selectOptions.map(o => <option key={o} value={o} style={{ background: "#1e293b" }}>{o}</option>)}
                           </select>
                         : isEditing
-                        ? <input autoFocus value={cellValue} onChange={e => setCellValue(e.target.value)} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "transparent", border: "none", outline: "none", color: "#fff", fontSize: 12.5, boxSizing: "border-box" }} />
+                        ? <input autoFocus value={cellValue} onChange={e => setCellValue(e.target.value)} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 12.5, boxSizing: "border-box" }} />
                         : col.key === "id"
-                        ? <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{row[col.key]}</span>
+                        ? <span style={{ color: T.textMuted, fontSize: 12 }}>{row[col.key]}</span>
                         : col.key === "firma" ? <span style={firmaBadge(row[col.key])}>{row[col.key]}</span>
                         : col.type === "number" ? fmtN(row[col.key])
                         : row[col.key] ?? ""}
@@ -916,7 +916,7 @@ export default function App() {
                   );
                 })}
                 {isAdmin && (
-                  <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.07)", textAlign: "center" }}>
+                  <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
                     <button onClick={() => setEditRow(row)} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11, marginRight: 5 }}>✏️ Editovat</button>
                     <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11 }}>🗑️</button>
                   </td>
