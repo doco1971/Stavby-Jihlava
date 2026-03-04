@@ -191,17 +191,19 @@ function FormField({ label, value, onChange, full }) {
   );
 }
 
+function FormSelectField({ label, value, onChange, options }) {
+  return (
+    <div>
+      <Lbl>{label}</Lbl>
+      <NativeSelect value={value ?? options[0]} onChange={onChange} options={options} />
+    </div>
+  );
+}
+
 function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavbyvedouci: svList }) {
   const [form, setForm] = useState({ ...initial });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const computed = computeRow(form);
-
-  const SelectField = ({ k, label, options }) => (
-    <div>
-      <Lbl>{label}</Lbl>
-      <NativeSelect value={form[k] ?? options[0]} onChange={v => set(k, v)} options={options} />
-    </div>
-  );
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
@@ -217,7 +219,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             <SecHead color="#60a5fa">Základní informace</SecHead>
             <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} />
             <FormField label="Název stavby" value={form["nazev_stavby"]} onChange={v => set("nazev_stavby", v)} />
-            <SelectField k="firma" label="Firma" options={firmy} />
+            <FormSelectField label="Firma" value={form["firma"]} onChange={v => set("firma", v)} options={firmy} />
 
             <SecHead color="#818cf8">Kategorie I</SecHead>
             <FormField label="PS I" value={form["ps_i"]} onChange={v => set("ps_i", v)} />
@@ -246,8 +248,8 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             <SecHead color="#f472b6">Ostatní</SecHead>
             <FormField label="SOD" value={form["sod"]} onChange={v => set("sod", v)} />
             <FormField label="Ze dne" value={form["ze_dne"]} onChange={v => set("ze_dne", v)} />
-            <SelectField k="objednatel" label="Objednatel" options={objednatele} />
-            <SelectField k="stavbyvedouci" label="Stavbyvedoucí" options={svList} />
+            <FormSelectField label="Objednatel" value={form["objednatel"]} onChange={v => set("objednatel", v)} options={objednatele} />
+            <FormSelectField label="Stavbyvedoucí" value={form["stavbyvedouci"]} onChange={v => set("stavbyvedouci", v)} options={svList} />
           </div>
         </div>
 
@@ -263,6 +265,27 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 // ============================================================
 // SETTINGS MODAL
 // ============================================================
+function ListEditor({ label, color, list, setList, nv, setNv }) {
+  const add = () => { const v = nv.trim(); if (v && !list.includes(v)) { setList([...list, v]); setNv(""); } };
+  const rem = (v) => setList(list.filter(x => x !== v));
+  return (
+    <div style={{ flex: 1 }}>
+      <div style={{ color, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: `3px solid ${color}`, paddingLeft: 8 }}>{label}</div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        <input value={nv} onChange={e => setNv(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
+          placeholder="Přidat..." style={{ ...inputSx, flex: 1, fontSize: 12 }} />
+        <button onClick={add} style={{ padding: "8px 12px", background: `${color}33`, border: `1px solid ${color}55`, borderRadius: 7, color, cursor: "pointer", fontWeight: 700 }}>+</button>
+      </div>
+      {list.map(v => (
+        <div key={v} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: "rgba(255,255,255,0.04)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)" }}>
+          <span style={{ color: "#e2e8f0", fontSize: 13 }}>{v}</span>
+          <button onClick={() => rem(v)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14 }}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
@@ -281,9 +304,6 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [userErr, setUserErr] = useState("");
 
   const add = (list, setList, val, setVal) => { const v = val.trim(); if (v && !list.includes(v)) { setList([...list, v]); setVal(""); } };
-  const rem = (list, setList, v) => setList(list.filter(x => x !== v));
-
-  const addUser = () => {
     setUserErr("");
     if (!newEmail.trim() || !newPass.trim() || !newName.trim()) { setUserErr("Vyplň jméno, email a heslo."); return; }
     if (uList.find(u => u.email === newEmail.trim())) { setUserErr("Uživatel s tímto emailem již existuje."); return; }
@@ -293,23 +313,6 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   };
 
   const removeUser = (id) => setUList(uList.filter(u => u.id !== id));
-
-  const ListEditor = ({ label, color, list, setList, nv, setNv }) => (
-    <div style={{ flex: 1 }}>
-      <div style={{ color, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: `3px solid ${color}`, paddingLeft: 8 }}>{label}</div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        <input value={nv} onChange={e => setNv(e.target.value)} onKeyDown={e => e.key === "Enter" && add(list, setList, nv, setNv)}
-          placeholder="Přidat..." style={{ ...inputSx, flex: 1, fontSize: 12 }} />
-        <button onClick={() => add(list, setList, nv, setNv)} style={{ padding: "8px 12px", background: `${color}33`, border: `1px solid ${color}55`, borderRadius: 7, color, cursor: "pointer", fontWeight: 700 }}>+</button>
-      </div>
-      {list.map(v => (
-        <div key={v} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: "rgba(255,255,255,0.04)", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)" }}>
-          <span style={{ color: "#e2e8f0", fontSize: 13 }}>{v}</span>
-          <button onClick={() => rem(list, setList, v)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14 }}>✕</button>
-        </div>
-      ))}
-    </div>
-  );
 
   const tabs = [
     { key: "ciselniky", label: "📋 Číselníky" },
