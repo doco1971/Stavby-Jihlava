@@ -619,6 +619,11 @@ export default function App() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  useEffect(() => {
+    document.body.style.background = isDark ? "#0f172a" : "#f1f5f9";
+    document.body.style.color = isDark ? "#e2e8f0" : "#1e293b";
+  }, [isDark]);
+
   // ── CRUD stavby ────────────────────────────────────────────
   const handleSave = async (updated) => {
     const { id, nabidka, rozdil, ...fields } = updated;
@@ -716,7 +721,6 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: "3px solid rgba(37,99,235,0.3)", borderTop: "3px solid #2563eb", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Načítám data...</div>
       </div>
     </div>
@@ -808,6 +812,12 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text }}>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        body { color: ${T.text} !important; }
+        table td, table th { color: ${T.text}; }
+        select option { background: ${T.modalBg}; color: ${T.text}; }
+      `}</style>
 
       {/* HEADER */}
       <div style={{ background: T.headerBg, borderBottom: `1px solid ${T.headerBorder}`, padding: "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
