@@ -186,7 +186,7 @@ function SummaryCards({ data, firmy, isDark, firmaColors }) {
         </div>
 
         {/* Separator */}
-        <div style={{ width: 2, background: groupBorder, borderRadius: 2, margin: "2px 8px" }} />
+        <div style={{ width: 2, background: groupBorder, borderRadius: 2, margin: "2px 40px" }} />
 
         {/* Skupiny firem */}
         {firmy.map((firma) => {
@@ -622,6 +622,8 @@ export default function App() {
   const [filterFirma, setFilterFirma] = useState("Všechny firmy");
   const [filterText, setFilterText] = useState("");
   const [filterObjed, setFilterObjed] = useState("Všichni objednatelé");
+  const [filterSV, setFilterSV] = useState("Všichni SV");
+  const [filterSV, setFilterSV] = useState("Všichni SV");
   const [editRow, setEditRow] = useState(null);
   const [adding, setAdding] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -792,8 +794,10 @@ export default function App() {
     if (filterFirma !== "Všechny firmy" && r.firma !== filterFirma) return false;
     if (filterText && !r.nazev_stavby?.toLowerCase().includes(filterText.toLowerCase()) && !r.cislo_stavby?.toLowerCase().includes(filterText.toLowerCase())) return false;
     if (filterObjed !== "Všichni objednatelé" && filterObjed && r.objednatel !== filterObjed) return false;
+    if (filterSV !== "Všichni SV" && filterSV && r.stavbyvedouci !== filterSV) return false;
+    if (filterSV !== "Všichni SV" && filterSV && r.stavbyvedouci !== filterSV) return false;
     return true;
-  }), [data, filterFirma, filterText, filterObjed]);
+  }), [data, filterFirma, filterText, filterObjed, filterSV]);
 
   const [tableHeight, setTableHeight] = useState(500);
 
@@ -824,7 +828,7 @@ export default function App() {
     return () => { clearTimeout(timer); ro.disconnect(); window.removeEventListener("resize", calc); };
   }, []);
   const [page, setPage] = useState(0);
-  useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed]);
+  useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed, filterSV]);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -993,6 +997,8 @@ export default function App() {
         <input placeholder="🔍 Hledat stavbu / číslo..." value={filterText} onChange={e => setFilterText(e.target.value)} style={{ ...inputSx, width: 230, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text }} />
         <NativeSelect value={filterFirma} onChange={setFilterFirma} options={["Všechny firmy", ...firmy.map(f => f.hodnota)]} style={{ width: 170, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
         <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} style={{ width: 190, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
+        <NativeSelect value={filterSV} onChange={setFilterSV} options={["Všichni SV", ...stavbyvedouci]} style={{ width: 170, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
+        <NativeSelect value={filterSV} onChange={setFilterSV} options={["Všichni SV", ...stavbyvedouci]} style={{ width: 170, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, padding: "4px 12px", color: T.text, fontSize: 13, fontWeight: 600 }}>{filtered.length} záznamů</span>
           <div style={{ position: "relative" }}>
