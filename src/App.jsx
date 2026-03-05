@@ -730,7 +730,18 @@ export default function App() {
     return true;
   }), [data, filterFirma, filterText, filterObjed]);
 
-  const PAGE_SIZE = 10;
+  const [PAGE_SIZE, setPageSize] = useState(10);
+  useEffect(() => {
+    const calc = () => {
+      const rowH = 36;
+      const reserved = 52 + 90 + 52 + 44 + 40; // header + cards + filters + pagination + padding
+      const rows = Math.max(5, Math.floor((window.innerHeight - reserved) / rowH));
+      setPageSize(rows);
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed]);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
