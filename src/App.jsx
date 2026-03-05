@@ -991,8 +991,9 @@ export default function App() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 2100 }}>
           <thead>
             <tr style={{ background: T.theadBg }}>
+              <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
               {isAdmin && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
-              {COLUMNS.map(col => (
+              {COLUMNS.filter(col => col.key !== "id").map(col => (
                 <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: col.width, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>
                   {col.label.toUpperCase()}
                 </th>
@@ -1011,16 +1012,21 @@ export default function App() {
                 onMouseEnter={e => e.currentTarget.style.background = isFaktura ? "rgba(22,163,74,0.38)" : T.hoverBg}
                 onMouseLeave={e => e.currentTarget.style.background = baseBg}
               >
+                {/* # číslo řádku */}
+                <td style={{ padding: "7px 11px", textAlign: "center", border: `1px solid ${T.cellBorder}` }}>
+                  <span style={{ color: T.textMuted, fontSize: 12 }}>{globalIndex + 1}</span>
+                </td>
+                {/* AKCE vlevo */}
                 {isAdmin && (
                   <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
                     <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11, marginRight: 5 }}>🗑️</button>
                     <button onClick={() => setEditRow(row)} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11 }}>✏️</button>
                   </td>
                 )}
-                {COLUMNS.map(col => {
+                {COLUMNS.filter(col => col.key !== "id").map(col => {
                   const isEditing = editingCell?.rowId === row.id && editingCell?.colKey === col.key;
                   const canEdit = isAdmin && !col.computed && col.key !== "id";
-                  const align = col.key === "id" ? "center" : col.type === "number" ? "right" : "left";
+                  const align = col.type === "number" ? "right" : "left";
                   const selectOptions = col.key === "firma" ? firmy.map(f => f.hodnota) : col.key === "objednatel" ? objednatele : col.key === "stavbyvedouci" ? stavbyvedouci : null;
                   const isSelectCol = selectOptions != null;
                   return (
@@ -1035,14 +1041,13 @@ export default function App() {
                           </select>
                         : isEditing
                         ? <input autoFocus value={cellValue} onChange={e => setCellValue(e.target.value)} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 12.5, boxSizing: "border-box" }} />
-                        : col.key === "id"
-                        ? <span style={{ color: T.textMuted, fontSize: 12 }}>{globalIndex + 1}</span>
                         : col.key === "firma" ? <span className="firma-badge" style={firmaBadge(row[col.key])}>{row[col.key]}</span>
                         : col.type === "number" ? fmtN(row[col.key])
                         : row[col.key] ?? ""}
                     </td>
                   );
                 })}
+                {/* AKCE vpravo */}
                 {isAdmin && (
                   <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
                     <button onClick={() => setEditRow(row)} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11, marginRight: 5 }}>✏️ Editovat</button>
@@ -1054,8 +1059,9 @@ export default function App() {
             })}
             {paginated.length < PAGE_SIZE && Array.from({ length: PAGE_SIZE - paginated.length }).map((_, i) => (
               <tr key={`empty-${i}`} style={{ height: 36 }}>
+                <td style={{ border: `1px solid ${T.cellBorder}` }} />
                 {isAdmin && <td style={{ border: `1px solid ${T.cellBorder}` }} />}
-                {COLUMNS.map(col => <td key={col.key} style={{ border: `1px solid ${T.cellBorder}` }} />)}
+                {COLUMNS.filter(col => col.key !== "id").map(col => <td key={col.key} style={{ border: `1px solid ${T.cellBorder}` }} />)}
                 {isAdmin && <td style={{ border: `1px solid ${T.cellBorder}` }} />}
               </tr>
             ))}
