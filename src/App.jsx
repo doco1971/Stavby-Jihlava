@@ -1149,7 +1149,8 @@ export default function App() {
                 {COLUMNS.filter(col => col.key !== "id").map(col => {
                   const isEditing = editingCell?.rowId === row.id && editingCell?.colKey === col.key;
                   const canEdit = isAdmin && !col.computed && col.key !== "id";
-                  const align = col.type === "number" ? "right" : "left";
+                  const centerCols = ["cislo_stavby","ukonceni","sod","ze_dne","cislo_faktury","splatna"];
+                  const align = col.type === "number" ? "right" : centerCols.includes(col.key) ? "center" : "left";
                   const selectOptions = col.key === "firma" ? firmy.map(f => f.hodnota) : col.key === "objednatel" ? objednatele : col.key === "stavbyvedouci" ? stavbyvedouci : null;
                   const isSelectCol = selectOptions != null;
                   return (
