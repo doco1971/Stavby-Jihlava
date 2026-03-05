@@ -736,13 +736,7 @@ export default function App() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const [tableHeight, setTableHeight] = useState(400);
-  useEffect(() => {
-    const calc = () => setTableHeight(Math.max(300, window.innerHeight - 52 - 90 - 52 - 50));
-    calc();
-    window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
-  }, []);
+  const [tableHeight, setTableHeight] = useState(undefined);
 
   const startCell = (row, col) => {
     if (!isAdmin || col.computed || col.key === "id") return;
@@ -923,7 +917,7 @@ export default function App() {
       </div>
 
       {/* TABLE */}
-      <div style={{ overflowX: "auto", overflowY: "auto", height: tableHeight }}>
+      <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 2100 }}>
           <thead>
             <tr style={{ background: T.theadBg }}>
