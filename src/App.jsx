@@ -933,7 +933,7 @@ export default function App() {
                         : isEditing
                         ? <input autoFocus value={cellValue} onChange={e => setCellValue(e.target.value)} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 12.5, boxSizing: "border-box" }} />
                         : col.key === "id"
-                        ? <span style={{ color: T.textMuted, fontSize: 12 }}>{row[col.key]}</span>
+                        ? <span style={{ color: T.textMuted, fontSize: 12 }}>{i + 1}</span>
                         : col.key === "firma" ? <span className="firma-badge" style={firmaBadge(row[col.key])}>{row[col.key]}</span>
                         : col.type === "number" ? fmtN(row[col.key])
                         : row[col.key] ?? ""}
