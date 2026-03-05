@@ -167,26 +167,26 @@ function SummaryCards({ data, firmy, isDark, firmaColors }) {
 
   return (
     <div style={{ overflowX: "auto", background: bg, padding: "10px 18px" }}>
-      <div style={{ display: "flex", gap: 10, minWidth: "max-content" }}>
+      <div style={{ display: "flex", gap: 6, minWidth: "max-content", alignItems: "stretch" }}>
 
-        {/* CELKEM VŠE – samostatná skupina */}
-        <div style={{ background: isDark ? "rgba(249,115,22,0.08)" : "rgba(249,115,22,0.07)", border: `1px solid rgba(249,115,22,0.35)`, borderRadius: 12, padding: "10px 14px", minWidth: 170 }}>
-          <div style={{ color: "#f97316", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8, textAlign: "center" }}>CELKEM VŠE</div>
-          <div style={{ color: textMain, fontSize: 20, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>{fmt(totalCelkem)}</div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <div style={{ background: isDark ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.1)", borderRadius: 6, padding: "3px 8px", textAlign: "center" }}>
-              <div style={{ color: textMuted, fontSize: 9, fontWeight: 600 }}>KAT. I</div>
-              <div style={{ color: textMain, fontSize: 12, fontWeight: 700 }}>{fmt(totalI)}</div>
+        {/* CELKEM VŠE */}
+        <div style={{ background: isDark ? "rgba(249,115,22,0.1)" : "rgba(249,115,22,0.08)", border: `1px solid rgba(249,115,22,0.4)`, borderRadius: 12, padding: "10px 16px", minWidth: 180, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ color: "#f97316", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>CELKEM VŠE</div>
+          <div style={{ color: textMain, fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{fmt(totalCelkem)}</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ background: isDark ? "rgba(249,115,22,0.15)" : "rgba(249,115,22,0.12)", borderRadius: 6, padding: "4px 10px", textAlign: "center" }}>
+              <div style={{ color: "#f97316", fontSize: 9, fontWeight: 700 }}>KAT. I</div>
+              <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(totalI)}</div>
             </div>
-            <div style={{ background: isDark ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.1)", borderRadius: 6, padding: "3px 8px", textAlign: "center" }}>
-              <div style={{ color: textMuted, fontSize: 9, fontWeight: 600 }}>KAT. II</div>
-              <div style={{ color: textMain, fontSize: 12, fontWeight: 700 }}>{fmt(totalII)}</div>
+            <div style={{ background: isDark ? "rgba(249,115,22,0.15)" : "rgba(249,115,22,0.12)", borderRadius: 6, padding: "4px 10px", textAlign: "center" }}>
+              <div style={{ color: "#f97316", fontSize: 9, fontWeight: 700 }}>KAT. II</div>
+              <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(totalII)}</div>
             </div>
           </div>
         </div>
 
         {/* Separator */}
-        <div style={{ width: 1, background: groupBorder, margin: "4px 0" }} />
+        <div style={{ width: 2, background: groupBorder, borderRadius: 2, margin: "2px 8px" }} />
 
         {/* Skupiny firem */}
         {firmy.map((firma) => {
@@ -195,17 +195,17 @@ function SummaryCards({ data, firmy, isDark, firmaColors }) {
           const katII = sum(firma, ["ps_ii","bo_ii","poruch"]);
           const celkem = katI + katII;
           return (
-            <div key={firma} style={{ background: isDark ? `${color}0d` : `${color}0f`, border: `1px solid ${color}40`, borderRadius: 12, padding: "10px 14px", minWidth: 210 }}>
-              <div style={{ color, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8, textAlign: "center" }}>{firma.toUpperCase()}</div>
-              <div style={{ color: textMain, fontSize: 18, fontWeight: 800, textAlign: "center", marginBottom: 6 }}>{fmt(celkem)}</div>
-              <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                <div style={{ background: cardBg, border: `1px solid ${color}25`, borderRadius: 6, padding: "3px 10px", textAlign: "center" }}>
-                  <div style={{ color: textMuted, fontSize: 9, fontWeight: 600 }}>KAT. I</div>
-                  <div style={{ color: textMain, fontSize: 12, fontWeight: 700 }}>{fmt(katI)}</div>
+            <div key={firma} style={{ background: isDark ? `${color}12` : `${color}10`, border: `1px solid ${color}40`, borderRadius: 12, padding: "10px 16px", minWidth: 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ color, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>{firma.toUpperCase()}</div>
+              <div style={{ color: textMain, fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{fmt(celkem)}</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ background: isDark ? `${color}18` : `${color}12`, border: `1px solid ${color}25`, borderRadius: 6, padding: "4px 12px", textAlign: "center" }}>
+                  <div style={{ color, fontSize: 9, fontWeight: 700 }}>KAT. I</div>
+                  <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(katI)}</div>
                 </div>
-                <div style={{ background: cardBg, border: `1px solid ${color}25`, borderRadius: 6, padding: "3px 10px", textAlign: "center" }}>
-                  <div style={{ color: textMuted, fontSize: 9, fontWeight: 600 }}>KAT. II</div>
-                  <div style={{ color: textMain, fontSize: 12, fontWeight: 700 }}>{fmt(katII)}</div>
+                <div style={{ background: isDark ? `${color}18` : `${color}12`, border: `1px solid ${color}25`, borderRadius: 6, padding: "4px 12px", textAlign: "center" }}>
+                  <div style={{ color, fontSize: 9, fontWeight: 700 }}>KAT. II</div>
+                  <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(katII)}</div>
                 </div>
               </div>
             </div>
@@ -966,8 +966,8 @@ export default function App() {
             <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
           </svg>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>Stavby Znojmo</div>
-            <div style={{ color: T.textMuted, fontSize: 11 }}>kategorie 1 & 2 <span style={{ marginLeft: 8, color: T.textFaint, fontSize: 10 }}>v1.1 | 05.03.2026</span></div>
+            <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Znojmo</div>
+            <div style={{ color: T.textMuted, fontSize: 13 }}>kategorie 1 & 2 <span style={{ marginLeft: 8, color: T.textFaint, fontSize: 11 }}>v1.1 | 05.03.2026</span></div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
