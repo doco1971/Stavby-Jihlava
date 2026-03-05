@@ -690,11 +690,13 @@ export default function App() {
 
   const startDrag = (e, colKey, currentWidth) => {
     e.preventDefault();
-    dragInfo.current = { colKey, startX: e.clientX, startWidth: currentWidth };
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = currentWidth;
     const onMove = (ev) => {
-      const diff = ev.clientX - dragInfo.current.startX;
-      const newW = Math.max(40, dragInfo.current.startWidth + diff);
-      setColWidths(prev => ({ ...prev, [dragInfo.current.colKey]: newW }));
+      const diff = ev.clientX - startX;
+      const newW = Math.max(40, startWidth + diff);
+      setColWidths(prev => ({ ...prev, [colKey]: newW }));
     };
     const onUp = () => {
       setColWidths(prev => {
@@ -1091,9 +1093,9 @@ export default function App() {
                     {isSuperAdmin && (
                       <span
                         onMouseDown={e => startDrag(e, col.key, getColWidth(col))}
-                        style={{ cursor: "col-resize", color: isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)", fontSize: 12, padding: "0 2px", userSelect: "none", flexShrink: 0 }}
+                        style={{ cursor: "col-resize", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)", fontSize: 14, padding: "0 4px", userSelect: "none", flexShrink: 0, lineHeight: 1 }}
                         title="Přetáhni pro změnu šířky"
-                      >⇔</span>
+                      >⟺</span>
                     )}
                   </div>
                 </th>
