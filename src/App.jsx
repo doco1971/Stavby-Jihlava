@@ -74,18 +74,36 @@ function SecHead({ color, children }) {
 }
 
 function NativeSelect({ value, onChange, options, style, isDark = true }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+  const bg = isDark ? "#1e293b" : "#fff";
+  const border = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)";
+  const textColor = isDark ? "#e2e8f0" : "#1e293b";
+  const hoverBg = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)";
+  const dropBg = isDark ? "#1e293b" : "#fff";
+  const dropShadow = isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)";
   return (
-    <div style={{ position: "relative" }}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{ ...inputSx, appearance: "none", WebkitAppearance: "none", cursor: "pointer", background: isDark ? "#0f172a" : "#fff", color: isDark ? "#e2e8f0" : "#1e293b", border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)"}`, ...style }}
-      >
-        {options.map(o => (
-          <option key={o} value={o} style={{ background: isDark ? "#1e293b" : "#fff", color: isDark ? "#fff" : "#1e293b", padding: 8 }}>{o}</option>
-        ))}
-      </select>
-      <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)", pointerEvents: "none", fontSize: 11 }}>▼</span>
+    <div ref={ref} style={{ position: "relative", ...style }}>
+      <button onClick={() => setOpen(v => !v)} style={{ width: "100%", padding: "7px 30px 7px 12px", background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 13, textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
+        <span style={{ marginLeft: 8, fontSize: 10, color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", flexShrink: 0 }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: "100%", background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 500, boxShadow: dropShadow, overflow: "hidden" }}>
+          {options.map(o => (
+            <div key={o} onClick={() => { onChange(o); setOpen(false); }}
+              style={{ padding: "9px 14px", color: o === value ? (isDark ? "#60a5fa" : "#2563eb") : textColor, background: o === value ? (isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)") : "transparent", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }}
+              onMouseEnter={e => { if (o !== value) e.currentTarget.style.background = hoverBg; }}
+              onMouseLeave={e => { if (o !== value) e.currentTarget.style.background = "transparent"; }}
+            >{o}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
