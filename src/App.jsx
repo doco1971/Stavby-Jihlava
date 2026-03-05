@@ -736,7 +736,7 @@ export default function App() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const [tableHeight, setTableHeight] = useState(undefined);
+
 
   const startCell = (row, col) => {
     if (!isAdmin || col.computed || col.key === "id") return;
@@ -863,7 +863,7 @@ export default function App() {
   const rowBg = (firma) => getFirmaColor(firma).bg;
 
   return (
-    <div style={{ height: "100vh", overflow: "hidden", background: T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text, display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} ${!isDark ? "table td:not(.colored-cell), table td:not(.colored-cell) * { color: #1e293b !important; } .firma-badge { color: inherit !important; }" : ""}`}</style>
 
       {/* HEADER */}
@@ -917,7 +917,7 @@ export default function App() {
       </div>
 
       {/* TABLE */}
-      <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0 }}>
+      <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 2100 }}>
           <thead>
             <tr style={{ background: T.theadBg }}>
