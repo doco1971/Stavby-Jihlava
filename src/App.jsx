@@ -40,27 +40,27 @@ function computeRow(row) {
 const COLUMNS = [
   { key: "id", label: "#", width: 40 },
   { key: "firma", label: "Firma", width: 90 },
-  { key: "cislo_stavby", label: "Č. stavby", width: 130 },
-  { key: "nazev_stavby", label: "Název stavby", width: 260 },
-  { key: "ps_i", label: "Plán. stavby I", width: 120, type: "number" },
-  { key: "snk_i", label: "SNK I", width: 110, type: "number" },
-  { key: "bo_i", label: "Běžné opravy I", width: 120, type: "number" },
-  { key: "ps_ii", label: "Plán. stavby II", width: 120, type: "number" },
-  { key: "bo_ii", label: "Běžné opravy II", width: 120, type: "number" },
-  { key: "poruch", label: "Poruchy", width: 110, type: "number" },
-  { key: "nabidka", label: "Nabídka", width: 120, type: "number", computed: true },
-  { key: "rozdil", label: "Rozdíl", width: 120, type: "number", computed: true },
-  { key: "vyfakturovano", label: "Vyfakturováno", width: 130, type: "number" },
-  { key: "ukonceni", label: "Ukončení", width: 110 },
-  { key: "zrealizovano", label: "Zrealizováno", width: 130, type: "number" },
-  { key: "sod", label: "SOD", width: 160 },
-  { key: "ze_dne", label: "Ze dne", width: 100 },
-  { key: "objednatel", label: "Objednatel", width: 110 },
-  { key: "stavbyvedouci", label: "Stavbyvedoucí", width: 130 },
-  { key: "nabidkova_cena", label: "Nab. cena", width: 120, type: "number" },
-  { key: "cislo_faktury", label: "Č. faktury", width: 120 },
-  { key: "castka_bez_dph", label: "Č. bez DPH", width: 120, type: "number" },
-  { key: "splatna", label: "Splatná", width: 110 },
+  { key: "cislo_stavby", label: "Č. stavby", width: 120 },
+  { key: "nazev_stavby", label: "Název stavby", width: 240 },
+  { key: "ps_i", label: "Plán. stavby I", width: 105, type: "number" },
+  { key: "snk_i", label: "SNK I", width: 95, type: "number" },
+  { key: "bo_i", label: "Běžné opravy I", width: 105, type: "number" },
+  { key: "ps_ii", label: "Plán. stavby II", width: 105, type: "number" },
+  { key: "bo_ii", label: "Běžné opravy II", width: 105, type: "number" },
+  { key: "poruch", label: "Poruchy", width: 95, type: "number" },
+  { key: "nabidka", label: "Nabídka", width: 105, type: "number", computed: true },
+  { key: "rozdil", label: "Rozdíl", width: 105, type: "number", computed: true },
+  { key: "vyfakturovano", label: "Vyfakturováno", width: 105, type: "number" },
+  { key: "ukonceni", label: "Ukončení", width: 88 },
+  { key: "zrealizovano", label: "Zrealizováno", width: 105, type: "number" },
+  { key: "sod", label: "SOD", width: 130 },
+  { key: "ze_dne", label: "Ze dne", width: 88 },
+  { key: "objednatel", label: "Objednatel", width: 110, truncate: true },
+  { key: "stavbyvedouci", label: "Stavbyvedoucí", width: 110, truncate: true },
+  { key: "nabidkova_cena", label: "Nab. cena", width: 105, type: "number" },
+  { key: "cislo_faktury", label: "Č. faktury", width: 105 },
+  { key: "castka_bez_dph", label: "Č. bez DPH", width: 105, type: "number" },
+  { key: "splatna", label: "Splatná", width: 88 },
 ];
 
 const inputSx = { width: "100%", padding: "9px 11px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 7, color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" };
@@ -167,7 +167,7 @@ function SummaryCards({ data, firmy, isDark, firmaColors }) {
   return (
     <div style={{ overflowX: "auto", background: bg, padding: "14px 18px" }}>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${firmy.length * 3 + 1}, minmax(140px, 1fr))`, gap: 10, minWidth: (firmy.length * 3 + 1) * 150 }}>
-        <div style={{ background: isDark ? "linear-gradient(135deg,rgba(20,184,166,0.15),rgba(20,184,166,0.05))" : "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.4)", borderLeft: "3px solid #14b8a6", borderRight: "3px solid #14b8a6", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
+        <div style={{ background: isDark ? "linear-gradient(135deg,rgba(249,115,22,0.15),rgba(249,115,22,0.05))" : "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.4)", borderLeft: "3px solid #f97316", borderRight: "3px solid #f97316", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
           <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>CELKEM VŠE</div>
           <div style={{ color: textMain, fontSize: 15, fontWeight: 800 }}>{fmt(totalCelkem)}</div>
           <div style={{ marginTop: 6, display: "flex", gap: 10, justifyContent: "center" }}>
@@ -1050,6 +1050,7 @@ export default function App() {
                         ? <input autoFocus value={cellValue} onChange={e => setCellValue(e.target.value)} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 12.5, boxSizing: "border-box" }} />
                         : col.key === "firma" ? <span className="firma-badge" style={firmaBadge(row[col.key])}>{row[col.key]}</span>
                         : col.type === "number" ? fmtN(row[col.key])
+                        : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
                         : row[col.key] ?? ""}
                     </td>
                   );
