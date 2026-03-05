@@ -88,7 +88,9 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const dropBg = isDark ? "#1e293b" : "#fff";
   const dropShadow = isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)";
   return (
-    <div ref={ref} style={{ position: "relative", ...style }}>
+    <div ref={ref} style={{ position: "relative", ...style }}
+      onMouseLeave={() => setTimeout(() => setOpen(false), 300)}
+    >
       <button onClick={() => setOpen(v => !v)} style={{ width: "100%", padding: "7px 30px 7px 12px", background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 13, textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
         <span style={{ marginLeft: 8, fontSize: 10, color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", flexShrink: 0 }}>▼</span>
