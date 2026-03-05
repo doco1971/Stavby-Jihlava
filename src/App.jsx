@@ -730,17 +730,26 @@ export default function App() {
     return true;
   }), [data, filterFirma, filterText, filterObjed]);
 
+  const headerRef = useRef(null);
+  const cardsRef = useRef(null);
+  const filtersRef = useRef(null);
+  const paginationRef = useRef(null);
+
   const [PAGE_SIZE, setPageSize] = useState(10);
   useEffect(() => {
     const calc = () => {
       const rowH = 36;
-      const reserved = 52 + 105 + 52 + 44; // header + cards + filters + pagination
+      const headerH = headerRef.current?.offsetHeight || 52;
+      const cardsH = cardsRef.current?.offsetHeight || 105;
+      const filtersH = filtersRef.current?.offsetHeight || 52;
+      const paginationH = paginationRef.current?.offsetHeight || 44;
+      const reserved = headerH + cardsH + filtersH + paginationH + 8;
       const rows = Math.max(5, Math.floor((window.innerHeight - reserved) / rowH));
       setPageSize(rows);
     };
-    calc();
+    const timer = setTimeout(calc, 100);
     window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
+    return () => { clearTimeout(timer); window.removeEventListener("resize", calc); };
   }, []);
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed]);
@@ -878,7 +887,7 @@ export default function App() {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} ${!isDark ? "table td:not(.colored-cell), table td:not(.colored-cell) * { color: #1e293b !important; } .firma-badge { color: inherit !important; }" : ""}`}</style>
 
       {/* HEADER */}
-      <div style={{ background: T.headerBg, borderBottom: `1px solid ${T.headerBorder}`, padding: "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div ref={headerRef} style={{ background: T.headerBg, borderBottom: `1px solid ${T.headerBorder}`, padding: "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <svg width="32" height="32" viewBox="0 0 80 80" fill="none">
             <circle cx="40" cy="40" r="38" fill="#1e3a8a" />
@@ -904,10 +913,10 @@ export default function App() {
       </div>
 
       {/* SUMMARY */}
-      <SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} isDark={isDark} />
+      <div ref={cardsRef}><SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} isDark={isDark} /></div>
 
       {/* FILTERS */}
-      <div style={{ padding: "10px 18px", display: "flex", gap: 10, alignItems: "center", background: T.filterBg, borderBottom: `1px solid ${T.cellBorder}`, flexWrap: "wrap" }}>
+      <div ref={filtersRef} style={{ padding: "10px 18px", display: "flex", gap: 10, alignItems: "center", background: T.filterBg, borderBottom: `1px solid ${T.cellBorder}`, flexWrap: "wrap" }}>
         <input placeholder="🔍 Hledat stavbu / číslo..." value={filterText} onChange={e => setFilterText(e.target.value)} style={{ ...inputSx, width: 230, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text }} />
         <NativeSelect value={filterFirma} onChange={setFilterFirma} options={["Všechny firmy", ...firmy.map(f => f.hodnota)]} style={{ width: 170, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
         <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} style={{ width: 190, background: T.inputBg, color: T.text, borderColor: T.inputBorder }} />
@@ -991,7 +1000,7 @@ export default function App() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 18px", borderTop: `1px solid ${T.cellBorder}`, background: T.filterBg }}>
+        <div ref={paginationRef} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 18px", borderTop: `1px solid ${T.cellBorder}`, background: T.filterBg }}>
           <button onClick={() => setPage(0)} disabled={page === 0} style={{ padding: "4px 9px", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.textMuted, cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.4 : 1, fontSize: 13 }}>«</button>
           <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={{ padding: "4px 9px", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.textMuted, cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.4 : 1, fontSize: 13 }}>‹</button>
           {Array.from({ length: totalPages }, (_, i) => (
