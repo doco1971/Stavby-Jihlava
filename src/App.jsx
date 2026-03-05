@@ -178,6 +178,10 @@ function SummaryCards({ data, firmy, isDark, firmaColors }) {
         <div style={{ background: isDark ? "linear-gradient(135deg,#2563eb22,#6366f10a)" : "#2563eb18", border: "1px solid #2563eb44", borderLeft: "3px solid #2563eb", borderRight: "3px solid #2563eb", borderRadius: 10, padding: "12px 14px" }}>
           <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>CELKEM VŠE</div>
           <div style={{ color: textMain, fontSize: 15, fontWeight: 800 }}>{fmt(totalCelkem)}</div>
+          <div style={{ marginTop: 6, display: "flex", gap: 10 }}>
+            <div style={{ color: textMuted, fontSize: 10 }}>Kat. I: <span style={{ color: textMain, fontWeight: 600 }}>{fmt(totalI)}</span></div>
+            <div style={{ color: textMuted, fontSize: 10 }}>Kat. II: <span style={{ color: textMain, fontWeight: 600 }}>{fmt(totalII)}</span></div>
+          </div>
         </div>
         {firmy.map((firma) => {
           const color = firmaColors[firma] || "#2563eb";
