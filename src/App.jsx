@@ -140,7 +140,7 @@ function Login({ onLogin, users, onLogAction }) {
         </button>
 
         <div style={{ marginTop: 20, padding: 14, background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
-          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: 0, textAlign: "center" }}>Demo: admin@durplus.cz / admin123<br />user@durplus.cz / user123</p>
+          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: 0, textAlign: "center" }}></p>
         </div>
       </div>
     </div>
@@ -965,6 +965,21 @@ export default function App() {
               );
             })}
           </tbody>
+          <tfoot>
+            <tr style={{ background: T.theadBg, fontWeight: 700 }}>
+              {COLUMNS.map(col => {
+                const numCols = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidka","vyfakturovano","rozdil","zrealizovano","nabidkova_cena","castka_bez_dph"];
+                if (col.key === "id") return <td key={col.key} style={{ padding: "7px 11px", border: `1px solid ${T.cellBorder}`, color: T.textMuted, fontSize: 11, textAlign: "center" }}>∑</td>;
+                if (numCols.includes(col.key)) {
+                  const total = filtered.reduce((a, r) => a + (Number(r[col.key]) || 0), 0);
+                  const color = col.key === "rozdil" ? (total >= 0 ? "#4ade80" : "#f87171") : col.type === "number" ? T.numColor : T.text;
+                  return <td key={col.key} style={{ padding: "7px 11px", border: `1px solid ${T.cellBorder}`, color, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>;
+                }
+                return <td key={col.key} style={{ padding: "7px 11px", border: `1px solid ${T.cellBorder}` }}></td>;
+              })}
+              {isAdmin && <td style={{ border: `1px solid ${T.cellBorder}` }}></td>}
+            </tr>
+          </tfoot>
         </table>
       </div>
 
