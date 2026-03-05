@@ -566,14 +566,14 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {uList.map(u => (
                   <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
-                      {u.role === "admin" ? "👑" : "👤"}
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+                      {u.role === "superadmin" ? "⚡" : u.role === "admin" ? "👑" : "👤"}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: modalText, fontSize: 13, fontWeight: 600 }}>{u.name}</div>
                       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>{u.email}</div>
                     </div>
-                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.15)", color: u.role === "admin" ? "#fbbf24" : "#94a3b8" }}>{u.role === "admin" ? "ADMIN" : "USER"}</span>
+                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.15)", color: u.role === "superadmin" ? "#c084fc" : u.role === "admin" ? "#fbbf24" : "#94a3b8" }}>{u.role === "superadmin" ? "SUPERADMIN" : u.role === "admin" ? "ADMIN" : "USER"}</span>
                     <button onClick={() => removeUser(u.id)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>✕</button>
                   </div>
                 ))}
@@ -666,7 +666,49 @@ export default function App() {
     } catch (e) { console.warn("Log load error:", e); return []; }
   }, []);
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "superadmin";
+
+  // ── Šířky sloupců (jen superadmin) ─────────────────────────
+  const [colWidths, setColWidths] = useState({});
+  const dragInfo = useRef(null);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    sb("nastaveni?klic=eq.col_widths").then(res => {
+      if (res && res[0]) {
+        try { setColWidths(JSON.parse(res[0].hodnota)); } catch {}
+      }
+    }).catch(() => {});
+  }, [isSuperAdmin]);
+
+  const saveColWidths = async (widths) => {
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "col_widths", hodnota: JSON.stringify(widths) }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const startDrag = (e, colKey, currentWidth) => {
+    e.preventDefault();
+    dragInfo.current = { colKey, startX: e.clientX, startWidth: currentWidth };
+    const onMove = (ev) => {
+      const diff = ev.clientX - dragInfo.current.startX;
+      const newW = Math.max(40, dragInfo.current.startWidth + diff);
+      setColWidths(prev => ({ ...prev, [dragInfo.current.colKey]: newW }));
+    };
+    const onUp = () => {
+      setColWidths(prev => {
+        saveColWidths(prev);
+        return prev;
+      });
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const getColWidth = (col) => colWidths[col.key] ?? col.width;
 
   // ── Načtení dat z Supabase ─────────────────────────────────
   const loadAll = useCallback(async () => {
@@ -996,7 +1038,7 @@ export default function App() {
           {deadlineWarnings.length > 0 && <button onClick={() => setShowDeadlines(true)} style={{ padding: "5px 12px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>⚠️ Termíny ({deadlineWarnings.length})</button>}
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
           <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
-          <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isAdmin ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.2)", color: isAdmin ? "#fbbf24" : "#94a3b8" }}>{isAdmin ? "ADMIN" : "USER"}</span>
+          <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : "USER"}</span>
           {isAdmin && <button onClick={() => { setShowSettings(true); loadLog(); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
           <div style={{ display: "flex", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
             {[["🌞","light","Světlý"],["🌙","dark","Tmavý"]].map(([icon, val, label]) => (
@@ -1028,6 +1070,9 @@ export default function App() {
               </div>
             )}
           </div>
+          {isSuperAdmin && Object.keys(colWidths).length > 0 && (
+            <button onClick={() => { setColWidths({}); saveColWidths({}); }} style={{ padding: "5px 10px", background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: 7, color: "#c084fc", cursor: "pointer", fontSize: 11 }} title="Reset šířek sloupců">↺ Reset šířek</button>
+          )}
           {isAdmin && <button onClick={() => setAdding(true)} style={{ padding: "7px 14px", background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>+ Přidat stavbu</button>}
         </div>
       </div>
@@ -1040,8 +1085,17 @@ export default function App() {
               <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
               {isAdmin && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
               {COLUMNS.filter(col => col.key !== "id").map(col => (
-                <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: col.width, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>
-                  {col.label.toUpperCase()}
+                <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", width: getColWidth(col), minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, userSelect: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    {col.label.toUpperCase()}
+                    {isSuperAdmin && (
+                      <span
+                        onMouseDown={e => startDrag(e, col.key, getColWidth(col))}
+                        style={{ cursor: "col-resize", color: isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)", fontSize: 12, padding: "0 2px", userSelect: "none", flexShrink: 0 }}
+                        title="Přetáhni pro změnu šířky"
+                      >⇔</span>
+                    )}
+                  </div>
                 </th>
               ))}
               {isAdmin && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
