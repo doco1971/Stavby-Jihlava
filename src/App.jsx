@@ -140,7 +140,7 @@ function Login({ onLogin, users, onLogAction }) {
         </button>
 
         <div style={{ marginTop: 20, padding: 14, background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
-          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: 0, textAlign: "center" }}></p>
+          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: 0, textAlign: "center" }}>v1.1 – 05.03.2026</p>
         </div>
       </div>
     </div>
@@ -154,14 +154,19 @@ const FIRMA_COLORS = ["#2563eb","#ca8a04","#16a34a","#7c3aed","#e11d48","#0891b2
 
 function SummaryCards({ data, firmy, isDark }) {
   const sum = (firma, fields) => data.filter(r => r.firma === firma).reduce((a, r) => { fields.forEach(f => a += Number(r[f])||0); return a; }, 0);
+  const sumAll = (fields) => data.reduce((a, r) => { fields.forEach(f => a += Number(r[f])||0); return a; }, 0);
   const bg = isDark ? "#0f172a" : "#f1f5f9";
   const cardBg = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
   const textMuted = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.45)";
   const textMain = isDark ? "#fff" : "#1e293b";
 
+  const totalI = sumAll(["ps_i","snk_i","bo_i"]);
+  const totalII = sumAll(["ps_ii","bo_ii","poruch"]);
+  const totalCelkem = totalI + totalII;
+
   return (
     <div style={{ overflowX: "auto", background: bg, padding: "14px 18px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${firmy.length * 3}, minmax(140px, 1fr))`, gap: 10, minWidth: firmy.length * 3 * 150 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${firmy.length * 3 + 3}, minmax(140px, 1fr))`, gap: 10, minWidth: (firmy.length * 3 + 3) * 150 }}>
         {firmy.map((firma, fi) => {
           const color = FIRMA_COLORS[fi % FIRMA_COLORS.length];
           const colorDark = FIRMA_COLORS[(fi * 2 + 1) % FIRMA_COLORS.length];
@@ -183,6 +188,18 @@ function SummaryCards({ data, firmy, isDark }) {
             </div>,
           ];
         })}
+        <div style={{ background: cardBg, border: "1px solid #2563eb33", borderLeft: "3px solid #2563eb", borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>Celkem – Kat. I</div>
+          <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(totalI)}</div>
+        </div>
+        <div style={{ background: cardBg, border: "1px solid #6366f133", borderLeft: "3px solid #6366f1", borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>Celkem – Kat. II</div>
+          <div style={{ color: textMain, fontSize: 13, fontWeight: 700 }}>{fmt(totalII)}</div>
+        </div>
+        <div style={{ background: isDark ? "linear-gradient(135deg,#2563eb22,#6366f10a)" : "#2563eb18", border: "1px solid #2563eb44", borderLeft: "3px solid #2563eb", borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ color: textMuted, fontSize: 10, fontWeight: 600, marginBottom: 5 }}>CELKEM VŠE</div>
+          <div style={{ color: textMain, fontSize: 15, fontWeight: 800 }}>{fmt(totalCelkem)}</div>
+        </div>
       </div>
     </div>
   );
@@ -864,7 +881,7 @@ export default function App() {
           </svg>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Stavby Znojmo</div>
-            <div style={{ color: T.textMuted, fontSize: 11 }}>kategorie 1 & 2 <span style={{ marginLeft: 8, color: T.textFaint, fontSize: 10 }}>v1.0 | 1.3.2026</span></div>
+            <div style={{ color: T.textMuted, fontSize: 11 }}>kategorie 1 & 2 <span style={{ marginLeft: 8, color: T.textFaint, fontSize: 10 }}>v1.1 | 05.03.2026</span></div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -965,21 +982,6 @@ export default function App() {
               );
             })}
           </tbody>
-          <tfoot>
-            <tr style={{ background: T.theadBg, fontWeight: 700 }}>
-              {COLUMNS.map(col => {
-                const numCols = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidka","vyfakturovano","rozdil","zrealizovano","nabidkova_cena","castka_bez_dph"];
-                if (col.key === "id") return <td key={col.key} style={{ padding: "7px 11px", border: `1px solid ${T.cellBorder}`, color: T.textMuted, fontSize: 11, textAlign: "center" }}>∑</td>;
-                if (numCols.includes(col.key)) {
-                  const total = filtered.reduce((a, r) => a + (Number(r[col.key]) || 0), 0);
-                  const color = col.key === "rozdil" ? (total >= 0 ? "#4ade80" : "#f87171") : col.type === "number" ? T.numColor : T.text;
-                  return <td key={col.key} style={{ padding: "7px 11px", border: `1px solid ${T.cellBorder}`, color, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(total)}</td>;
-                }
-                return <td key={col.key} style={{ padding: "7px 11px", border: `1px solid ${T.cellBorder}` }}></td>;
-              })}
-              {isAdmin && <td style={{ border: `1px solid ${T.cellBorder}` }}></td>}
-            </tr>
-          </tfoot>
         </table>
       </div>
 
