@@ -289,7 +289,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const computed = computeRow(form);
 
-  const numFields = ["cislo_stavby","ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
+  const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
   const dateFields = ["ukonceni","splatna","ze_dne","splatna_2"];
 
   const handleSave = () => {
@@ -324,7 +324,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
 
             <SecHead color="#60a5fa">Základní informace</SecHead>
-            <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} type="number" />
+            <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} />
             <FormField label="Název stavby" value={form["nazev_stavby"]} onChange={v => set("nazev_stavby", v)} />
             <FormSelectField label="Firma" value={form["firma"]} onChange={v => set("firma", v)} options={firmy} />
 
@@ -1034,7 +1034,7 @@ export default function App() {
   // ── CRUD stavby ────────────────────────────────────────────
   const handleSave = async (updated) => {
     const { id, nabidka, rozdil, ...fields } = updated;
-    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2","cislo_stavby"];
+    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
     numFields.forEach(k => { if (fields[k] === "" || fields[k] == null) fields[k] = 0; else fields[k] = Number(fields[k]) || 0; });
     try {
       await sb(`stavby?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(fields) });
@@ -1046,7 +1046,7 @@ export default function App() {
 
   const handleAdd = async (newRow) => {
     const { id, nabidka, rozdil, ...fields } = newRow;
-    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2","cislo_stavby"];
+    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
     numFields.forEach(k => { if (fields[k] === "" || fields[k] == null) fields[k] = 0; else fields[k] = Number(fields[k]) || 0; });
     try {
       await sb("stavby", { method: "POST", body: JSON.stringify(fields) });
