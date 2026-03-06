@@ -1700,26 +1700,40 @@ export default function App() {
             {/* footer */}
             <div style={{ padding: "14px 24px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => {
-                const rows = deadlineWarnings.map(r => {
+                const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#3b82f6"]));
+                const rows = deadlineWarnings.map((r, i) => {
                   const urgentColor = r.dniDo <= 5 ? "#dc2626" : r.dniDo <= 15 ? "#ea580c" : "#ca8a04";
+                  const urgentBg = r.dniDo <= 5 ? "#fee2e2" : r.dniDo <= 15 ? "#ffedd5" : "#fef9c3";
+                  const firmaBg = firmaColorMap[r.firma] || "#3b82f6";
+                  const rowBg = i % 2 === 0 ? "#f8fafc" : "#ffffff";
                   return `<tr>
-                    <td>${r.cislo_stavby}</td>
-                    <td>${r.nazev_stavby}</td>
-                    <td>${r.ukonceni}</td>
-                    <td style="color:${urgentColor};font-weight:700">${r.dniDo} dní</td>
-                    <td>${r.objednatel || ""}</td>
-                    <td>${r.stavbyvedouci || ""}</td>
+                    <td style="background:${rowBg}">${r.cislo_stavby || ""}</td>
+                    <td style="background:${rowBg};font-weight:600">${r.nazev_stavby || ""}</td>
+                    <td style="background:${firmaBg};color:#fff;font-weight:700;text-align:center">${r.firma || ""}</td>
+                    <td style="background:${rowBg}">${r.ukonceni || ""}</td>
+                    <td style="background:${urgentBg};color:${urgentColor};font-weight:700;text-align:center">${r.dniDo} dní</td>
+                    <td style="background:${rowBg}">${r.objednatel || ""}</td>
+                    <td style="background:${rowBg}">${r.stavbyvedouci || ""}</td>
                   </tr>`;
                 }).join("");
                 const w = window.open("", "_blank");
                 w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Blížící se termíny</title>
-                <style>body{font-family:'Segoe UI',sans-serif;padding:24px;color:#1e293b}h2{margin:0 0 4px}p{margin:0 0 16px;color:#64748b;font-size:13px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#1e3a8a;color:#fff;padding:8px 12px;text-align:left}td{padding:8px 12px;border-bottom:1px solid #e2e8f0}tr:nth-child(even){background:#f8fafc}@media print{button{display:none}}</style>
+                <style>
+                  @page { size: A4 landscape; margin: 10mm; }
+                  body { font-family: Arial,sans-serif; padding: 0; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  h2 { margin: 0 0 4px; font-size: 15px; }
+                  p { margin: 0 0 12px; color: #64748b; font-size: 11px; }
+                  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                  th { background: #1e3a8a; color: #fff; padding: 7px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  td { padding: 6px 10px; border: 1px solid #e2e8f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  @media print { button { display: none; } }
+                </style>
                 </head><body>
                 <h2>⚠️ Stavby Znojmo – Blížící se termíny ukončení</h2>
                 <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Zakázky s termínem do 30 pracovních dní (${deadlineWarnings.length} zakázek)</p>
-                <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Termín ukončení</th><th>Dní do termínu</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
+                <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Firma</th><th>Termín ukončení</th><th>Dní do termínu</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                 <tbody>${rows}</tbody></table>
-                <br><button onclick="window.print()">🖨️ Tisk / PDF</button>
+                <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
                 </body></html>`);
                 w.document.close();
               }} style={{ padding: "9px 18px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / PDF</button>
