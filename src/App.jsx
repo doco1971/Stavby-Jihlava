@@ -614,6 +614,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                     <div style={{ position: "relative" }}>
                       <select value={newRole} onChange={e => setNewRole(e.target.value)} style={{ ...inputSx, appearance: "none", cursor: "pointer" }}>
                         <option value="user" style={{ background: "#1e293b" }}>User</option>
+                        <option value="user_e" style={{ background: "#1e293b" }}>User Editor</option>
                         <option value="admin" style={{ background: "#1e293b" }}>Admin</option>
                       </select>
                       <span style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.4)", pointerEvents: "none", fontSize: 10 }}>▼</span>
@@ -629,14 +630,14 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {uList.filter(u => !isAdmin || isSuperAdmin ? true : u.role !== "superadmin").map(u => (
                   <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
-                      {u.role === "superadmin" ? "⚡" : u.role === "admin" ? "👑" : "👤"}
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : u.role === "user_e" ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+                      {u.role === "superadmin" ? "⚡" : u.role === "admin" ? "👑" : u.role === "user_e" ? "✏️" : "👤"}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: modalText, fontSize: 13, fontWeight: 600 }}>{u.name}</div>
                       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>{u.email}</div>
                     </div>
-                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.15)", color: u.role === "superadmin" ? "#c084fc" : u.role === "admin" ? "#fbbf24" : "#94a3b8" }}>{u.role === "superadmin" ? "SUPERADMIN" : u.role === "admin" ? "ADMIN" : "USER"}</span>
+                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : u.role === "user_e" ? "rgba(34,197,94,0.15)" : "rgba(100,116,139,0.15)", color: u.role === "superadmin" ? "#c084fc" : u.role === "admin" ? "#fbbf24" : u.role === "user_e" ? "#4ade80" : "#94a3b8" }}>{u.role === "superadmin" ? "SUPERADMIN" : u.role === "admin" ? "ADMIN" : u.role === "user_e" ? "USER EDITOR" : "USER"}</span>
                     <button onClick={() => removeUser(u.id)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>✕</button>
                   </div>
                 ))}
@@ -868,6 +869,7 @@ export default function App() {
 
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const isSuperAdmin = user?.role === "superadmin";
+  const isEditor = user?.role === "user_e" || isAdmin;
 
   // ── Šířky sloupců (jen superadmin) ─────────────────────────
   const [colWidths, setColWidths] = useState({});
@@ -1279,7 +1281,7 @@ export default function App() {
           {(() => { const firmyNames = firmy.map(f => f.hodnota); const count = data.filter(s => s.firma && !firmyNames.includes(s.firma)).length; return count > 0 ? <button onClick={() => setShowOrphanWarning(true)} style={{ padding: "5px 12px", background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 7, color: "#fbbf24", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🏚️ Bez firmy ({count})</button> : null; })()}
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
           <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
-          <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : "USER"}</span>
+          <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
           {isAdmin && <button onClick={() => { setShowSettings(true); loadLog(); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
           <div style={{ display: "flex", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
             {[["🌞","light","Světlý"],["🌙","dark","Tmavý"]].map(([icon, val, label]) => (
@@ -1316,7 +1318,7 @@ export default function App() {
             <button onClick={() => { setColWidths({}); saveColWidths({}); }} style={{ padding: "5px 10px", background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: 7, color: "#c084fc", cursor: "pointer", fontSize: 11 }} title="Reset šířek sloupců">↺ Reset šířek</button>
           )}
           {isAdmin && <button onClick={zalohaExcel} style={{ padding: "7px 14px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: T.text, cursor: "pointer", fontSize: 12 }} title="Stáhne všechna data jako Excel zálohu">💾 Záloha</button>}
-          {isAdmin && <button onClick={() => setAdding(true)} style={{ padding: "7px 14px", background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>+ Přidat stavbu</button>}
+          {isEditor && <button onClick={() => setAdding(true)} style={{ padding: "7px 14px", background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>+ Přidat stavbu</button>}
         </div>
       </div>
 
@@ -1325,16 +1327,16 @@ export default function App() {
         <table style={{ borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed", width: "max-content" }}>
           <colgroup>
             <col style={{ width: 40 }} />
-            {isAdmin && <col style={{ width: 90 }} />}
+            {(isAdmin || isEditor) && <col style={{ width: 90 }} />}
             {COLUMNS.filter(col => col.key !== "id").map(col => (
               <col key={col.key} style={{ width: getColWidth(col) }} />
             ))}
-            {isAdmin && <col style={{ width: 120 }} />}
+            {(isAdmin || isEditor) && <col style={{ width: 120 }} />}
           </colgroup>
           <thead>
             <tr style={{ background: T.theadBg }}>
               <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
-              {isAdmin && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
+              {(isAdmin || isEditor) && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
               {COLUMNS.filter(col => col.key !== "id").map(col => (
                 <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", width: getColWidth(col), minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, userSelect: "none" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
@@ -1360,7 +1362,7 @@ export default function App() {
                   </div>
                 </th>
               ))}
-              {isAdmin && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
+              {(isAdmin || isEditor) && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
             </tr>
           </thead>
           <tbody>
@@ -1379,15 +1381,15 @@ export default function App() {
                   <span style={{ color: T.textMuted, fontSize: 12 }}>{globalIndex + 1}</span>
                 </td>
                 {/* AKCE vlevo */}
-                {isAdmin && (
+                {(isAdmin || isEditor) && (
                   <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
-                    <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11, marginRight: 5 }}>🗑️</button>
+                    {isAdmin && <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11, marginRight: 5 }}>🗑️</button>}
                     <button onClick={() => setEditRow(row)} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11 }}>✏️</button>
                   </td>
                 )}
                 {COLUMNS.filter(col => col.key !== "id" && !col.hidden).map(col => {
                   const isEditing = editingCell?.rowId === row.id && editingCell?.colKey === col.key;
-                  const canEdit = isAdmin && !col.computed && col.key !== "id";
+                  const canEdit = isEditor && !col.computed && col.key !== "id";
                   const centerCols = ["cislo_stavby","ukonceni","sod","ze_dne","cislo_faktury","splatna"];
                   const align = col.type === "number" ? "right" : centerCols.includes(col.key) ? "center" : "left";
                   const selectOptions = col.key === "firma" ? firmy.map(f => f.hodnota) : col.key === "objednatel" ? objednatele : col.key === "stavbyvedouci" ? stavbyvedouci : null;
