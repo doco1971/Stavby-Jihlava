@@ -1440,15 +1440,23 @@ export default function App() {
               <h3 style={{ color: "#fff", margin: 0, fontSize: 16 }}>🖨️ Náhled pro tisk / PDF</h3>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => {
-                  const rows = filtered.map((row, i) => `<tr style="background:${i%2===0?(row.firma==="DUR plus"?"#eff6ff":"#fefce8"):"#fff"}">
-                    ${COLUMNS.map(c => {
+                  const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#3b82f6"]));
+                  const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
+                  const rows = filtered.map((row, i) => {
+                    const hex = firmaColorMap[row.firma] || "#3b82f6";
+                    const rgb = hexToRgb(hex);
+                    const bg = i%2===0 ? `rgba(${rgb},0.18)` : `rgba(${rgb},0.07)`;
+                    return `<tr>${COLUMNS.map(c => {
                       const v = row[c.key] ?? "";
                       const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
                       const display = isNum ? Number(v).toLocaleString("cs-CZ",{minimumFractionDigits:2,maximumFractionDigits:2}) : v;
                       const color = c.key === "rozdil" ? (Number(v)>=0?"#166534":"#991b1b") : "#111";
-                      return `<td style="padding:3px 6px;border:1px solid #e2e8f0;white-space:nowrap;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};color:${color};font-size:8px">${display}</td>`;
-                    }).join("")}
-                  </tr>`).join("");
+                      const cellBg = c.key === "firma" ? hex : bg;
+                      const cellColor = c.key === "firma" ? "#fff" : color;
+                      const cellWeight = c.key === "firma" ? "700" : "400";
+                      return `<td style="padding:3px 6px;border:1px solid #e2e8f0;white-space:nowrap;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};color:${cellColor};background:${cellBg};font-size:8px;font-weight:${cellWeight}">${display}</td>`;
+                    }).join("")}</tr>`;
+                  }).join("");
                   const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid #2563eb;font-size:8px">${c.label}</th>`).join("");
                   const win = window.open("","_blank");
                   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Znojmo – tisk</title>
@@ -1484,17 +1492,26 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((row, i) => (
-                        <tr key={row.id} style={{ background: i % 2 === 0 ? (row.firma === "DUR plus" ? "#eff6ff" : "#fefce8") : "#fff" }}>
-                          {COLUMNS.map(c => {
-                            const v = row[c.key] ?? "";
-                            const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
-                            const display = isNum ? Number(v).toLocaleString("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
-                            const color = c.key === "rozdil" ? (Number(v) >= 0 ? "#166534" : "#991b1b") : "#111";
-                            return <td key={c.key} style={{ padding: "3px 6px", border: "1px solid #e2e8f0", whiteSpace: "nowrap", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", color, fontSize: 9 }}>{display}</td>;
-                          })}
-                        </tr>
-                      ))}
+                      {filtered.map((row, i) => {
+                        const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#3b82f6"]));
+                        const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
+                        const hex = firmaColorMap[row.firma] || "#3b82f6";
+                        const rgb = hexToRgb(hex);
+                        const bg = i % 2 === 0 ? `rgba(${rgb},0.18)` : `rgba(${rgb},0.07)`;
+                        return (
+                          <tr key={row.id}>
+                            {COLUMNS.map(c => {
+                              const v = row[c.key] ?? "";
+                              const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
+                              const display = isNum ? Number(v).toLocaleString("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
+                              const color = c.key === "rozdil" ? (Number(v) >= 0 ? "#166534" : "#991b1b") : "#111";
+                              const cellBg = c.key === "firma" ? hex : bg;
+                              const cellColor = c.key === "firma" ? "#fff" : color;
+                              return <td key={c.key} style={{ padding: "3px 6px", border: "1px solid #e2e8f0", whiteSpace: "nowrap", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", color: cellColor, background: cellBg, fontSize: 9, fontWeight: c.key === "firma" ? 700 : 400 }}>{display}</td>;
+                            })}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
