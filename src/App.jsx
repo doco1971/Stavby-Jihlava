@@ -62,7 +62,7 @@ const COLUMNS = [
   { key: "castka_bez_dph", label: "Č. bez DPH", width: 105, type: "number" },
   { key: "splatna", label: "Splatná", width: 88 },
   { key: "cislo_faktury_2", label: "Č. faktury 2", width: 105, hidden: true },
-  { key: "castka_bez_dph_2", label: "Č. bez DPH 2", width: 105, type: "number", hidden: true },
+  { key: "bez_dph_2", label: "Č. bez DPH 2", width: 105, type: "number", hidden: true },
   { key: "splatna_2", label: "Splatná 2", width: 88, hidden: true },
 ];
 
@@ -289,7 +289,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const computed = computeRow(form);
 
-  const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
+  const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","bez_dph_2"];
   const dateFields = ["ukonceni","splatna","ze_dne","splatna_2"];
 
   const handleSave = () => {
@@ -352,7 +352,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             <FormField label="Částka bez DPH" value={form["castka_bez_dph"]} onChange={v => set("castka_bez_dph", v)} type="number" />
             <FormField label="Splatná" value={form["splatna"]} onChange={v => set("splatna", v)} type="date" />
             <FormField label="Číslo faktury 2" value={form["cislo_faktury_2"]} onChange={v => set("cislo_faktury_2", v)} />
-            <FormField label="Částka bez DPH 2" value={form["castka_bez_dph_2"]} onChange={v => set("castka_bez_dph_2", v)} type="number" />
+            <FormField label="Částka bez DPH 2" value={form["bez_dph_2"]} onChange={v => set("bez_dph_2", v)} type="number" />
             <FormField label="Splatná 2" value={form["splatna_2"]} onChange={v => set("splatna_2", v)} type="date" />
 
             <SecHead color="#f472b6">Ostatní</SecHead>
@@ -1034,7 +1034,7 @@ export default function App() {
   // ── CRUD stavby ────────────────────────────────────────────
   const handleSave = async (updated) => {
     const { id, nabidka, rozdil, ...fields } = updated;
-    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
+    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","bez_dph_2"];
     numFields.forEach(k => { if (fields[k] === "" || fields[k] == null) fields[k] = 0; else fields[k] = Number(fields[k]) || 0; });
     try {
       await sb(`stavby?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(fields) });
@@ -1046,7 +1046,7 @@ export default function App() {
 
   const handleAdd = async (newRow) => {
     const { id, nabidka, rozdil, ...fields } = newRow;
-    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
+    const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","bez_dph_2"];
     numFields.forEach(k => { if (fields[k] === "" || fields[k] == null) fields[k] = 0; else fields[k] = Number(fields[k]) || 0; });
     try {
       await sb("stavby", { method: "POST", body: JSON.stringify(fields) });
@@ -1211,7 +1211,7 @@ export default function App() {
   };
 
   const nextId = data.length > 0 ? Math.max(...data.map(r => r.id)) + 1 : 1;
-  const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", cislo_faktury_2: "", castka_bez_dph_2: 0, splatna_2: "" };
+  const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", cislo_faktury_2: "", bez_dph_2: 0, splatna_2: "" };
 
   const FIRMA_COLOR_FALLBACK = [
     "#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899",
@@ -1394,7 +1394,7 @@ export default function App() {
                   const isSelectCol = selectOptions != null;
 
                   // Dvojité hodnoty pro faktury
-                  const key2 = col.key === "cislo_faktury" ? "cislo_faktury_2" : col.key === "castka_bez_dph" ? "castka_bez_dph_2" : col.key === "splatna" ? "splatna_2" : null;
+                  const key2 = col.key === "cislo_faktury" ? "cislo_faktury_2" : col.key === "castka_bez_dph" ? "bez_dph_2" : col.key === "splatna" ? "splatna_2" : null;
                   const val2 = key2 ? row[key2] : null;
                   const hasDouble = key2 && (val2 || val2 === 0);
 
