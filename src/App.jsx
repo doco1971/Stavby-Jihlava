@@ -148,7 +148,6 @@ function Login({ onLogin, users, onLogAction }) {
             <circle cx="15" cy="58" r="1.6" fill="#facc15" opacity="0.5" />
           </svg>
           <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 800, margin: 0 }}>Stavby Znojmo</h1>
-          <p style={{ color: "rgba(255,255,255,0.5)", margin: "6px 0 0", fontSize: 15, letterSpacing: 2, textTransform: "uppercase" }}>kategorie 1 & 2</p>
         </div>
 
         <div style={{ marginBottom: 14 }}><Lbl>Email</Lbl><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vas@email.cz" style={inputSx} onKeyDown={e => e.key === "Enter" && handle()} /></div>
@@ -1364,7 +1363,34 @@ export default function App() {
             <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h3 style={{ color: "#fff", margin: 0, fontSize: 16 }}>🖨️ Náhled pro tisk / PDF</h3>
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => window.print()} style={{ padding: "7px 16px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / Uložit jako PDF</button>
+                <button onClick={() => {
+                  const rows = filtered.map((row, i) => `<tr style="background:${i%2===0?(row.firma==="DUR plus"?"#eff6ff":"#fefce8"):"#fff"}">
+                    ${COLUMNS.map(c => {
+                      const v = row[c.key] ?? "";
+                      const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
+                      const display = isNum ? Number(v).toLocaleString("cs-CZ",{minimumFractionDigits:2,maximumFractionDigits:2}) : v;
+                      const color = c.key === "rozdil" ? (Number(v)>=0?"#166534":"#991b1b") : "#111";
+                      return `<td style="padding:3px 6px;border:1px solid #e2e8f0;white-space:nowrap;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};color:${color};font-size:8px">${display}</td>`;
+                    }).join("")}
+                  </tr>`).join("");
+                  const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid #2563eb;font-size:8px">${c.label}</th>`).join("");
+                  const win = window.open("","_blank");
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Znojmo – tisk</title>
+                  <style>
+                    @page { size: A4 landscape; margin: 10mm; }
+                    body { font-family: Arial, sans-serif; font-size: 9px; color: #111; margin: 0; }
+                    table { border-collapse: collapse; width: 100%; }
+                    thead tr { background: #1e3a5f; }
+                    h2 { font-size: 13px; margin: 0 0 2px; }
+                    .sub { font-size: 9px; color: #666; margin-bottom: 8px; }
+                  </style></head><body>
+                  <h2>Stavby Znojmo</h2>
+                  <div class="sub">kategorie 1 & 2 | Tisk: ${new Date().toLocaleDateString("cs-CZ")} | Záznamů: ${filtered.length}</div>
+                  <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+                  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()};}<\/script>
+                  </body></html>`);
+                  win.document.close();
+                }} style={{ padding: "7px 16px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / Uložit jako PDF</button>
                 <button onClick={() => setExportPreview(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
               </div>
             </div>
@@ -1374,26 +1400,28 @@ export default function App() {
                   <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
-                <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 9 }}>
-                  <thead>
-                    <tr style={{ background: "#1e3a5f" }}>
-                      {COLUMNS.map(c => <th key={c.key} style={{ color: "#fff", padding: "4px 6px", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", whiteSpace: "nowrap", border: "1px solid #2563eb", fontSize: 8 }}>{c.label}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((row, i) => (
-                      <tr key={row.id} style={{ background: i % 2 === 0 ? (row.firma === "DUR plus" ? "#eff6ff" : "#fefce8") : "#fff" }}>
-                        {COLUMNS.map(c => {
-                          const v = row[c.key] ?? "";
-                          const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
-                          const display = isNum ? Number(v).toLocaleString("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
-                          const color = c.key === "rozdil" ? (Number(v) >= 0 ? "#166534" : "#991b1b") : "#111";
-                          return <td key={c.key} style={{ padding: "3px 6px", border: "1px solid #e2e8f0", whiteSpace: "nowrap", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", color, fontSize: 9 }}>{display}</td>;
-                        })}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "collapse", fontSize: 9 }}>
+                    <thead>
+                      <tr style={{ background: "#1e3a5f" }}>
+                        {COLUMNS.map(c => <th key={c.key} style={{ color: "#fff", padding: "4px 6px", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", whiteSpace: "nowrap", border: "1px solid #2563eb", fontSize: 8 }}>{c.label}</th>)}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filtered.map((row, i) => (
+                        <tr key={row.id} style={{ background: i % 2 === 0 ? (row.firma === "DUR plus" ? "#eff6ff" : "#fefce8") : "#fff" }}>
+                          {COLUMNS.map(c => {
+                            const v = row[c.key] ?? "";
+                            const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
+                            const display = isNum ? Number(v).toLocaleString("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
+                            const color = c.key === "rozdil" ? (Number(v) >= 0 ? "#166534" : "#991b1b") : "#111";
+                            return <td key={c.key} style={{ padding: "3px 6px", border: "1px solid #e2e8f0", whiteSpace: "nowrap", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", color, fontSize: 9 }}>{display}</td>;
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
