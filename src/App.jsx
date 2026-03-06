@@ -726,6 +726,35 @@ export default function App() {
   const [editingCell, setEditingCell] = useState(null);
   const [cellValue, setCellValue] = useState("");
   const [showExport, setShowExport] = useState(false);
+  const [confirmExport, setConfirmExport] = useState(null); // { type, label }
+
+  const doExportXLSColor = () => {
+    const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#3b82f6"]));
+    const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
+    const cols = COLUMNS.filter(c => c.key !== "id");
+    const headers = cols.map(c => `<th style="padding:7px 10px;background:#1E3A8A;color:#fff;border:1px solid #2563EB;white-space:nowrap;font-size:11px">${c.label}</th>`).join("");
+    const rows = filtered.map((row, i) => {
+      const rgb = hexToRgb(firmaColorMap[row.firma] || "#3b82f6");
+      const bg = i % 2 === 0 ? `rgba(${rgb},0.12)` : "#ffffff";
+      const cells = cols.map(c => {
+        const v = row[c.key] ?? "";
+        const isNum = c.type === "number" && v !== "" && Number(v) !== 0;
+        const display = isNum ? Number(v).toLocaleString("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v;
+        const color = c.key === "rozdil" ? (Number(v) >= 0 ? "#166534" : "#991b1b") : "#1e293b";
+        const align = c.type === "number" ? "right" : ["cislo_stavby","ukonceni","sod","ze_dne","cislo_faktury","splatna"].includes(c.key) ? "center" : "left";
+        return `<td style="padding:5px 10px;border:1px solid #E2E8F0;background:${bg};color:${color};white-space:nowrap;text-align:${align};font-size:10px">${display}</td>`;
+      }).join("");
+      return `<tr>${cells}</tr>`;
+    }).join("");
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>
+      <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+    </body></html>`;
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `stavby_znojmo_${new Date().toISOString().slice(0,10)}.xls`;
+    a.click();
+  };
   const [logData, setLogData] = useState([]);
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("theme") || "dark"; } catch { return "dark"; }
@@ -1012,20 +1041,10 @@ export default function App() {
     setEditingCell(null);
   };
 
-  const exportCSV = () => {
-    setExportPreview({ type: "csv" });
-    setShowExport(false);
-  };
-
-  const exportXLS = () => {
-    setExportPreview({ type: "xls" });
-    setShowExport(false);
-  };
-
-  const exportPDF = () => {
-    setExportPreview({ type: "pdf" });
-    setShowExport(false);
-  };
+  const exportCSV = () => { setConfirmExport({ type: "csv", label: "CSV (.csv)" }); setShowExport(false); };
+  const exportXLS = () => { setConfirmExport({ type: "xls", label: "Excel (.xlsx)" }); setShowExport(false); };
+  const exportPDF = () => { setConfirmExport({ type: "pdf", label: "PDF tisk" }); setShowExport(false); };
+  const exportXLSColor = () => { setConfirmExport({ type: "xls-color", label: "Barevný Excel (.xls)" }); setShowExport(false); };
 
   const zalohaExcel = () => {
     const headers = COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => c.label);
@@ -1179,6 +1198,7 @@ export default function App() {
               <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`, borderRadius: 10, padding: 6, zIndex: 200, minWidth: 160, boxShadow: "0 12px 32px rgba(0,0,0,0.3)" }}>
                 <button onClick={exportCSV} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>📄 CSV (.csv)</button>
                 <button onClick={exportXLS} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>📊 Excel (.xlsx)</button>
+                <button onClick={exportXLSColor} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>🎨 Barevný Excel (.xls)</button>
                 <button onClick={exportPDF} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>🖨️ PDF tisk</button>
               </div>
             )}
@@ -1320,6 +1340,26 @@ export default function App() {
       <div style={{ textAlign: "center", padding: "6px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11 }}>
         © {appDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
       </div>
+
+      {/* POTVRZOVACÍ DIALOG */}
+      {confirmExport && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
+          <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 14, padding: "28px 32px", width: 380, border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📤</div>
+            <div style={{ color: isDark ? "#f8fafc" : "#1e293b", fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Exportovat data?</div>
+            <div style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 13, marginBottom: 24 }}>Bude exportováno <strong>{filtered.length} záznamů</strong> jako <strong>{confirmExport.label}</strong></div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button onClick={() => setConfirmExport(null)} style={{ padding: "9px 22px", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 8, color: isDark ? "#fff" : "#1e293b", cursor: "pointer", fontSize: 13 }}>Zrušit</button>
+              <button onClick={() => {
+                const t = confirmExport.type;
+                setConfirmExport(null);
+                if (t === "xls-color") { doExportXLSColor(); }
+                else { setExportPreview({ type: t }); }
+              }} style={{ padding: "9px 22px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>✅ Ano, exportovat</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* EXPORT PREVIEW - sdílená tabulka pro CSV a XLS */}
       {(exportPreview?.type === "csv" || exportPreview?.type === "xls") && (
