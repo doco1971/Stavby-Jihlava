@@ -814,8 +814,7 @@ export default function App() {
   const [adding, setAdding] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [editingCell, setEditingCell] = useState(null);
-  const [cellValue, setCellValue] = useState("");
+  // ── inline editing odstraněno – editace přes tlačítko ✏️
   const [showExport, setShowExport] = useState(false);
   const [confirmExport, setConfirmExport] = useState(null); // { type, label }
 
@@ -1135,22 +1134,6 @@ export default function App() {
 
 
 
-  const startCell = (row, col) => {
-    if (!isAdmin || col.computed || col.key === "id") return;
-    setEditingCell({ rowId: row.id, colKey: col.key });
-    setCellValue(row[col.key] ?? "");
-  };
-
-  const commitCell = async () => {
-    if (!editingCell) return;
-    const { rowId, colKey } = editingCell;
-    try {
-      await sb(`stavby?id=eq.${rowId}`, { method: "PATCH", body: JSON.stringify({ [colKey]: cellValue }) });
-      await loadAll();
-    } catch (e) { alert("Chyba uložení: " + e.message); }
-    setEditingCell(null);
-  };
-
   const exportCSV = () => { setConfirmExport({ type: "csv", label: "CSV (.csv)" }); setShowExport(false); };
   const exportXLS = () => { setConfirmExport({ type: "xls", label: "Excel (.xlsx)" }); setShowExport(false); };
   const exportPDF = () => { setConfirmExport({ type: "pdf", label: "PDF tisk" }); setShowExport(false); };
@@ -1388,12 +1371,8 @@ export default function App() {
                   </td>
                 )}
                 {COLUMNS.filter(col => col.key !== "id" && !col.hidden).map(col => {
-                  const isEditing = editingCell?.rowId === row.id && editingCell?.colKey === col.key;
-                  const canEdit = isEditor && !col.computed && col.key !== "id";
                   const centerCols = ["cislo_stavby","ukonceni","sod","ze_dne","cislo_faktury","splatna"];
                   const align = col.type === "number" ? "right" : centerCols.includes(col.key) ? "center" : "left";
-                  const selectOptions = col.key === "firma" ? firmy.map(f => f.hodnota) : col.key === "objednatel" ? objednatele : col.key === "stavbyvedouci" ? stavbyvedouci : null;
-                  const isSelectCol = selectOptions != null;
 
                   // Dvojité hodnoty pro faktury
                   const key2 = col.key === "cislo_faktury" ? "cislo_faktury_2" : col.key === "castka_bez_dph" ? "bez_dph_2" : col.key === "splatna" ? "splatna_2" : null;
@@ -1402,30 +1381,22 @@ export default function App() {
 
                   return (
                     <td key={col.key}
-                      onClick={() => canEdit && !isEditing && startCell(row, col)}
                       className={col.key === "rozdil" || col.type === "number" ? "colored-cell" : ""}
-                      style={{ padding: isEditing ? 0 : "5px 11px", whiteSpace: "nowrap", textAlign: align, border: `1px solid ${T.cellBorder}`, cursor: canEdit ? "pointer" : "default", outline: isEditing ? "2px solid #2563eb" : "none", color: col.key === "rozdil" ? (Number(row[col.key]) >= 0 ? "#4ade80" : "#f87171") : col.type === "number" ? T.numColor : T.text }}
+                      style={{ padding: "5px 11px", whiteSpace: "nowrap", textAlign: align, border: `1px solid ${T.cellBorder}`, color: col.key === "rozdil" ? (Number(row[col.key]) >= 0 ? "#4ade80" : "#f87171") : col.type === "number" ? T.numColor : T.text }}
                     >
-                      {isEditing && isSelectCol
-                        ? <select autoFocus value={cellValue} onChange={e => { setCellValue(e.target.value); }} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "#1e3a5f", border: "none", outline: "none", color: "#fff", fontSize: 12.5, boxSizing: "border-box", cursor: "pointer" }}>
-                            {selectOptions.map(o => <option key={o} value={o} style={{ background: "#1e293b" }}>{o}</option>)}
-                          </select>
-                        : isEditing
-                        ? <input autoFocus value={cellValue} onChange={e => setCellValue(e.target.value)} onBlur={commitCell} onKeyDown={e => { if (e.key === "Enter") commitCell(); if (e.key === "Escape") setEditingCell(null); }} style={{ width: "100%", height: "100%", padding: "7px 11px", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 12.5, boxSizing: "border-box" }} />
-                        : <div>
-                            <div>
-                              {col.key === "firma" ? <span className="firma-badge" style={firmaBadge(row[col.key])}>{row[col.key]}</span>
-                              : col.type === "number" ? fmtN(row[col.key])
-                              : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
-                              : row[col.key] ?? ""}
-                            </div>
-                            {hasDouble && (
-                              <div style={{ borderTop: `1px dashed ${T.cellBorder}`, marginTop: 3, paddingTop: 3, color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 11.5 }}>
-                                {col.type === "number" ? fmtN(val2) : val2}
-                              </div>
-                            )}
+                      <div>
+                        <div>
+                          {col.key === "firma" ? <span className="firma-badge" style={firmaBadge(row[col.key])}>{row[col.key]}</span>
+                          : col.type === "number" ? fmtN(row[col.key])
+                          : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
+                          : row[col.key] ?? ""}
+                        </div>
+                        {hasDouble && (
+                          <div style={{ borderTop: `1px dashed ${T.cellBorder}`, marginTop: 3, paddingTop: 3, color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 11.5 }}>
+                            {col.type === "number" ? fmtN(val2) : val2}
                           </div>
-                      }
+                        )}
+                      </div>
                     </td>
                   );
                 })}
