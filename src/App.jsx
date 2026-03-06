@@ -160,9 +160,6 @@ function Login({ onLogin, users, onLogAction }) {
           {loading ? "Přihlašuji..." : "Přihlásit se →"}
         </button>
 
-        <div style={{ marginTop: 20, padding: 14, background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
-          <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: 0, textAlign: "center" }}>v1.1 – 05.03.2026</p>
-        </div>
       </div>
     </div>
   );
