@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_09_build0014
+// BUILD: 2026_03_09_build0015
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -997,6 +997,7 @@ export default function App() {
   const [adding, setAdding] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   // ── inline editing odstraněno – editace přes tlačítko ✏️
   const [showExport, setShowExport] = useState(false);
   const [confirmExport, setConfirmExport] = useState(null); // { type, label }
