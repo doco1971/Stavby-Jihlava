@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_09_build0007
+// BUILD: 2026_03_09_build0008
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -1303,6 +1303,8 @@ export default function App() {
   const cardsRef = useRef(null);
   const filtersRef = useRef(null);
   const tableWrapRef = useRef(null);
+  const paginationRef = useRef(null);
+  const footerRef = useRef(null);
 
   const [PAGE_SIZE, setPageSize] = useState(10);
   useEffect(() => {
@@ -1312,11 +1314,13 @@ export default function App() {
       const thead = wrap.querySelector("thead");
       const firstRow = wrap.querySelector("tbody tr");
       const theadH = thead ? thead.getBoundingClientRect().height : 35;
-      // Pokud máme vykreslený řádek, změř jeho skutečnou výšku
-      // Jinak použij 32px (změřeno z produkce)
       const rowH = firstRow ? firstRow.getBoundingClientRect().height : 32;
-      if (rowH < 1) return; // element ještě není viditelný
-      const available = wrap.clientHeight - theadH - 1;
+      if (rowH < 1) return;
+      // Odečti pagination a footer které jsou mimo table wrapper
+      const paginationH = paginationRef.current ? paginationRef.current.getBoundingClientRect().height : 0;
+      const footerH = footerRef.current ? footerRef.current.getBoundingClientRect().height : 22;
+      const wrapH = wrap.getBoundingClientRect().height - paginationH - footerH;
+      const available = wrapH - theadH - 1;
       const rows = Math.max(5, Math.floor(available / rowH));
       setPageSize(rows);
     };
@@ -1659,8 +1663,8 @@ export default function App() {
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 18px", borderTop: `1px solid ${T.cellBorder}`, background: T.filterBg }}>
+      <div ref={paginationRef} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "6px 18px", borderTop: `1px solid ${T.cellBorder}`, background: T.filterBg, flexShrink: 0, minHeight: 44 }}>
+        {totalPages > 1 && <>
           <button onClick={() => setPage(0)} disabled={page === 0} style={{ padding: "4px 9px", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.textMuted, cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.4 : 1, fontSize: 13 }}>«</button>
           <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={{ padding: "4px 9px", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.textMuted, cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.4 : 1, fontSize: 13 }}>‹</button>
           {Array.from({ length: totalPages }, (_, i) => (
@@ -1669,10 +1673,10 @@ export default function App() {
           <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1} style={{ padding: "4px 9px", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.textMuted, cursor: page === totalPages - 1 ? "default" : "pointer", opacity: page === totalPages - 1 ? 0.4 : 1, fontSize: 13 }}>›</button>
           <button onClick={() => setPage(totalPages - 1)} disabled={page === totalPages - 1} style={{ padding: "4px 9px", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.textMuted, cursor: page === totalPages - 1 ? "default" : "pointer", opacity: page === totalPages - 1 ? 0.4 : 1, fontSize: 13 }}>»</button>
           <span style={{ color: T.textMuted, fontSize: 12, marginLeft: 6 }}>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} z {filtered.length}</span>
-        </div>
-      )}
+        </>}
+      </div>
 
-      <div style={{ textAlign: "center", padding: "4px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11, flexShrink: 0 }}>
+      <div ref={footerRef} style={{ textAlign: "center", padding: "4px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11, flexShrink: 0 }}>
         © {appDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
       </div>
 
