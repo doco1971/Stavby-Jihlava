@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_09_build0018
+// BUILD: 2026_03_09_build0019
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -1801,7 +1801,7 @@ export default function App() {
         </div>
       )}
 
-      {/* POTVRZOVACÍ DIALOG */}}}
+      {/* POTVRZOVACÍ DIALOG */}
       {confirmExport && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
           <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 14, padding: "28px 32px", width: 380, border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
