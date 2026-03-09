@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_09_build0011
+// BUILD: 2026_03_09_build0012
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -771,8 +771,30 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>{u.email}</div>
                     </div>
                     <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.role === "superadmin" ? "rgba(168,85,247,0.2)" : u.role === "admin" ? "rgba(245,158,11,0.2)" : u.role === "user_e" ? "rgba(34,197,94,0.15)" : "rgba(100,116,139,0.15)", color: u.role === "superadmin" ? "#c084fc" : u.role === "admin" ? "#fbbf24" : u.role === "user_e" ? "#4ade80" : "#94a3b8" }}>{u.role === "superadmin" ? "SUPERADMIN" : u.role === "admin" ? "ADMIN" : u.role === "user_e" ? "USER EDITOR" : "USER"}</span>
-                    <button onClick={() => removeUser(u.id)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>✕</button>
+                    <button onClick={() => removeUser(u.id)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 4px" }} title="Smazat">✕</button>
                   </div>
+                  {editUserId === u.id && (
+                    <div style={{ margin: "6px 0 2px 0", padding: "10px 14px", background: "rgba(37,99,235,0.08)", borderRadius: 8, border: "1px solid rgba(37,99,235,0.2)", display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ color: "#60a5fa", fontSize: 11, fontWeight: 700, marginBottom: 2 }}>UPRAVIT UŽIVATELE</div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, minWidth: 70 }}>Nové heslo:</span>
+                        <input type="password" value={editUserPass} onChange={e => setEditUserPass(e.target.value)} placeholder="nové heslo (prázdné = beze změny)" style={{ flex: 1, padding: "6px 10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#fff", fontSize: 12 }} />
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, minWidth: 70 }}>Role:</span>
+                        <select value={editUserRole} onChange={e => setEditUserRole(e.target.value)} style={{ flex: 1, padding: "6px 10px", background: "#1e293b", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#fff", fontSize: 12 }}>
+                          <option value="user">USER</option>
+                          <option value="user_e">USER EDITOR</option>
+                          <option value="admin">ADMIN</option>
+                          {isSuperAdmin && <option value="superadmin">SUPERADMIN</option>}
+                        </select>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => { setUList(uList.map(x => x.id === u.id ? { ...x, password: editUserPass.trim() || x.password, role: editUserRole } : x)); setEditUserId(null); }} style={{ padding: "6px 14px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>💾 Uložit</button>
+                        <button onClick={() => setEditUserId(null)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 12 }}>Zrušit</button>
+                      </div>
+                    </div>
+                  )}
                 ))}
               </div>
             </div>
@@ -1509,6 +1531,7 @@ export default function App() {
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
           <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
           <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
+          <button onClick={() => setShowHelp(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
           {isAdmin && <button onClick={() => { setShowSettings(true); loadLog(); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
           <div style={{ display: "flex", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
             {[["🌞","light","Světlý"],["🌙","dark","Tmavý"]].map(([icon, val, label]) => (
@@ -1694,7 +1717,43 @@ export default function App() {
         © {appDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
       </div>
 
-      {/* POTVRZOVACÍ DIALOG */}
+      {/* HELP MODAL */}
+      {showHelp && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1400, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
+          <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 16, width: "min(700px,95vw)", maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
+            <div style={{ padding: "18px 24px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, color: isDark ? "#fff" : "#1e293b", fontSize: 17 }}>❓ Nápověda – Stavby Znojmo</h3>
+              <button onClick={() => setShowHelp(false)} style={{ background: "none", border: "none", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "20px 24px", color: isDark ? "#e2e8f0" : "#1e293b", fontSize: 13, lineHeight: 1.7 }}>
+              {[
+                { icon: "🏗️", title: "Přidání stavby", text: "Klikněte na zelené tlačítko + Přidat stavbu. Vyplňte název (povinný) a ostatní pole. Enter přeskočí na další pole. Uložte tlačítkem Uložit." },
+                { icon: "✏️", title: "Editace stavby", text: "Klikněte na modré tlačítko ✏️ v řádku stavby. Otevře se stejný formulář s předvyplněnými hodnotami." },
+                { icon: "🗑️", title: "Smazání stavby", text: "Klikněte na červené tlačítko 🗑️. Systém požádá o potvrzení – musíte kliknout dvakrát pro jistotu." },
+                { icon: "🎨", title: "Barevné řádky", text: "Každá firma má svou barvu. Řádek se zbarví výrazně zeleně pokud má stavba vyplněné číslo faktury, částku bez DPH a datum splatnosti zároveň." },
+                { icon: "⚠️", title: "Červené termíny", text: "Pole Ukončení se zobrazí červeně s ikonou ⚠️ pokud je termín v minulosti. Tlačítko Termíny v hlavičce upozorní na stavby s termínem do 30 dní." },
+                { icon: "🔍", title: "Filtry", text: "Vyhledávejte podle názvu nebo čísla stavby. Filtrujte podle firmy, objednatele nebo stavbyvedoucího. Filtry lze kombinovat." },
+                { icon: "📤", title: "Export", text: "CSV – tabulka pro Excel. Excel – standardní .xlsx. Barevný Excel – .xls se zbarvením firem (při otevření potvrďte varování). PDF – tisk přehledu." },
+                { icon: "💾", title: "Záloha", text: "Tlačítko Záloha stáhne kompletní zálohu všech staveb jako Excel soubor. Doporučujeme zálohovat pravidelně." },
+                { icon: "⚙️", title: "Nastavení", text: "Správa firem (včetně barev), číselníků objednatelů a stavbyvedoucích. Administrátor může spravovat uživatele a měnit jim hesla a role." },
+                { icon: "🌙", title: "Tmavý / světlý režim", text: "Přepínejte mezi 🌞 světlým a 🌙 tmavým motivem tlačítky v pravém horním rohu." },
+                { icon: "↔️", title: "Šířky sloupců", text: "Táhněte ikonu ⟺ v záhlaví sloupce pro změnu šířky. Superadmin může resetovat šířky v Nastavení → Aplikace." },
+                { icon: "👥", title: "Role uživatelů", text: "USER – pouze zobrazení. USER EDITOR – může přidávat a editovat. ADMIN – plný přístup + správa uživatelů. SUPERADMIN – navíc nastavení aplikace." },
+              ].map(({ icon, title, text }) => (
+                <div key={title} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}` }}>
+                  <div style={{ fontWeight: 700, marginBottom: 3, color: isDark ? "#60a5fa" : "#2563eb" }}>{icon} {title}</div>
+                  <div style={{ color: isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)" }}>{text}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: "12px 24px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, textAlign: "right" }}>
+              <button onClick={() => setShowHelp(false)} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POTVRZOVACÍ DIALOG */}}
       {confirmExport && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
           <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 14, padding: "28px 32px", width: 380, border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
