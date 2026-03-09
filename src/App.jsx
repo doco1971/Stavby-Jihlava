@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_09_build0015
+// BUILD: 2026_03_09_build0016
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -657,6 +657,9 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [newRole, setNewRole] = useState("user");
   const [newName, setNewName] = useState("");
   const [userErr, setUserErr] = useState("");
+  const [editUserId, setEditUserId] = useState(null);
+  const [editUserPass, setEditUserPass] = useState("");
+  const [editUserRole, setEditUserRole] = useState("");
 
   const add = (list, setList, val, setVal) => { const v = val.trim(); if (v && !list.includes(v)) { setList([...list, v]); setVal(""); } };
 
