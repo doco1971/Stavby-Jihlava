@@ -305,7 +305,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const computed = computeRow(form);
 
-  const [pos, setPos] = useState(null); // null = vycentrováno, {x,y} = přesunuto
+  const [pos, setPos] = useState({ x: window.innerWidth - Math.min(1100, window.innerWidth * 0.97) - 10, y: 10 });
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
 
@@ -349,13 +349,11 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
     onSave(computeRow(form));
   };
 
-  const modalStyle = pos
-    ? { position: "fixed", left: pos.x, top: pos.y, margin: 0 }
-    : { position: "relative" };
+  const modalStyle = { position: "fixed", left: pos.x, top: pos.y, margin: 0 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div data-modal style={{ ...modalStyle, background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div data-modal style={{ ...modalStyle, pointerEvents: "all", background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
 
         {/* Header – táhlo pro přesun */}
         <div onMouseDown={onDragStart} style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, cursor: "grab", userSelect: "none" }}>
