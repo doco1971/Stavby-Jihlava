@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_09_build0004
+// BUILD: 2026_03_09_build0005
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
@@ -1307,15 +1307,19 @@ export default function App() {
   const [PAGE_SIZE, setPageSize] = useState(10);
   useEffect(() => {
     const calc = () => {
-      const rowH = 36;
-      const theadH = 38;
-      if (tableWrapRef.current) {
-        const available = tableWrapRef.current.clientHeight - theadH;
-        const rows = Math.max(5, Math.floor(available / rowH));
-        setPageSize(rows);
-      }
+      if (!tableWrapRef.current) return;
+      const wrap = tableWrapRef.current;
+      // Změř skutečnou výšku thead a prvního řádku tbody
+      const thead = wrap.querySelector("thead");
+      const firstRow = wrap.querySelector("tbody tr");
+      const theadH = thead ? thead.getBoundingClientRect().height : 38;
+      const rowH = firstRow ? firstRow.getBoundingClientRect().height : 36;
+      const available = wrap.clientHeight - theadH - 2; // -2px border
+      const rows = Math.max(5, Math.floor(available / rowH));
+      setPageSize(rows);
     };
-    const timer = setTimeout(calc, 100);
+    // Počkej na render tabulky
+    const timer = setTimeout(calc, 150);
     const ro = new ResizeObserver(calc);
     if (tableWrapRef.current) ro.observe(tableWrapRef.current);
     window.addEventListener("resize", calc);
@@ -1524,7 +1528,7 @@ export default function App() {
       </div>
 
       {/* TABLE */}
-      <div ref={tableWrapRef} className="table-wrapper" style={{ overflow: "auto", flex: 1, minHeight: 0 }}>
+      <div ref={tableWrapRef} className="table-wrapper" style={{ overflowX: "auto", overflowY: "hidden", flex: 1, minHeight: 0 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed", width: "max-content" }}>
           <colgroup>
             <col style={{ width: 40 }} />
