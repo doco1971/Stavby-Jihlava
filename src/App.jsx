@@ -1355,7 +1355,7 @@ export default function App() {
   const rowBg = (firma) => getFirmaColor(firma).bg;
 
   return (
-    <div style={{ minHeight: "100vh", background: T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text }}>
+    <div style={{ height: "100vh", maxHeight: "100vh", background: T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} ${!isDark ? "table td:not(.colored-cell) { color: #1e293b; } table td:not(.colored-cell) input { color: #1e293b; } table td:not(.colored-cell) select { color: #1e293b; }" : ""}`}</style>
 
       {/* HEADER */}
@@ -1418,7 +1418,7 @@ export default function App() {
       </div>
 
       {/* TABLE */}
-      <div style={{ overflowX: "auto" }}>
+      <div style={{ overflow: "auto", flex: 1 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed", width: "max-content" }}>
           <colgroup>
             <col style={{ width: 40 }} />
@@ -1547,7 +1547,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ textAlign: "center", padding: "6px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11 }}>
+      <div style={{ textAlign: "center", padding: "4px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11, flexShrink: 0 }}>
         © {appDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
       </div>
 
