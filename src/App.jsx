@@ -305,6 +305,27 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const computed = computeRow(form);
 
+  const [pos, setPos] = useState(null); // null = vycentrováno, {x,y} = přesunuto
+  const dragging = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  const onDragStart = (e) => {
+    dragging.current = true;
+    const rect = e.currentTarget.closest("[data-modal]").getBoundingClientRect();
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    document.addEventListener("mousemove", onDragMove);
+    document.addEventListener("mouseup", onDragEnd);
+  };
+  const onDragMove = (e) => {
+    if (!dragging.current) return;
+    setPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y });
+  };
+  const onDragEnd = () => {
+    dragging.current = false;
+    document.removeEventListener("mousemove", onDragMove);
+    document.removeEventListener("mouseup", onDragEnd);
+  };
+
   const numFields = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","bez_dph_2"];
   const dateFields = ["ukonceni","splatna","ze_dne","splatna_2"];
 
@@ -328,14 +349,18 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
     onSave(computeRow(form));
   };
 
+  const modalStyle = pos
+    ? { position: "fixed", left: pos.x, top: pos.y, margin: 0 }
+    : { position: "relative" };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+      <div data-modal style={{ ...modalStyle, background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
 
-        {/* Header */}
-        <div style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-          <h3 style={{ color: "#fff", margin: 0, fontSize: 16, flexShrink: 0 }}>{title}</h3>
-          <input value={form["nazev_stavby"] ?? ""} onChange={e => set("nazev_stavby", e.target.value)} placeholder="Název stavby..." style={{ flex: 1, padding: "7px 14px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, outline: "none" }} />
+        {/* Header – táhlo pro přesun */}
+        <div onMouseDown={onDragStart} style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, cursor: "grab", userSelect: "none" }}>
+          <h3 style={{ color: "#fff", margin: 0, fontSize: 16, flexShrink: 0 }}>{title} <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>⠿ přetáhnout</span></h3>
+          <input onMouseDown={e => e.stopPropagation()} value={form["nazev_stavby"] ?? ""} onChange={e => set("nazev_stavby", e.target.value)} placeholder="Název stavby..." style={{ flex: 1, padding: "7px 14px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, outline: "none", cursor: "text" }} />
           <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer", flexShrink: 0 }}>✕</button>
         </div>
 
