@@ -314,67 +314,101 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "#1e293b", borderRadius: 16, width: "min(1200px, 97vw)", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-          <h3 style={{ color: "#fff", margin: 0, fontSize: 17, flexShrink: 0 }}>{title}</h3>
-          <input value={form["nazev_stavby"] ?? ""} onChange={e => set("nazev_stavby", e.target.value)} placeholder="Název stavby..." style={{ flex: 1, padding: "8px 14px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, outline: "none" }} />
+      <div style={{ background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+
+        {/* Header */}
+        <div style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          <h3 style={{ color: "#fff", margin: 0, fontSize: 16, flexShrink: 0 }}>{title}</h3>
+          <input value={form["nazev_stavby"] ?? ""} onChange={e => set("nazev_stavby", e.target.value)} placeholder="Název stavby..." style={{ flex: 1, padding: "7px 14px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, outline: "none" }} />
           <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer", flexShrink: 0 }}>✕</button>
         </div>
 
-        <div style={{ padding: "16px 24px", overflowY: "auto" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Body – dva sloupce */}
+        <div style={{ padding: "16px 24px", overflowY: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
-            {/* Základní informace */}
-            <div style={{ display: "grid", gridTemplateColumns: "160px 140px 1fr", gap: 12, alignItems: "end" }}>
-              <div style={{ borderLeft: "3px solid #60a5fa", paddingLeft: 10, color: "#60a5fa", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>Základní informace</div>
-              <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} />
-              <FormSelectField label="Firma" value={form["firma"]} onChange={v => set("firma", v)} options={firmy} />
+          {/* LEVÝ SLOUPEC */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* Základní info */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#60a5fa", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #60a5fa", paddingLeft: 8 }}>ZÁKLADNÍ INFORMACE</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} />
+                <FormSelectField label="Firma" value={form["firma"]} onChange={v => set("firma", v)} options={firmy} />
+              </div>
             </div>
 
             {/* Kategorie I */}
-            <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 1fr 1fr", gap: 12, alignItems: "end" }}>
-              <div style={{ borderLeft: "3px solid #818cf8", paddingLeft: 10, color: "#818cf8", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>Kategorie I</div>
-              <FormField label="Plán. stavby I" value={form["ps_i"]} onChange={v => set("ps_i", v)} type="number" />
-              <FormField label="SNK I" value={form["snk_i"]} onChange={v => set("snk_i", v)} type="number" />
-              <FormField label="Běžné opravy I" value={form["bo_i"]} onChange={v => set("bo_i", v)} type="number" />
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#818cf8", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #818cf8", paddingLeft: 8 }}>KATEGORIE I</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <FormField label="Plán. stavby I" value={form["ps_i"]} onChange={v => set("ps_i", v)} type="number" />
+                <FormField label="SNK I" value={form["snk_i"]} onChange={v => set("snk_i", v)} type="number" />
+                <FormField label="Běžné opravy I" value={form["bo_i"]} onChange={v => set("bo_i", v)} type="number" />
+              </div>
             </div>
 
             {/* Kategorie II */}
-            <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 1fr 1fr", gap: 12, alignItems: "end" }}>
-              <div style={{ borderLeft: "3px solid #fb923c", paddingLeft: 10, color: "#fb923c", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>Kategorie II</div>
-              <FormField label="Plán. stavby II" value={form["ps_ii"]} onChange={v => set("ps_ii", v)} type="number" />
-              <FormField label="Běžné opravy II" value={form["bo_ii"]} onChange={v => set("bo_ii", v)} type="number" />
-              <FormField label="Poruchy" value={form["poruch"]} onChange={v => set("poruch", v)} type="number" />
-            </div>
-
-            {/* Fakturace & termíny */}
-            <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 130px 1fr", gap: 12, alignItems: "end" }}>
-              <div style={{ borderLeft: "3px solid #34d399", paddingLeft: 10, color: "#34d399", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>Fakturace & termíny</div>
-              <FormField label="Vyfakturováno" value={form["vyfakturovano"]} onChange={v => set("vyfakturovano", v)} type="number" />
-              <FormField label="Ukončení" value={form["ukonceni"]} onChange={v => set("ukonceni", v)} type="date" />
-              <FormField label="Zrealizováno" value={form["zrealizovano"]} onChange={v => set("zrealizovano", v)} type="number" />
-
-              <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.25)", borderRadius: 8, padding: "8px 14px", display: "flex", gap: 20, alignItems: "center" }}>
-                <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Nabídka: </span><span style={{ color: "#60a5fa", fontWeight: 700, fontSize: 13 }}>{fmt(computed.nabidka)}</span></div>
-                <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Rozdíl: </span><span style={{ color: computed.rozdil >= 0 ? "#4ade80" : "#f87171", fontWeight: 700, fontSize: 13 }}>{fmt(computed.rozdil)}</span></div>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#fb923c", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #fb923c", paddingLeft: 8 }}>KATEGORIE II</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <FormField label="Plán. stavby II" value={form["ps_ii"]} onChange={v => set("ps_ii", v)} type="number" />
+                <FormField label="Běžné opravy II" value={form["bo_ii"]} onChange={v => set("bo_ii", v)} type="number" />
+                <FormField label="Poruchy" value={form["poruch"]} onChange={v => set("poruch", v)} type="number" />
               </div>
-              <FormField label="Nabídková cena" value={form["nabidkova_cena"]} onChange={v => set("nabidkova_cena", v)} type="number" />
-              <FormField label="Číslo faktury" value={form["cislo_faktury"]} onChange={v => set("cislo_faktury", v)} />
-              <FormField label="Částka bez DPH" value={form["castka_bez_dph"]} onChange={v => set("castka_bez_dph", v)} type="number" />
-
-              <FormField label="Splatná" value={form["splatna"]} onChange={v => set("splatna", v)} type="date" />
-              <FormField label="Číslo faktury 2" value={form["cislo_faktury_2"]} onChange={v => set("cislo_faktury_2", v)} />
-              <FormField label="Částka bez DPH 2" value={form["bez_dph_2"]} onChange={v => set("bez_dph_2", v)} type="number" />
-              <FormField label="Splatná 2" value={form["splatna_2"]} onChange={v => set("splatna_2", v)} type="date" />
             </div>
 
             {/* Ostatní */}
-            <div style={{ display: "grid", gridTemplateColumns: "160px 140px 130px 1fr 1fr", gap: 12, alignItems: "end" }}>
-              <div style={{ borderLeft: "3px solid #f472b6", paddingLeft: 10, color: "#f472b6", fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>Ostatní</div>
-              <FormField label="SOD" value={form["sod"]} onChange={v => set("sod", v)} />
-              <FormField label="Ze dne" value={form["ze_dne"]} onChange={v => set("ze_dne", v)} type="date" />
-              <FormSelectField label="Objednatel" value={form["objednatel"]} onChange={v => set("objednatel", v)} options={objednatele} allowEmpty />
-              <FormSelectField label="Stavbyvedoucí" value={form["stavbyvedouci"]} onChange={v => set("stavbyvedouci", v)} options={svList} allowEmpty />
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#f472b6", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #f472b6", paddingLeft: 8 }}>OSTATNÍ</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <FormField label="SOD" value={form["sod"]} onChange={v => set("sod", v)} />
+                <FormField label="Ze dne" value={form["ze_dne"]} onChange={v => set("ze_dne", v)} type="date" />
+                <FormSelectField label="Objednatel" value={form["objednatel"]} onChange={v => set("objednatel", v)} options={objednatele} allowEmpty />
+                <FormSelectField label="Stavbyvedoucí" value={form["stavbyvedouci"]} onChange={v => set("stavbyvedouci", v)} options={svList} allowEmpty />
+              </div>
+            </div>
+          </div>
+
+          {/* PRAVÝ SLOUPEC */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* Realizace */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#34d399", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #34d399", paddingLeft: 8 }}>REALIZACE</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <FormField label="Vyfakturováno" value={form["vyfakturovano"]} onChange={v => set("vyfakturovano", v)} type="number" />
+                <FormField label="Ukončení" value={form["ukonceni"]} onChange={v => set("ukonceni", v)} type="date" />
+                <FormField label="Zrealizováno" value={form["zrealizovano"]} onChange={v => set("zrealizovano", v)} type="number" />
+              </div>
+              <div style={{ marginTop: 10, background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)", borderRadius: 8, padding: "8px 14px", display: "flex", gap: 24 }}>
+                <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Nabídka: </span><span style={{ color: "#60a5fa", fontWeight: 700 }}>{fmt(computed.nabidka)}</span></div>
+                <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Rozdíl: </span><span style={{ color: computed.rozdil >= 0 ? "#4ade80" : "#f87171", fontWeight: 700 }}>{fmt(computed.rozdil)}</span></div>
+              </div>
+            </div>
+
+            {/* Faktura 1 */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#fbbf24", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #fbbf24", paddingLeft: 8 }}>FAKTURA 1</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <FormField label="Nabídková cena" value={form["nabidkova_cena"]} onChange={v => set("nabidkova_cena", v)} type="number" />
+                <FormField label="Číslo faktury" value={form["cislo_faktury"]} onChange={v => set("cislo_faktury", v)} />
+                <FormField label="Částka bez DPH" value={form["castka_bez_dph"]} onChange={v => set("castka_bez_dph", v)} type="number" />
+                <div />
+                <FormField label="Splatná" value={form["splatna"]} onChange={v => set("splatna", v)} type="date" />
+              </div>
+            </div>
+
+            {/* Faktura 2 */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(96,165,250,0.15)" }}>
+              <div style={{ color: "#93c5fd", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #93c5fd", paddingLeft: 8 }}>FAKTURA 2 <span style={{ fontWeight: 400, opacity: 0.5 }}>(nepovinné)</span></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <div />
+                <FormField label="Číslo faktury 2" value={form["cislo_faktury_2"]} onChange={v => set("cislo_faktury_2", v)} />
+                <FormField label="Částka bez DPH 2" value={form["bez_dph_2"]} onChange={v => set("bez_dph_2", v)} type="number" />
+                <div />
+                <FormField label="Splatná 2" value={form["splatna_2"]} onChange={v => set("splatna_2", v)} type="date" />
+              </div>
             </div>
 
           </div>
@@ -861,10 +895,11 @@ export default function App() {
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>
       <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
     </body></html>`;
+    const ts = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
     const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `stavby_znojmo_${new Date().toISOString().slice(0,10)}.xls`;
+    a.download = `stavby_znojmo_${ts}.xls`;
     a.click();
   };
   const [logData, setLogData] = useState([]);
@@ -1156,13 +1191,33 @@ export default function App() {
   const exportPDF = () => { setConfirmExport({ type: "pdf", label: "PDF tisk" }); setShowExport(false); };
   const exportXLSColor = () => { setConfirmExport({ type: "xls-color", label: "Barevný Excel (.xls)" }); setShowExport(false); };
 
+  const exportLog = async () => {
+    setShowExport(false);
+    // Načti celý log z databáze
+    try {
+      const res = await sb("log_aktivit?order=cas.desc&limit=10000");
+      const rows = res || [];
+      const actionColors = { "Přihlášení": "#dbeafe", "Přidání stavby": "#dcfce7", "Editace stavby": "#fef9c3", "Smazání stavby": "#fee2e2", "Nastavení": "#f3e8ff", "Záloha": "#ffedd5" };
+      const headers = `<tr><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Datum a čas</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Uživatel</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Akce</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Detail</th></tr>`;
+      const dataRows = rows.map((r, i) => {
+        const bg = actionColors[r.akce] || (i % 2 === 0 ? "#f8fafc" : "#fff");
+        const cas = r.cas ? new Date(r.cas).toLocaleString("cs-CZ") : "";
+        return `<tr><td style="padding:5px 10px;border:1px solid #E2E8F0;background:${bg};font-size:10px">${cas}</td><td style="padding:5px 10px;border:1px solid #E2E8F0;background:${bg};font-size:10px">${r.uzivatel||""}</td><td style="padding:5px 10px;border:1px solid #E2E8F0;background:${bg};font-size:10px;font-weight:600">${r.akce||""}</td><td style="padding:5px 10px;border:1px solid #E2E8F0;background:${bg};font-size:10px">${r.detail||""}</td></tr>`;
+      }).join("");
+      const ts = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta charset="utf-8"></head><body><table>${headers}${dataRows}</table></body></html>`;
+      const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `log_aktivit_${ts}.xls`; a.click();
+    } catch(e) { alert("Chyba exportu logu: " + e.message); }
+  };
+
   const zalohaExcel = () => {
     const headers = COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => c.label);
     const rows = data.map(row => COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => row[c.key] ?? ""));
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     XLSX.utils.book_append_sheet(wb, ws, "Záloha");
-    const datum = new Date().toISOString().slice(0,10);
+    const datum = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
     XLSX.writeFile(wb, `zaloha_stavby_${datum}.xlsx`);
     logAkce(user?.email, "Záloha", `${data.length} záznamů`);
   };
@@ -1310,6 +1365,7 @@ export default function App() {
                 <button onClick={exportCSV} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>📄 CSV (.csv)</button>
                 <button onClick={exportXLS} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>📊 Excel (.xlsx)</button>
                 <button onClick={exportXLSColor} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>🎨 Barevný Excel (.xls)</button>
+                {isAdmin && <><div style={{ height: 1, background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", margin: "4px 0" }} /><button onClick={exportLog} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>📜 Export logu (.xls)</button></>}
                 <button onClick={exportPDF} style={{ display: "block", width: "100%", padding: "9px 14px", background: "none", border: "none", color: T.text, cursor: "pointer", fontSize: 13, textAlign: "left", borderRadius: 6 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>🖨️ PDF tisk</button>
               </div>
             )}
@@ -1488,20 +1544,21 @@ export default function App() {
                 <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>{filtered.length} řádků</span>
                 <button
                   onClick={() => {
+                    const ts = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
                     const ws_data = [COLUMNS.map(c => c.label), ...filtered.map(r => COLUMNS.map(c => r[c.key] ?? ""))];
                     if (exportPreview.type === "xls") {
                       const wb = XLSX.utils.book_new();
                       const ws = XLSX.utils.aoa_to_sheet(ws_data);
                       ws["!cols"] = COLUMNS.map(c => ({ wch: Math.max(c.label.length, 14) }));
                       XLSX.utils.book_append_sheet(wb, ws, "Stavby");
-                      XLSX.writeFile(wb, "stavby.xlsx");
+                      XLSX.writeFile(wb, `stavby_znojmo_${ts}.xlsx`);
                     } else {
                       const BOM = "\uFEFF";
                       const h = COLUMNS.map(c => `"${c.label}"`).join(";");
                       const rows = filtered.map(r => COLUMNS.map(c => `"${String(r[c.key] ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
                       const blob = new Blob([BOM + h + "\n" + rows], { type: "text/csv;charset=utf-8;" });
                       const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a"); a.href = url; a.download = "stavby.csv";
+                      const a = document.createElement("a"); a.href = url; a.download = `stavby_znojmo_${ts}.csv`;
                       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
                     }
                   }}
