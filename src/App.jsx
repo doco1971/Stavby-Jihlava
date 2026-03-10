@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_10_build0027
+// BUILD: 2026_03_10_build0028
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -189,9 +189,13 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
 // GRAF MODAL
 // ============================================================
 function GrafModal({ data, firmy, isDark, onClose }) {
-  const [mode, setMode] = useState("firma"); // "firma" | "mesic"
+  const [mode, setMode] = useState("firma"); // "firma" | "mesic" | "kat"
 
   const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#3b82f6"]));
+
+  // KAT I = ps_i + snk_i + bo_i   |   KAT II = ps_ii + bo_ii + poruch
+  const katI  = r => (Number(r.ps_i)||0) + (Number(r.snk_i)||0) + (Number(r.bo_i)||0);
+  const katII = r => (Number(r.ps_ii)||0) + (Number(r.bo_ii)||0) + (Number(r.poruch)||0);
 
   const grafData = useMemo(() => {
     if (mode === "firma") {
@@ -199,50 +203,66 @@ function GrafModal({ data, firmy, isDark, onClose }) {
       data.forEach(r => {
         const key = r.firma || "Bez firmy";
         if (!map[key]) map[key] = { name: key, nabidka: 0, vyfakturovano: 0, zrealizovano: 0 };
-        map[key].nabidka += Number(r.nabidka) || 0;
+        map[key].nabidka      += Number(r.nabidka) || 0;
         map[key].vyfakturovano += Number(r.vyfakturovano) || 0;
-        map[key].zrealizovano += Number(r.zrealizovano) || 0;
+        map[key].zrealizovano  += Number(r.zrealizovano) || 0;
       });
       return Object.values(map);
-    } else {
+    } else if (mode === "mesic") {
       const map = {};
       data.forEach(r => {
         if (!r.ze_dne) return;
         const parts = r.ze_dne.trim().split(".");
         if (parts.length < 3) return;
-        const key = `${parts[2]}-${parts[1].padStart(2,"0")}`;
+        const key   = `${parts[2]}-${parts[1].padStart(2,"0")}`;
         const label = `${parts[1]}/${parts[2]}`;
         if (!map[key]) map[key] = { name: label, _sort: key, nabidka: 0, vyfakturovano: 0, zrealizovano: 0 };
-        map[key].nabidka += Number(r.nabidka) || 0;
+        map[key].nabidka      += Number(r.nabidka) || 0;
         map[key].vyfakturovano += Number(r.vyfakturovano) || 0;
-        map[key].zrealizovano += Number(r.zrealizovano) || 0;
+        map[key].zrealizovano  += Number(r.zrealizovano) || 0;
       });
       return Object.values(map).sort((a, b) => a._sort.localeCompare(b._sort));
+    } else {
+      // mode === "kat" — dvě skupiny, každá firma jako podskupina
+      const firmaKeys = [...new Set(data.map(r => r.firma || "Bez firmy"))];
+      return firmaKeys.map(firma => {
+        const rows = data.filter(r => (r.firma || "Bez firmy") === firma);
+        return {
+          name: firma,
+          kat1: rows.reduce((s, r) => s + katI(r), 0),
+          kat2: rows.reduce((s, r) => s + katII(r), 0),
+        };
+      });
     }
   }, [data, mode]);
 
   const fmtTick = (v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v);
+  const fmtVal  = (v) => Number(v).toLocaleString("cs-CZ", { minimumFractionDigits: 0 });
 
   const modalBg = isDark ? "#1e293b" : "#fff";
-  const textC = isDark ? "#e2e8f0" : "#1e293b";
-  const mutedC = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
-  const gridC = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const textC   = isDark ? "#e2e8f0" : "#1e293b";
+  const mutedC  = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
+  const gridC   = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
 
   const renderBars = () => {
-    // Vlastní SVG sloupcový graf (bez recharts – není v package.json)
-    const maxVal = Math.max(...grafData.map(d => Math.max(d.nabidka, d.vyfakturovano, d.zrealizovano)), 1);
-    const W = 700, H = 300, PAD_L = 68, PAD_B = 64, PAD_T = 20, PAD_R = 20;
+    const isKat   = mode === "kat";
+    const KEYS    = isKat ? ["kat1","kat2"] : ["nabidka","vyfakturovano","zrealizovano"];
+    const LABELS  = isKat ? ["Kat. I (Plán.+SNK+Běžné op.)","Kat. II (Plán.+Běžné op.+Poruchy)"] : ["Nabídka","Vyfakturováno","Zrealizováno"];
+    const COLORS  = isKat ? ["#60a5fa","#f97316"] : ["#60a5fa","#4ade80","#fbbf24"];
+
+    const maxVal = Math.max(...grafData.map(d => Math.max(...KEYS.map(k => d[k] || 0))), 1);
+    const W = 700, H = 310, PAD_L = 68, PAD_B = 70, PAD_T = 20, PAD_R = 20;
     const chartW = W - PAD_L - PAD_R;
     const chartH = H - PAD_T - PAD_B;
     const groupW = chartW / Math.max(grafData.length, 1);
-    const barW = Math.min(Math.max(8, groupW / 4 - 2), 28);
+    const numBars = KEYS.length;
+    const barW = Math.min(Math.max(8, groupW / (numBars + 1) - 2), 30);
     const scaleY = v => PAD_T + chartH - (v / maxVal) * chartH;
-    const BAR_COLORS = ["#60a5fa","#4ade80","#fbbf24"];
-    const KEYS = ["nabidka","vyfakturovano","zrealizovano"];
-    const LABELS = ["Nabídka","Vyfakturováno","Zrealizováno"];
+    const offsets = KEYS.map((_, ki) => (ki - (numBars - 1) / 2) * (barW + 3));
+
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 300 }}>
-        {/* grid lines */}
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 310 }}>
+        {/* grid */}
         {[0, 0.25, 0.5, 0.75, 1].map(p => {
           const y = PAD_T + p * chartH;
           return <g key={p}>
@@ -256,24 +276,27 @@ function GrafModal({ data, firmy, isDark, onClose }) {
         {grafData.map((d, gi) => {
           const cx = PAD_L + gi * groupW + groupW / 2;
           return KEYS.map((k, ki) => {
-            const bx = cx + (ki - 1) * (barW + 3);
-            const val = d[k] || 0;
-            const bh = Math.max(1, (val / maxVal) * chartH);
-            const by = scaleY(val);
-            const fill = mode === "firma" && ki === 0 ? (firmaColorMap[d.name] || BAR_COLORS[ki]) : BAR_COLORS[ki];
+            const val  = d[k] || 0;
+            const bh   = Math.max(1, (val / maxVal) * chartH);
+            const by   = scaleY(val);
+            const bx   = cx + offsets[ki];
+            // Kat mode: zbarvit sloupeček barvou firmy pro kat1, tmavší pro kat2
+            const fill = isKat
+              ? (ki === 0 ? (firmaColorMap[d.name] || COLORS[0]) : (firmaColorMap[d.name] ? firmaColorMap[d.name] + "99" : COLORS[1]))
+              : (mode === "firma" && ki === 0 ? (firmaColorMap[d.name] || COLORS[0]) : COLORS[ki]);
             return <rect key={k} x={bx - barW / 2} y={by} width={barW} height={bh} fill={fill} rx={3} opacity={0.88}/>;
           });
         })}
         {/* x labels */}
         {grafData.map((d, gi) => {
-          const cx = PAD_L + gi * groupW + groupW / 2;
-          const lbl = d.name.length > 12 ? d.name.slice(0, 11) + "…" : d.name;
-          return <text key={gi} x={cx} y={H - PAD_B + 18} textAnchor="middle" fill={mutedC} fontSize={9} transform={`rotate(-20, ${cx}, ${H - PAD_B + 18})`}>{lbl}</text>;
+          const cx  = PAD_L + gi * groupW + groupW / 2;
+          const lbl = d.name.length > 13 ? d.name.slice(0, 12) + "…" : d.name;
+          return <text key={gi} x={cx} y={H - PAD_B + 16} textAnchor="end" fill={mutedC} fontSize={9} transform={`rotate(-28, ${cx}, ${H - PAD_B + 16})`}>{lbl}</text>;
         })}
         {/* legend */}
         {LABELS.map((l, i) => (
-          <g key={l} transform={`translate(${PAD_L + i * 140}, ${H - 12})`}>
-            <rect width={10} height={10} fill={BAR_COLORS[i]} rx={2}/>
+          <g key={l} transform={`translate(${PAD_L + i * (isKat ? 220 : 140)}, ${H - 10})`}>
+            <rect width={10} height={10} fill={COLORS[i]} rx={2}/>
             <text x={14} y={9} fill={mutedC} fontSize={10}>{l}</text>
           </g>
         ))}
@@ -281,58 +304,100 @@ function GrafModal({ data, firmy, isDark, onClose }) {
     );
   };
 
+  // Souhrn pro kat mode — speciální struktura
+  const renderTable = () => {
+    if (mode === "kat") {
+      return (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }}>
+              {["Firma","Kat. I","Kat. II","Celkem"].map((h, i) => (
+                <th key={h} style={{ padding: "7px 12px", textAlign: i === 0 ? "left" : "right", color: mutedC, fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {grafData.map((d, i) => (
+              <tr key={i} style={{ borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"}` }}>
+                <td style={{ padding: "6px 12px", color: textC, fontWeight: 600 }}>
+                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: firmaColorMap[d.name] || "#3b82f6", marginRight: 7, verticalAlign: "middle" }}/>
+                  {d.name}
+                </td>
+                <td style={{ padding: "6px 12px", textAlign: "right", color: "#60a5fa", fontFamily: "monospace", fontSize: 12 }}>{fmtVal(d.kat1)}</td>
+                <td style={{ padding: "6px 12px", textAlign: "right", color: "#f97316", fontFamily: "monospace", fontSize: 12 }}>{fmtVal(d.kat2)}</td>
+                <td style={{ padding: "6px 12px", textAlign: "right", color: isDark ? "#93c5fd" : "#2563eb", fontFamily: "monospace", fontSize: 12, fontWeight: 700 }}>{fmtVal((d.kat1||0)+(d.kat2||0))}</td>
+              </tr>
+            ))}
+            {/* Celkový součet */}
+            <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.06)", fontWeight: 700 }}>
+              <td style={{ padding: "7px 12px", color: textC, fontWeight: 700 }}>CELKEM</td>
+              <td style={{ padding: "7px 12px", textAlign: "right", color: "#60a5fa", fontFamily: "monospace", fontWeight: 700 }}>{fmtVal(grafData.reduce((s,d)=>s+(d.kat1||0),0))}</td>
+              <td style={{ padding: "7px 12px", textAlign: "right", color: "#f97316", fontFamily: "monospace", fontWeight: 700 }}>{fmtVal(grafData.reduce((s,d)=>s+(d.kat2||0),0))}</td>
+              <td style={{ padding: "7px 12px", textAlign: "right", color: isDark ? "#93c5fd" : "#2563eb", fontFamily: "monospace", fontWeight: 700 }}>{fmtVal(grafData.reduce((s,d)=>s+(d.kat1||0)+(d.kat2||0),0))}</td>
+            </tr>
+          </tbody>
+        </table>
+      );
+    }
+    // standardní tabulka
+    return (
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead>
+          <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }}>
+            {[mode === "firma" ? "Firma" : "Měsíc", "Nabídka", "Vyfakturováno", "Zrealizováno"].map((h, i) => (
+              <th key={h} style={{ padding: "7px 12px", textAlign: i === 0 ? "left" : "right", color: mutedC, fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {grafData.map((d, i) => (
+            <tr key={i} style={{ borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"}` }}>
+              <td style={{ padding: "6px 12px", color: textC, fontWeight: 600 }}>
+                {mode === "firma" && <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: firmaColorMap[d.name] || "#3b82f6", marginRight: 7, verticalAlign: "middle" }}/>}
+                {d.name}
+              </td>
+              {["nabidka","vyfakturovano","zrealizovano"].map(k => (
+                <td key={k} style={{ padding: "6px 12px", textAlign: "right", color: isDark ? "#93c5fd" : "#2563eb", fontFamily: "monospace", fontSize: 12 }}>
+                  {fmtVal(d[k])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: modalBg, borderRadius: 18, width: "min(780px,95vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
+      <div style={{ background: modalBg, borderRadius: 18, width: "min(820px,95vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
         {/* header */}
-        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "16px 22px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
-            <h3 style={{ color: textC, margin: 0, fontSize: 17 }}>📊 Graf nákladů</h3>
-            <div style={{ color: mutedC, fontSize: 12, marginTop: 3 }}>Nabídka · Vyfakturováno · Zrealizováno</div>
+            <h3 style={{ color: textC, margin: 0, fontSize: 16 }}>📊 Graf nákladů</h3>
+            <div style={{ color: mutedC, fontSize: 11, marginTop: 2 }}>
+              {mode === "kat" ? "Kat. I (Plán.+SNK+Běžné op.) vs Kat. II (Plán.+Běžné op.+Poruchy)" : "Nabídka · Vyfakturováno · Zrealizováno"}
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* přepínač */}
             <div style={{ display: "flex", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 8, overflow: "hidden" }}>
-              {[["firma","🏢 Firma"],["mesic","📅 Měsíc"]].map(([val, lbl]) => (
-                <button key={val} onClick={() => setMode(val)} style={{ padding: "6px 14px", background: mode === val ? (isDark ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.15)") : "transparent", border: "none", color: mode === val ? "#60a5fa" : mutedC, cursor: "pointer", fontSize: 13, fontWeight: mode === val ? 700 : 400, transition: "all 0.15s" }}>{lbl}</button>
+              {[["firma","🏢 Firma"],["mesic","📅 Měsíc"],["kat","📂 Kat. I / II"]].map(([val, lbl]) => (
+                <button key={val} onClick={() => setMode(val)} style={{ padding: "6px 13px", background: mode === val ? (isDark ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.15)") : "transparent", border: "none", borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, color: mode === val ? "#60a5fa" : mutedC, cursor: "pointer", fontSize: 12, fontWeight: mode === val ? 700 : 400, transition: "all 0.15s", whiteSpace: "nowrap" }}>{lbl}</button>
               ))}
             </div>
             <button onClick={onClose} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer", lineHeight: 1 }}>✕</button>
           </div>
         </div>
         {/* graf */}
-        <div style={{ padding: "24px 24px 12px", flex: 1, overflowY: "auto" }}>
+        <div style={{ padding: "20px 22px 8px", flex: 1, overflowY: "auto" }}>
           {grafData.length === 0
             ? <div style={{ textAlign: "center", color: mutedC, padding: 48 }}>Žádná data k zobrazení</div>
             : renderBars()
           }
         </div>
-        {/* tabulka souhrnu */}
-        <div style={{ padding: "0 24px 20px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr style={{ background: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)" }}>
-                {[mode === "firma" ? "Firma" : "Měsíc", "Nabídka", "Vyfakturováno", "Zrealizováno"].map(h => (
-                  <th key={h} style={{ padding: "7px 12px", textAlign: h === (mode === "firma" ? "Firma" : "Měsíc") ? "left" : "right", color: mutedC, fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {grafData.map((d, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"}` }}>
-                  <td style={{ padding: "6px 12px", color: textC, fontWeight: 600 }}>
-                    {mode === "firma" && <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: firmaColorMap[d.name] || "#3b82f6", marginRight: 7, verticalAlign: "middle" }}/>}
-                    {d.name}
-                  </td>
-                  {["nabidka","vyfakturovano","zrealizovano"].map(k => (
-                    <td key={k} style={{ padding: "6px 12px", textAlign: "right", color: isDark ? "#93c5fd" : "#2563eb", fontFamily: "monospace", fontSize: 12 }}>
-                      {Number(d[k]).toLocaleString("cs-CZ", { minimumFractionDigits: 0 })}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* tabulka */}
+        <div style={{ padding: "0 22px 18px" }}>
+          {renderTable()}
         </div>
       </div>
     </div>
