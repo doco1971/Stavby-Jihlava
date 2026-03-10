@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_10_build0026
+// BUILD: 2026_03_10_build0027
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -1979,6 +1979,10 @@ export default function App() {
                       <div>
                         <div>
                           {col.key === "firma" ? <span className="firma-badge" style={firmaBadge(row[col.key])}>{row[col.key]}</span>
+                          : col.key === "nazev_stavby" ? <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{row[col.key] ?? ""}</span>
+                              {row.poznamka && row.poznamka.trim() !== "" && <span onMouseEnter={e => showTooltip(e, row.poznamka)} onMouseLeave={hideTooltip} style={{ cursor: "help", fontSize: 13, flexShrink: 0 }}>💬</span>}
+                            </span>
                           : col.type === "number" ? fmtN(row[col.key])
                           : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
                           : isOverdue ? <span>⚠️ {row[col.key]}</span>
@@ -1994,7 +1998,6 @@ export default function App() {
                   <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
                     <button onClick={() => setEditRow(row)} onMouseEnter={e => showTooltip(e, "Editovat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11, marginRight: isAdmin ? 5 : 0 }}>✏️ Editovat</button>
                     {isAdmin && <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} onMouseEnter={e => showTooltip(e, "Smazat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11 }}>🗑️</button>}
-                    {row.poznamka && row.poznamka.trim() !== "" && <span onMouseEnter={e => showTooltip(e, row.poznamka)} onMouseLeave={hideTooltip} style={{ marginLeft: 6, cursor: "help", fontSize: 13 }}>💬</span>}
                   </td>
                 )}
               </tr>
@@ -2044,6 +2047,10 @@ export default function App() {
                 { icon: "🌙", title: "Tmavý / světlý režim", text: "Přepínejte mezi 🌞 světlým a 🌙 tmavým režimem tlačítky v pravém horním rohu. Po najetí kurzorem se zobrazí název režimu." },
                 { icon: "↔️", title: "Šířky sloupců", text: "Táhněte ikonu ⟺ v záhlaví sloupce pro změnu šířky. Superadmin může resetovat šířky v Nastavení → Aplikace." },
                 { icon: "👥", title: "Role uživatelů", text: "USER – pouze zobrazení. USER EDITOR – může přidávat a editovat. ADMIN – plný přístup + správa uživatelů. SUPERADMIN – navíc nastavení aplikace." },
+                { icon: "💬", title: "Poznámka ke stavbě", text: "V editačním formuláři (sekce Poznámka) lze zapsat libovolný komentář. Pokud stavba poznámku má, zobrazí se ikona 💬 vedle názvu stavby v tabulce. Najeďte myší na ikonu pro zobrazení textu." },
+                { icon: "📊", title: "Graf nákladů", text: "Tlačítko 📊 Graf ve filtrovací liště otevře sloupcový graf. Přepínač Firma / Měsíc mění způsob zobrazení. Graf zobrazuje Nabídku, Vyfakturováno a Zrealizováno – vždy jen pro aktuálně vyfiltrovaná data." },
+                { icon: "🔔", title: "Notifikace v prohlížeči", text: "Aplikace může zobrazovat upozornění na blížící se termíny i mimo otevřenou záložku. Po přihlášení prohlížeč zobrazí dialog – klikněte Povolit. Notifikace se odešlou pro stavby s termínem do 7 pracovních dní. Opakují se každých 60 minut, ale pouze pokud záložka není aktivní." },
+                { icon: "⏱️", title: "Automatické odhlášení", text: "Po 15 minutách nečinnosti (bez pohybu myši, klikání nebo psaní) se zobrazí varování s odpočítáváním 60 sekund. Klikněte na tlačítko Jsem tady pro pokračování, jinak dojde k automatickému odhlášení." },
               ].map(({ icon, title, text }) => (
                 <div key={title} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}` }}>
                   <div style={{ fontWeight: 700, marginBottom: 3, color: isDark ? "#60a5fa" : "#2563eb" }}>{icon} {title}</div>
