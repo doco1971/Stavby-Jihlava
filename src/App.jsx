@@ -101,6 +101,7 @@ import * as XLSX from "xlsx";
 //   Č. FAKTURY 2 / Č. BEZ DPH 2 / SPLATNÁ 2 zmizely z hlavičky (hidden filter)
 //   colgroup + thead: přidán filtr !col.hidden (chyběl, data ho měly)
 //   Druhý řádek faktury: odstraněn fontSize:11 + color:textMuted → dědí styl buňky
+//   FIX: table-wrapper overflowY:"hidden" → "auto" (řádky nebyly vidět)
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -2663,7 +2664,7 @@ export default function App() {
       </div>
 
       {/* TABLE */}
-      <div ref={tableWrapRef} className="table-wrapper" style={{ overflowX: "auto", overflowY: "hidden", flex: 1, minHeight: 0 }}>
+      <div ref={tableWrapRef} className="table-wrapper" style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed", width: "max-content" }}>
           <colgroup>
             <col style={{ width: 40 }} />
