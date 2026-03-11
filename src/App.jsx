@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_10_build0044
+// BUILD: 2026_03_10_build0045
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -8,114 +8,95 @@ import * as XLSX from "xlsx";
 //   stavby-app_DATUM_buildXXXX.jsx
 //   stavby-app_DATUM_buildXXXX_changelog.txt
 //   Třetí řádek souboru: // BUILD: DATUM_buildXXXX
+//   Po každém buildu aktualizovat sekci HISTORY níže.
 //
-// TRANSCRIPT: /mnt/transcripts/ — vždy přečíst pro kontext
+// DEPLOY: Vercel + GitHub (doco1971/stavby-znojmo), branch main
+//   Soubor patří do: src/App.jsx
 //
-// EXPORT — uživatel chce zachovat:
-//   - CSV, Excel (.xlsx), Barevný Excel (.xls), PDF tisk, Export logu
-//   - Barevný XLS: zbarvení podle firmy, varování při otevření = OK
-//   - Záloha: kompletní data jako Excel (jen admin)
-//   - XLSX export: používá HTML blob (.xls) — NE import("xlsx"), to nefunguje v bundlu
+// TRANSCRIPT: /mnt/transcripts/ — přečíst pro kontext předchozích session
 //
-// TABULKA:
-//   - Sloupce Faktura 2 (cislo_faktury_2, bez_dph_2, splatna_2): hidden:true
-//     ale data se zobrazují jako druhý řádek v buňkách faktury
-//   - Zelený řádek (isFaktura): vyplněno č.faktury + částka bez DPH + splatná
-//     → isOverdue = false (červené ukončení se NEZOBRAZÍ)
-//   - Červené ukončení (isOverdue): termín v minulosti, jen pokud !isFaktura
+// ============================================================
+// TECHNICKÉ DETAILY
+// ============================================================
 //
-// ROLE: user (jen čtení), user_e (editor), admin, superadmin
-// DEMO: email=demo / heslo=demo, max 5 staveb, jen v paměti
+// SUPABASE: tabulky stavby, ciselniky, uzivatele, log_aktivit, nastaveni
+//   sb() helper — fetch wrapper s Bearer tokenem
+//   XLSX export: HTML blob (.xls) — NE import("xlsx"), nefunguje v bundlu!
+//   XLSX import: XLSX.read(..., { raw: true, cellDates: true }) — raw:true nutné!
 //
-// MOBIL: tabulka není optimalizována pro mobil (25 sloupců)
-//   → do budoucna zvážit mobilní zobrazení (kartičky)
+// TABULKA — sloupce:
+//   Faktura 2 (cislo_faktury_2, castka_bez_dph_2, splatna_2): hidden:true
+//   ale zobrazují se jako druhý řádek v buňkách faktury (šedě, menší)
+//   Zelený řádek (isFaktura): č.faktury + castka_bez_dph + splatna vyplněny
+//     → isOverdue = false
+//   Červené ukončení (isOverdue): termín v minulosti, jen pokud !isFaktura
 //
-// DB MIGRACE (nutné spustit v Supabase SQL editoru):
+// ROLE: user (čtení), user_e (editor), admin, superadmin
+//
+// DEMO: email=demo / heslo=demo
+//   role=admin, max 15 staveb, jen v paměti — NESMÍ zapisovat do DB!
+//   Blokováno: logAkce, saveSettings, saveUsers, saveAppInfo, saveColWidths,
+//              loadLog, HistorieModal, LogModal, SettingsModal log tab
+//   Demo data: 8 staveb, 4 firmy, DEMO_USERS (4 účty viditelné v Nastavení)
+//
+// IMPORT původní tabulky (📥 Import, jen superadmin):
+//   Formát A — původní Excel: List1, hlavička řádek 4, data od řádku 5
+//     col1=firma, col3=ps_i, col4=snk_i, col5=bo_i, col6=ps_ii, col7=bo_ii,
+//     col8=poruch, col9=cislo_stavby, col10=nazev_stavby,
+//     col14=ukonceni, col15=zrealizovano, col16=sod, col17=ze_dne,
+//     col18=objednatel, col19=stavbyvedouci, col20=nabidkova_cena,
+//     col21=cislo_faktury, col22=castka_bez_dph, col23=splatna
+//   Formát B — záloha DB (list "Stavby" z aplikace)
+//   Datumy vždy DD.MM.YYYY, čísla jako float (raw:true)
+//
+// ZÁLOHA DB (💾 Záloha DB, jen superadmin):
+//   Excel 3 listy: Stavby + Ciselniky + Uzivatele (bez hesel)
+//
+// DB MIGRACE (nutné v Supabase SQL editoru):
 //   ALTER TABLE stavby ADD COLUMN IF NOT EXISTS poznamka TEXT;
+//   ALTER TABLE stavby ADD COLUMN IF NOT EXISTS cislo_faktury_2 TEXT;
+//   ALTER TABLE stavby ADD COLUMN IF NOT EXISTS castka_bez_dph_2 NUMERIC;
+//   ALTER TABLE stavby ADD COLUMN IF NOT EXISTS splatna_2 TEXT;
 //   CREATE POLICY "admin_read_all" ON log_aktivit FOR SELECT USING (true);
 //
+// MOBIL: tabulka není optimalizována (25 sloupců) → do budoucna kartičky
+//
 // ============================================================
-// HISTORY BUILDŮ
+// PENDING FUNKCE (dohodnuté, zatím neimplementované)
+// ============================================================
+// [PENDING] 📋 Kopírovat stavbu — duplikovat řádek jako základ pro nový
+// [PENDING] 🔍 Rozšířený filtr — rok, rozsah částek, prošlé termíny
+// [PENDING] 📱 Mobilní kartičky — přepínač tabulka ↔ kartičky
+//
+// ============================================================
+// HISTORY BUILDŮ (0025–0045)
 // ============================================================
 //
-// BUILD0025 — nové funkce:
-//   🔔 NOTIFIKACE: Browser Notification API, žádá povolení po přihlášení,
-//      odesílá notifikaci pro každou stavbu s termínem do 7 dní,
-//      opakuje každých 60 min (jen pokud tab není aktivní)
-//   📊 GRAF: vlastní SVG sloupcový graf (BEZ recharts — není v package.json!),
-//      přepínač firma/měsíc, otevírá se tlačítkem "📊 Graf" ve filtrovací liště
-//   🔒 AUTO-LOGOUT: 15 min nečinnost → varování 60s countdown → odhlášení
-//      sleduje mousemove, keydown, click, scroll
-//   💬 POZNÁMKA: pole poznamka v editačním formuláři (textarea, ukládá do DB)
-//      zobrazuje se jako ikona 💬 v tabulce (tooltip s textem)
-//
-// BUILD0026 — opravy build chyb:
-//   🔧 FIX: recharts dynamický import odstraněn → čistý SVG graf
-//   🔧 FIX: duplicate key "height" v inline stylu
-//
-// BUILD0027 — bugfix + nápověda:
-//   🐛 FIX: ikona 💬 byla skrytá pro role user — přesunuta mimo editor guard
-//   📋 Nápověda: přidány sekce pro 💬 Poznámka, 📊 Graf, 🔔 Notifikace, ⏱️ Logout
-//
-// BUILD0028 — graf Kat. I / II:
-//   📊 Graf: třetí přepínač "📂 Kat. I / II"
-//      Kat. I  = ps_i + snk_i + bo_i
-//      Kat. II = ps_ii + bo_ii + poruch
-//      Sloupeček zbarvený barvou firmy, tabulka s řádkem CELKEM
-//
-// BUILD0029 — 🕐 Historie změn:
-//   Nová komponenta HistorieModal — fialové tlačítko 🕐 v levém sloupci akcí
-//   Při uložení se do log_aktivit.detail zapisuje JSON s diffem polí:
-//     { nazev: "...", zmeny: [{ pole: "vyfakturovano", stare: "0", nove: "720000" }] }
-//   FIELD_LABELS mapa pro překlad klíčů polí do čitelných názvů
-//   Záznamy před build0029 neobsahují diff (zobrazí se jen akce + čas)
-//
-// BUILD0030 — oprava syntax error:
-//   🔧 FIX: záznamy "Historie změn" a "Poznámka" v nápovědě sloučeny do 1 objektu
-//
-// BUILD0031 — oprava filtru historie:
-//   🐛 FIX: Historie zobrazovala záznamy jiných staveb
-//   Oprava: regex /^ID:\s*(\d+)[,\s]/ pro přesnou shodu ID na začátku detailu
-//
-// BUILD0032 — 📜 Log zakázek + exporty:
-//   Nové tlačítko 📜 Log v hlavičce (jen admin)
-//   LogModal: kompletní log Přidání/Editace/Smazání staveb
-//   Filtry: uživatel, akce, datum od/do + Reset
-//   Exporty z LogModal: 📊 Excel (.xls blob), 🎨 Barevný Excel, 🖨️ PDF tisk
-//   Exporty z HistorieModal: 🖨️ PDF tisk, 📊 Excel (.xls blob)
-//
-// BUILD0033 — tečka na historii + RLS warning:
-//   🔴 Červená svítivá tečka na 🕐 pokud stavba má záznamy v logu
-//   LogModal: žlutý RLS banner s SQL příkazem pokud vidíme jen 1 uživatele
-//
-// BUILD0034 — opravy runtime chyb:
-//   🔧 FIX: ReferenceError "ur" — isDemo použito před deklarací v useEffect
-//   🔧 FIX: import("xlsx") nefunguje v bundlu → nahrazeno HTML blob exportem
-//
-// BUILD0035 — tečka zjednodušena + nápověda:
-//   🔴 Tečka svítí permanentně pokud stavba má záznamy (bez localStorage)
-//   Nápověda: kompletní přepis, 16 sekcí, intro box, nové záznamy
-//
-// BUILD0036 — plovoucí nápověda + demo + RLS:
-//   ❓ Nápověda: plovoucí přetahovatelné okno (jako EditModal), tmavý styl
-//      helpPos state + onHelpDragStart handler
-//   🎮 Demo banner: lepší kontrast, boxíčky s velkým písmem
-//   📜 Log RLS warning: tlačítko 📋 Kopírovat SQL příkazu
-//
-// BUILD0040 — blokování ostrých dat v demo (Nastavení log):
-//   SettingsModal dostává prop isDemo
-//   handleLoadLog: if (isDemo) return → žádné sb() volání
-//   Tlačítko ⚙️ Nastavení: loadLog() se nevolá při isDemo
-//   Tab "log" v Nastavení: žlutý banner "Demo režim — log se neukládá"
-//
-// BUILD0044 — opravy importu + Faktura 2 obnovena:
-//   Import: raw:true → čísla se nezaokrouhlují (126721.85 ne 12672)
-//   Import: fmtDateFromXls opravena — Date obj + Excel serial → DD.MM.YYYY
-//   Import: numVal opravena — typeof number → přímá hodnota bez parsování
-//   Faktura 2: přidána do COLUMNS (hidden:true), NUM_FIELDS, DATE_FIELDS
-//   Faktura 2: sekce obnovena v EditModal (Č.faktury 2, Č.bez DPH 2, Splatná 2)
-//   Faktura 2: druhý řádek zobrazen v buňkách tabulky pod prvním (šedě, menší)
-//   emptyRow: doplněna pole cislo_faktury_2, castka_bez_dph_2, splatna_2
+// BUILD0025 — Notifikace, SVG graf firma/měsíc, auto-logout, poznámka
+// BUILD0026 — FIX: recharts odstraněn, duplicate key
+// BUILD0027 — FIX: 💬 ikona pro user, nápověda rozšířena
+// BUILD0028 — Graf: třetí přepínač Kat. I / II
+// BUILD0029 — 🕐 HistorieModal, diff při uložení, FIELD_LABELS
+// BUILD0030 — FIX: syntax error v nápovědě
+// BUILD0031 — FIX: regex filtr historie (přesná shoda ID)
+// BUILD0032 — 📜 LogModal, exporty z logu a historie
+// BUILD0033 — 🔴 Tečka na 🕐, RLS banner v logu
+// BUILD0034 — FIX: ReferenceError "ur", dynamic import xlsx
+// BUILD0035 — Tečka permanentní, nápověda přepsána (16 sekcí)
+// BUILD0036 — Nápověda plovoucí (drag), demo banner, RLS kopírovat
+// BUILD0037 — Aktualizace hlavičky (jen dokumentace)
+// BUILD0038 — Demo jako admin, 8 staveb, DEMO_USERS, tečka při loginu
+// BUILD0039 — FIX: demo logy prázdné (isDemo prop), tečka ihned po save
+// BUILD0040 — FIX: SettingsModal log tab blokován v demo
+// BUILD0041 — 🚨 KRITICKÁ OPRAVA: demo zapisovalo do ostré DB
+//   saveSettings/saveUsers/logAkce/saveAppInfo/saveColWidths — vše blokováno
+//   PŘÍČINA: demo role admin + chybějící guardy → přepsalo ciselniky+uzivatele
+// BUILD0042 — 💾 Záloha DB (superadmin): 3 listy Stavby+Ciselniky+Uzivatele
+// BUILD0043 — 📥 Import staveb: původní tabulka + záloha DB formát
+// BUILD0044 — FIX: import čísla (raw:true), datumy DD.MM.YYYY, Faktura 2 obnovena
+//   Faktura 2 chyběla v COLUMNS/editaci/tabulce — obnovena kompletně
+//   FIX syntax error: chybějící </div> po sekci Faktura 2 v EditModal
+// BUILD0045 — Aktualizace hlavičky pro nové session (jen dokumentace)
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
