@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_10_build0041
+// BUILD: 2026_03_10_build0042
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -108,14 +108,11 @@ import * as XLSX from "xlsx";
 //   Tlačítko ⚙️ Nastavení: loadLog() se nevolá při isDemo
 //   Tab "log" v Nastavení: žlutý banner "Demo režim — log se neukládá"
 //
-// BUILD0041 — KRITICKÁ OPRAVA: demo nesmí zapisovat do ostré DB:
-//   logAkce(): if (uzivatel==="demo") return — globální blokování
-//   saveSettings(): isDemo → jen lokální setState, žádné sb() DELETE/POST
-//   saveUsers(): isDemo → jen lokální setState, žádné sb() DELETE/POST
-//   saveAppInfo(): isDemo → jen setState, žádné sb()
-//   saveColWidths(): isDemo → return, žádné sb()
-//   nastavení useEffect (col_widths): přidán guard !isDemo
-//   PŘÍČINA CHYBY: demo uživatelé a ciselniky se zapsaly do ostré Supabase
+// BUILD0042 — Záloha DB (superadmin):
+//   zalohaExcel() rozšířena na 3 listy: Stavby + Ciselniky + Uzivatele (bez hesel)
+//   Ciselniky a Uzivatele se načítají živě z DB (sb())
+//   Tlačítko: isAdmin → isSuperAdmin, label "💾 Záloha DB"
+//   Soubor: zaloha_DB_DATUM.xlsx
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -2339,15 +2336,33 @@ export default function App() {
     } catch(e) { showToast("Chyba exportu logu: " + e.message, "error"); }
   };
 
-  const zalohaExcel = () => {
-    const headers = COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => c.label);
-    const rows = data.map(row => COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => row[c.key] ?? ""));
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    XLSX.utils.book_append_sheet(wb, ws, "Záloha");
+  const zalohaExcel = async () => {
     const datum = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
-    XLSX.writeFile(wb, `zaloha_stavby_${datum}.xlsx`);
-    logAkce(user?.email, "Záloha", `${data.length} záznamů`);
+    const wb = XLSX.utils.book_new();
+
+    // List 1 — Stavby
+    const stavbyHeaders = COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => c.label);
+    const stavbyRows = data.map(row => COLUMNS.filter(c => !c.computed && c.key !== "id").map(c => row[c.key] ?? ""));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([stavbyHeaders, ...stavbyRows]), "Stavby");
+
+    // List 2 — Ciselniky (živá data z DB)
+    try {
+      const cis = await sb("ciselniky?order=typ,poradi");
+      const cisHeaders = ["id", "typ", "hodnota", "barva", "poradi"];
+      const cisRows = (cis || []).map(r => [r.id, r.typ, r.hodnota, r.barva || "", r.poradi]);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cisHeaders, ...cisRows]), "Ciselniky");
+    } catch { XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Chyba načtení"]]), "Ciselniky"); }
+
+    // List 3 — Uzivatele (bez hesla)
+    try {
+      const uz = await sb("uzivatele?order=id");
+      const uzHeaders = ["id", "jmeno", "email", "role"];
+      const uzRows = (uz || []).map(r => [r.id, r.jmeno, r.email, r.role]);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([uzHeaders, ...uzRows]), "Uzivatele");
+    } catch { XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Chyba načtení"]]), "Uzivatele"); }
+
+    XLSX.writeFile(wb, `zaloha_DB_${datum}.xlsx`);
+    logAkce(user?.email, "Záloha", `${data.length} staveb + ciselniky + uzivatele`);
   };
 
   // ── isDark + useMemo hooky MUSÍ být před každým early return ──
@@ -2502,7 +2517,7 @@ export default function App() {
               </div>
             )}
           </div>
-          {isAdmin && <button onClick={zalohaExcel} onMouseEnter={e => showTooltip(e, "Stáhne zálohu všech staveb jako Excel")} onMouseLeave={hideTooltip} style={{ padding: "7px 14px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: T.text, cursor: "pointer", fontSize: 12 }}>💾 Záloha</button>}
+          {isSuperAdmin && <button onClick={zalohaExcel} onMouseEnter={e => showTooltip(e, "Záloha celé DB: stavby + číselníky + uživatelé (Excel, 3 listy)")} onMouseLeave={hideTooltip} style={{ padding: "7px 14px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: T.text, cursor: "pointer", fontSize: 12 }}>💾 Záloha DB</button>}
           {isEditor && (
             <button
               onMouseEnter={e => showTooltip(e, "Přidat novou stavbu")} onMouseLeave={hideTooltip}
@@ -2684,7 +2699,7 @@ export default function App() {
                 { icon: "🔍", title: "Filtry a vyhledávání", text: "Vyhledávejte podle názvu nebo čísla stavby (pole Hledat). Filtrujte podle firmy, objednatele nebo stavbyvedoucího. Filtry lze kombinovat. Graf 📊 a export vždy pracují jen s aktuálně vyfiltrovanými daty." },
                 { icon: "📊", title: "Graf nákladů", text: "Tlačítko 📊 Graf ve filtrovací liště otevře interaktivní sloupcový graf. Tři přepínače: 🏢 Firma, 📅 Měsíc, 📂 Kat. I / II (Plán.+SNK+Běžné op. vs. Plán.+Běžné op.+Poruchy). Graf vždy odráží aktuální filtr." },
                 { icon: "📤", title: "Export dat", text: "CSV — prostá tabulka. Excel (.xlsx) — standardní formát. Barevný Excel (.xls) — se zbarvením firem (potvrďte varování Excelu). PDF — tisk na A4 landscape. Vše pracuje s aktuálním filtrem." },
-                { icon: "💾", title: "Záloha dat", text: "Tlačítko Záloha (pouze admin) stáhne kompletní zálohu VŠECH staveb jako Excel — bez ohledu na filtry. Doporučujeme zálohovat pravidelně, zvláště před hromadnými změnami." },
+                { icon: "💾", title: "Záloha DB", text: "Tlačítko Záloha DB (pouze superadmin) stáhne kompletní zálohu celé databáze jako Excel se třemi listy: Stavby, Ciselniky, Uzivatele. Doporučujeme zálohovat pravidelně, zvláště před hromadnými změnami nebo aktualizací aplikace." },
                 { icon: "⚙️", title: "Nastavení", text: "Správa firem (název + barva řádku), číselníků objednatelů a stavbyvedoucích. Admin spravuje uživatele — přidává, mění hesla a role. Role: USER (čtení), USER EDITOR (editace), ADMIN (plný přístup), SUPERADMIN (+ nastavení aplikace)." },
                 { icon: "🔔", title: "Notifikace v prohlížeči", text: "Aplikace zobrazuje upozornění na blížící se termíny i mimo otevřenou záložku. Po přihlášení prohlížeč zobrazí dialog — klikněte Povolit. Notifikace se odešlou pro stavby s termínem do 7 pracovních dní, opakují každých 60 min pokud záložka není aktivní." },
                 { icon: "⏱️", title: "Automatické odhlášení", text: "Aplikace se automaticky odhlásí po 15 minutách nečinnosti. Před odhlášením se zobrazí varování s odpočítáváním 60 sekund — klikněte Jsem tady pro pokračování. Neaktivní v demo režimu." },
