@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_10_build0043
+// BUILD: 2026_03_10_build0044
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -108,17 +108,14 @@ import * as XLSX from "xlsx";
 //   Tlačítko ⚙️ Nastavení: loadLog() se nevolá při isDemo
 //   Tab "log" v Nastavení: žlutý banner "Demo režim — log se neukládá"
 //
-// BUILD0043 — 📥 Import staveb (superadmin):
-//   Tlačítko 📥 Import vedle 💾 Záloha DB — jen pro superadmin
-//   Podporuje 2 formáty:
-//     a) Původní tabulka Excel (List1, řádek 4=hlavička, data od řádku 5)
-//        Mapování: col1=firma, col9=č.stavby, col10=název, col3-8=čísla,
-//        col14=ukončení, col15=zreal., col16=SOD, col17=ze_dne,
-//        col18=objednatel, col19=stavbyvedoucí, col20=nab.cena,
-//        col21=č.faktury, col22=č.bez_dph, col23=splatná
-//     b) Záloha DB (list "Stavby" — export z aplikace)
-//   Po importu: DELETE stavby?id=gt.0 + POST nové po 50 kusech
-//   importLog state → modal s výsledkem (ok/chyby)
+// BUILD0044 — opravy importu + Faktura 2 obnovena:
+//   Import: raw:true → čísla se nezaokrouhlují (126721.85 ne 12672)
+//   Import: fmtDateFromXls opravena — Date obj + Excel serial → DD.MM.YYYY
+//   Import: numVal opravena — typeof number → přímá hodnota bez parsování
+//   Faktura 2: přidána do COLUMNS (hidden:true), NUM_FIELDS, DATE_FIELDS
+//   Faktura 2: sekce obnovena v EditModal (Č.faktury 2, Č.bez DPH 2, Splatná 2)
+//   Faktura 2: druhý řádek zobrazen v buňkách tabulky pod prvním (šedě, menší)
+//   emptyRow: doplněna pole cislo_faktury_2, castka_bez_dph_2, splatna_2
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -203,14 +200,17 @@ const COLUMNS = [
   { key: "cislo_faktury", label: "Č. faktury", width: 105 },
   { key: "castka_bez_dph", label: "Č. bez DPH", width: 105, type: "number" },
   { key: "splatna", label: "Splatná", width: 88 },
+  { key: "cislo_faktury_2", label: "Č. faktury 2", width: 105, hidden: true },
+  { key: "castka_bez_dph_2", label: "Č. bez DPH 2", width: 105, type: "number", hidden: true },
+  { key: "splatna_2", label: "Splatná 2", width: 88, hidden: true },
 
 ];
 
 const inputSx = { width: "100%", padding: "9px 11px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 7, color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" };
 
 // ── Globální sdílené konstanty ─────────────────────────────
-const NUM_FIELDS = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph"];
-const DATE_FIELDS = ["ukonceni","splatna","ze_dne"];
+const NUM_FIELDS = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovano","zrealizovano","nabidkova_cena","castka_bez_dph","castka_bez_dph_2"];
+const DATE_FIELDS = ["ukonceni","splatna","ze_dne","splatna_2"];
 const TEXT_FIELDS_EXTRA = ["poznamka"]; // textarea pole – nepatří do NUM ani DATE
 const FIRMA_COLOR_FALLBACK = ["#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899"];
 const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
@@ -1230,9 +1230,14 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             </div>
 
             {/* Faktura 2 */}
-
-
-          </div>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 10, borderLeft: "3px solid #f59e0b", paddingLeft: 8, opacity: 0.7 }}>FAKTURA 2</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <FormField label="Č. faktury 2" value={form["cislo_faktury_2"]} onChange={v => set("cislo_faktury_2", v)} />
+                <FormField label="Částka bez DPH 2" value={form["castka_bez_dph_2"]} onChange={v => set("castka_bez_dph_2", v)} type="number" />
+                <FormField label="Splatná 2" value={form["splatna_2"]} onChange={v => set("splatna_2", v)} type="date" />
+              </div>
+            </div>
         </div>
 
         {/* Poznámka */}
@@ -2377,12 +2382,21 @@ export default function App() {
 
   const fmtDateFromXls = (v) => {
     if (!v) return "";
+    let d;
     if (v instanceof Date) {
-      const d = v.getDate().toString().padStart(2,"0");
-      const m = (v.getMonth()+1).toString().padStart(2,"0");
-      return `${d}.${m}.${v.getFullYear()}`;
+      d = v;
+    } else if (typeof v === "number") {
+      // Excel serial date → JS Date
+      d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    } else if (typeof v === "string" && v.includes("-")) {
+      d = new Date(v);
+    } else {
+      return String(v);
     }
-    return String(v);
+    if (isNaN(d.getTime())) return String(v);
+    const dd = d.getDate().toString().padStart(2,"0");
+    const mm = (d.getMonth()+1).toString().padStart(2,"0");
+    return `${dd}.${mm}.${d.getFullYear()}`;
   };
 
   const handleImport = (e) => {
@@ -2397,7 +2411,7 @@ export default function App() {
         // ── Detekce listu: buď "Stavby" (záloha DB) nebo první list (původní tabulka) ──
         const isZaloha = wb.SheetNames.includes("Stavby");
         const ws = isZaloha ? wb.Sheets["Stavby"] : wb.Sheets[wb.SheetNames[0]];
-        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false, cellDates: true });
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true, cellDates: true });
 
         let stavbyRows = [];
         let ok = 0, chyby = [];
@@ -2415,6 +2429,7 @@ export default function App() {
             ["Objednatel", "objednatel"], ["Stavbyvedoucí", "stavbyvedouci"],
             ["Ukončení", "ukonceni"], ["Č.faktury", "cislo_faktury"],
             ["Částka bez DPH", "castka_bez_dph"], ["Splatná", "splatna"],
+            ["Č.faktury 2", "cislo_faktury_2"], ["Č. bez DPH 2", "castka_bez_dph_2"], ["Splatná 2", "splatna_2"],
             ["Poznámka", "poznamka"],
           ];
           for (const row of raw.slice(1)) {
@@ -2434,6 +2449,7 @@ export default function App() {
             if (!nazev) continue; // přeskočit prázdné řádky
             const numVal = (v) => {
               if (v === null || v === undefined || v === "") return 0;
+              if (typeof v === "number") return v;
               const n = parseFloat(String(v).replace(/\s/g,"").replace(",","."));
               return isNaN(n) ? 0 : n;
             };
@@ -2566,7 +2582,7 @@ export default function App() {
   };
 
   const nextId = data.length > 0 ? data.reduce((max, r) => Math.max(max, r.id), 0) + 1 : 1;
-  const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", poznamka: "" };
+  const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", cislo_faktury_2: "", castka_bez_dph_2: 0, splatna_2: "", poznamka: "" };
 
   const getFirmaColor = (firmaName) => firmaColorCache[firmaName] || { bg: isDark ? "#1a2744" : "#e2e8f0", badge: "rgba(59,130,246,0.25)", badgeBorder: "rgba(59,130,246,0.6)", text: "#3b82f6", hex: "#3b82f6" };
 
@@ -2764,6 +2780,16 @@ export default function App() {
                           : isOverdue ? <span>⚠️ {row[col.key]}</span>
                           : row[col.key] ?? ""}
                         </div>
+                        {/* Druhý řádek pro fakturační sloupce */}
+                        {col.key === "cislo_faktury" && row.cislo_faktury_2 && (
+                          <div style={{ fontSize: 11, color: T.textMuted, borderTop: `1px dashed ${T.cellBorder}`, marginTop: 2, paddingTop: 2 }}>{row.cislo_faktury_2}</div>
+                        )}
+                        {col.key === "castka_bez_dph" && row.castka_bez_dph_2 > 0 && (
+                          <div style={{ fontSize: 11, color: T.textMuted, borderTop: `1px dashed ${T.cellBorder}`, marginTop: 2, paddingTop: 2 }}>{fmtN(row.castka_bez_dph_2)}</div>
+                        )}
+                        {col.key === "splatna" && row.splatna_2 && (
+                          <div style={{ fontSize: 11, color: T.textMuted, borderTop: `1px dashed ${T.cellBorder}`, marginTop: 2, paddingTop: 2 }}>{row.splatna_2}</div>
+                        )}
 
                       </div>
                     </td>
