@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_12_build0049
+// BUILD: 2026_03_12_build0050
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -111,6 +111,11 @@ import * as XLSX from "xlsx";
 //   Zmenšeny šířky NativeSelect (145/160/170), hledání 170px, gap 6px
 //   Zkráceny popisky tlačítek (záz., Záloha) aby se vešlo na 1 řádek
 //   Aktualizována HISTORY + PENDING sekce v hlavičce
+// BUILD0050 — FIX blikání stránkování: řádky s Fakturou 2 jsou vyšší
+//   PAGE_SIZE se počítal z firstRow → na str.5+ vyšší řádky → přepočet → blikání
+//   Oprava: použít MIN výšku ze všech viditelných řádků (ne firstRow)
+//   Odstraněn druhý useEffect bez deps (spouštěl se po každém renderu = smyčka)
+//   setPageSize: přidána ochrana prev === rows (nevyvolá re-render pokud stejné)
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -2293,16 +2298,18 @@ export default function App() {
       if (!tableWrapRef.current) return;
       const wrap = tableWrapRef.current;
       const thead = wrap.querySelector("thead");
-      const firstRow = wrap.querySelector("tbody tr");
       const theadH = thead ? thead.getBoundingClientRect().height : 35;
-      const rowH = firstRow ? firstRow.getBoundingClientRect().height : 32;
+      // Použij MINIMÁLNÍ výšku řádku ze všech viditelných řádků
+      // (řádky s fakturou 2 jsou vyšší — nesmíme je použít jako referenci)
+      const allRows = Array.from(wrap.querySelectorAll("tbody tr"));
+      const rowHeights = allRows.map(r => r.getBoundingClientRect().height).filter(h => h > 1);
+      const rowH = rowHeights.length > 0 ? Math.min(...rowHeights) : 32;
       if (rowH < 1) return;
-      // clientHeight = vnitřní výška pouze table wrapperu (bez pagination/footer)
       const scrollbarH = wrap.offsetHeight - wrap.clientHeight;
       const wrapH = wrap.clientHeight > 50 ? wrap.clientHeight : wrap.offsetHeight;
       const available = wrapH - theadH - scrollbarH - 1;
       const rows = Math.max(5, Math.floor(available / rowH));
-      setPageSize(rows);
+      setPageSize(prev => prev === rows ? prev : rows);
     };
     const t1 = setTimeout(calc, 0);
     const t2 = setTimeout(calc, 150);
@@ -2318,21 +2325,6 @@ export default function App() {
       window.removeEventListener("orientationchange", calc);
     };
   }, []);
-  // Přepočítej PAGE_SIZE po změně dat (výška wrapperu se mohla změnit)
-  useEffect(() => {
-    if (!tableWrapRef.current) return;
-    const wrap = tableWrapRef.current;
-    const thead = wrap.querySelector("thead");
-    const firstRow = wrap.querySelector("tbody tr");
-    if (!thead || !firstRow) return;
-    const theadH = thead.getBoundingClientRect().height;
-    const rowH = firstRow.getBoundingClientRect().height;
-    if (rowH < 1) return;
-    const scrollbarH = wrap.offsetHeight - wrap.clientHeight;
-      const available = wrap.clientHeight - theadH - scrollbarH - 1;
-    const rows = Math.max(5, Math.floor(available / rowH));
-    if (rows !== PAGE_SIZE) setPageSize(rows);
-  });
 
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed, filterSV, filterRok, filterCastkaOd, filterCastkaDo, filterProslé, filterFakturace, filterKat]);
