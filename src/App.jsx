@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_12_build0063
+// BUILD: 2026_03_12_build0064
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -143,9 +143,10 @@ import * as XLSX from "xlsx";
 // BUILD0061 — Doplnění nápovědy o nové funkce (BUILD0043–0060)
 //   Přidány sekce: Dva pohledy, Rozšířený filtr, Import, Označení faktur e/S
 // BUILD0062 — 2 opravy: td overflow:hidden pro truncate, reset shownDeadlineOnce
-// BUILD0063 — 2 opravy
-//   1. Resize sloupce: th maxWidth odstraněn (blokoval rozšíření)
-//   2. Nápověda: e červené + S žluté jako v tabulce (JSX node v text poli)
+// BUILD0063 — th maxWidth odstraněn, nápověda e/S s barvami
+// BUILD0064 — FIX: ikona ⟺ není vidět v úzkých sloupcích
+//   th bez overflow/maxWidth, flex space-between (text ell. | ikona vždy viditelná)
+//   objednatel: 110→130px, stavbyvedoucí: 110→140px default
 //   1. Resize sloupce Objednatel/Stavbyvedoucí: td overflow:hidden + maxWidth
 //   2. Termíny se nezobrazí po přepnutí účtu: reset shownDeadlineOnce při změně user
 //   Přidáno: Dva pohledy, Rozšířený filtr, Import staveb, Označení faktur e/S
@@ -2831,9 +2832,9 @@ export default function App() {
               <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
               {(isAdmin || isEditor) && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
               {COLUMNS.filter(col => col.key !== "id" && !col.hidden).map(col => (
-                <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", width: getColWidth(col), minWidth: 0, maxWidth: getColWidth(col), overflow: "hidden", position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, userSelect: "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                    {col.label.toUpperCase()}
+                <th key={col.key} style={{ padding: "6px 4px 6px 8px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, width: getColWidth(col), minWidth: 0, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, userSelect: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, width: "100%", minWidth: 0 }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, textAlign: "center", minWidth: 0 }}>{col.label.toUpperCase()}</span>
                     {isSuperAdmin && (
                       editingColWidth === col.key
                         ? <input
@@ -2842,13 +2843,13 @@ export default function App() {
                             defaultValue={Math.round(getColWidth(col))}
                             onBlur={e => { const w = Math.max(40, Math.min(2000, parseInt(e.target.value)||40)); setColWidths(prev => { const n = {...prev, [col.key]: w}; saveColWidths(n); return n; }); setEditingColWidth(null); }}
                             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingColWidth(null); }}
-                            style={{ width: 65, fontSize: 10, padding: "1px 3px", background: "#1e3a8a", color: "#fff", border: "1px solid #60a5fa", borderRadius: 3 }}
+                            style={{ width: 50, fontSize: 10, padding: "1px 3px", background: "#1e3a8a", color: "#fff", border: "1px solid #60a5fa", borderRadius: 3, flexShrink: 0 }}
                             onClick={e => e.stopPropagation()}
                           />
                         : <span
-                            onMouseDown={e => startDrag(e, col.key, getColWidth(col))}
-                            onClick={e => { e.stopPropagation(); setEditingColWidth(col.key); }}
-                            style={{ cursor: "col-resize", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)", fontSize: 14, padding: "0 4px", userSelect: "none", flexShrink: 0, display: "inline-block" }}
+                            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); startDrag(e, col.key, getColWidth(col)); }}
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); setEditingColWidth(col.key); }}
+                            style={{ cursor: "col-resize", color: isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.5)", fontSize: 12, padding: "1px 3px", userSelect: "none", flexShrink: 0, display: "inline-flex", alignItems: "center", borderRadius: 3, background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)", lineHeight: 1 }}
                             title={`Táhni = resize | Klik = zadat šířku (nyní: ${Math.round(getColWidth(col))}px)`}
                           >⟺</span>
                     )}
