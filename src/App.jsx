@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_12_build0048
+// BUILD: 2026_03_12_build0049
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -102,12 +102,6 @@ import * as XLSX from "xlsx";
 //   colgroup + thead: přidán filtr !col.hidden (chyběl, data ho měly)
 //   Druhý řádek faktury: odstraněn fontSize:11 + color:textMuted → dědí styl buňky
 //   FIX: table-wrapper overflowY:"hidden" → "auto" (řádky nebyly vidět)
-// BUILD0047 — Označení faktur: červené "e" (E.ON) před Fakturou 1, žluté "S" (sdružení) před Fakturou 2
-//   Nápověda doplněna: sekce 🧾 Označení faktur
-// BUILD0048 — 🔍 Rozšířený filtr: rok, rozsah nab. ceny, prošlé termíny bez faktury
-//   Plovoucí přetahovatelný panel (stejný princip jako nápověda)
-//   Tabulka se při otevření filtru neposouvá
-//   Nápověda doplněna: sekce 🔍 Rozšířený filtr
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -205,7 +199,6 @@ const NUM_FIELDS = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovan
 const DATE_FIELDS = ["ukonceni","splatna","ze_dne","splatna_2"];
 const TEXT_FIELDS_EXTRA = ["poznamka"]; // textarea pole – nepatří do NUM ani DATE
 const FIRMA_COLOR_FALLBACK = ["#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899"];
-const EON_LOGO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIABYAOAMBEQACEQEDEQH/xAAZAAADAQEBAAAAAAAAAAAAAAAEBQYDBwH/xAAtEAABAwIEBQMDBQAAAAAAAAABAgMEBREABhIxEyFBUWEHcZEiMoEUFVKhwv/EABoBAAIDAQEAAAAAAAAAAAAAAAMEAQIFBgD/xAAwEQACAQMCAgcHBQAAAAAAAAABAgMABBEhMRJRBQYyYXGhwRQiQYGR8PETFSOx4f/aAAwDAQACEQMRAD8A7e4tDTanHFpQhIupSjYAdyce2qQCTgVF1b1IpkVxTVNYeqDiQSVI+lsAbnVuR5At5wnJeoui61vW3V+4kAaYhB37/T/c1QZXrjWYaSic02WlaihxsqvoUOl+u4P5weGUSpxCs2/sms5zExzyPMUXUKnApqErqExiMlX2l1wJ1e198XZ1XtHFAht5pziJS3gM15T6rT6mlaqfNjyQj7+E4Fafftjyurdk1M1tNAQJUK55iiEPsuNF1t1tTY3WlQI+cTkb0IowPCRrWcOfDnBZhS2JAQdKyy4F6T2NtsQrK2xq0kMkWBIpGeYxUJ6wPzUQ4LLesQXFK4xTspYtpSf7NvHjCV+WCgDauj6tJE0jse2MY8PiR5UkgRKtTcvK/T1LLrEGa2UreW4eIsKGxOm9xci3TAkR0j0YYNPTS209178chdTtjQY7s/mnuVINTgUiE3l+oU+THXLU5UH0q1BAsgaE3HP6R4N7bYNAjIgEZB11rO6RngmndrlGUhcKPrqfnU5Tp9PrmaKnWa6ppcRphbjDL6uSgOSEgHflzt3N8LI6SSs8mwrVngntLOO2tshiQCR5nPryoShF2lZXq1XJKFywIEbpcnmsj2A37g4rF/HEz89BRrwLc3sVvuF94+g+frTjKWUpk+j8WszJMWii7qYiF6eJ1KiOieXud+W5LBbsyZc4XlSPSXSsUM+LdQ0u3FvjuHf96009IoYEep1BCVJZedDTQV/FNz/oD8HBbFcBmpTrJMS8cJ3AyfE/ir+QwzKZWxJaQ60sWUhxIUlQ8g4eIBGDXNo7IwZTgip85Eyzx+N+1N6uwcXp+L2wD2WHOeGtL96v+Hh/UPl/eM0/jR2IjCGIrLbLKBZLbaQlIHsMHAAGBWc7tIxZzkmkzmTcuOPF1VJj6ibkC4HwDbAvZ4s54aeXpa+VeESGjpVEpcyNHjSYLC48cgtNaLJRbsNsXaNGGCNKWju543Z0cgnc/E0ZIYakx3I76AtlxBQtB2UkixGLEAjBoKOyMGU4IrKnQItMiIiQWUssIvpQnpc3OIVQgwtXmmkncySHJNf/2Q==";
 const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
 const hexToRgbaGlobal = (hex, alpha) => `rgba(${hexToRgb(hex)},${alpha})`;
 
@@ -244,13 +237,13 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const dropBg = isDark ? "#1e293b" : "#fff";
   const dropShadow = isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)";
   return (
-    <div ref={ref} style={{ position: "relative", ...style }}
+    <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}
       onMouseEnter={openDropdown}
       onMouseLeave={() => setTimeout(() => setOpen(false), 480)}
     >
-      <button style={{ width: "100%", padding: "7px 22px 7px 10px", background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 13, textAlign: "left", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", position: "relative" }}>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", paddingRight: 4 }}>{value}</span>
-        <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", fontSize: 9, color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)", flexShrink: 0, pointerEvents: "none" }}>▼</span>
+      <button style={{ width: "auto", padding: "7px 20px 7px 10px", background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 13, textAlign: "left", display: "inline-block", whiteSpace: "nowrap", position: "relative", minWidth: 80 }}>
+        <span>{value}</span>
+        <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", fontSize: 9, color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)", pointerEvents: "none" }}>▼</span>
       </button>
       {open && (
         <div style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, width: dropPos.width, background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 9999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
@@ -1763,6 +1756,15 @@ export default function App() {
   const [filterProslé, setFilterProslé] = useState(false);
   const [filterFakturace, setFilterFakturace] = useState("");
   const [filterKat, setFilterKat] = useState("");
+  const [advFilterPos, setAdvFilterPos] = useState({ x: Math.max(20, window.innerWidth/2 - 220), y: 120 });
+  const onAdvFilterDragStart = (e) => {
+    e.preventDefault();
+    const startX = e.clientX - advFilterPos.x, startY = e.clientY - advFilterPos.y;
+    const onMove = (ev) => setAdvFilterPos({ x: Math.max(0, Math.min(window.innerWidth-100, ev.clientX-startX)), y: Math.max(0, Math.min(window.innerHeight-60, ev.clientY-startY)) });
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
   const [editRow, setEditRow] = useState(null);
   const [adding, setAdding] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -1774,15 +1776,6 @@ export default function App() {
     e.preventDefault();
     const startX = e.clientX - helpPos.x, startY = e.clientY - helpPos.y;
     const onMove = (ev) => setHelpPos({ x: Math.max(0, Math.min(window.innerWidth-100, ev.clientX-startX)), y: Math.max(0, Math.min(window.innerHeight-60, ev.clientY-startY)) });
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
-  const [advFilterPos, setAdvFilterPos] = useState({ x: Math.max(20, window.innerWidth/2 - 220), y: 120 });
-  const onAdvFilterDragStart = (e) => {
-    e.preventDefault();
-    const startX = e.clientX - advFilterPos.x, startY = e.clientY - advFilterPos.y;
-    const onMove = (ev) => setAdvFilterPos({ x: Math.max(0, Math.min(window.innerWidth-100, ev.clientX-startX)), y: Math.max(0, Math.min(window.innerHeight-60, ev.clientY-startY)) });
     const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -2266,7 +2259,7 @@ export default function App() {
     if (filterText && !r.nazev_stavby?.toLowerCase().includes(filterText.toLowerCase()) && !r.cislo_stavby?.toLowerCase().includes(filterText.toLowerCase())) return false;
     if (filterObjed !== "Všichni objednatelé" && filterObjed && r.objednatel !== filterObjed) return false;
     if (filterSV !== "Všichni stavbyvedoucí" && filterSV && r.stavbyvedouci !== filterSV) return false;
-    if (filterRok) { const rok = filterRok; if (!((r.ukonceni && r.ukonceni.includes(rok)) || (r.ze_dne && r.ze_dne.includes(rok)))) return false; }
+    if (filterRok) { if (!((r.ukonceni && r.ukonceni.includes(filterRok)) || (r.ze_dne && r.ze_dne.includes(filterRok)))) return false; }
     if (filterCastkaOd !== "" && Number(r.nabidkova_cena) < Number(filterCastkaOd)) return false;
     if (filterCastkaDo !== "" && Number(r.nabidkova_cena) > Number(filterCastkaDo)) return false;
     if (filterProslé) { const dnes = new Date(); dnes.setHours(0,0,0,0); const isFak = r.cislo_faktury && r.cislo_faktury.trim() !== "" && r.castka_bez_dph && Number(r.castka_bez_dph) !== 0 && r.splatna && r.splatna.trim() !== ""; if (isFak || !r.ukonceni) return false; const [d,m,y] = r.ukonceni.split(".").map(Number); if (new Date(y,m-1,d) >= dnes) return false; }
@@ -2654,7 +2647,6 @@ export default function App() {
         </div>
       </div>
 
-
       {/* SUMMARY */}
       <div ref={cardsRef}><SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} isDark={isDark} firmaColors={Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#2563eb"]))} /></div>
 
@@ -2665,7 +2657,6 @@ export default function App() {
         <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} isDark={isDark} style={{ width: 190 }} />
         <NativeSelect value={filterSV} onChange={setFilterSV} options={["Všichni stavbyvedoucí", ...stavbyvedouci]} isDark={isDark} style={{ width: 210 }} />
         <button onClick={() => setShowAdvFilter(v => !v)} onMouseEnter={e => showTooltip(e, "Rozšířený filtr: rok, částka, prošlé termíny")} onMouseLeave={hideTooltip} style={{ padding: "7px 12px", background: showAdvFilter ? "rgba(37,99,235,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)"), border: `1px solid ${showAdvFilter ? "rgba(37,99,235,0.5)" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)")}`, borderRadius: 7, color: showAdvFilter ? "#60a5fa" : T.text, cursor: "pointer", fontSize: 12, fontWeight: showAdvFilter ? 700 : 400 }}>🔍 Filtr {showAdvFilter ? "▲" : "▼"}</button>
-
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, padding: "4px 12px", color: T.text, fontSize: 13, fontWeight: 600 }}>{filtered.length} záznamů</span>
           <button onClick={() => setShowGraf(true)} onMouseEnter={e => showTooltip(e, "Sloupcový graf nákladů")} onMouseLeave={hideTooltip} style={{ padding: "7px 14px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: T.text, cursor: "pointer", fontSize: 12 }}>📊 Graf</button>
@@ -2895,10 +2886,8 @@ export default function App() {
                 { icon: "📜", title: "Log zakázek", text: "Tlačítko 📜 Log v hlavičce (pouze admin) otevře kompletní přehled všech akcí na zakázkách — přidání, editace i smazání. Záznamy lze filtrovat podle uživatele, typu akce a datumového rozsahu. Exporty: Excel, Barevný Excel a PDF tisk." },
                 { icon: "💬", title: "Poznámka ke stavbě", text: "V editačním formuláři najdete fialovou sekci 💬 POZNÁMKA — zapište libovolný komentář nebo interní poznámku. Ikona 💬 se zobrazí vedle názvu stavby v tabulce pokud poznámka existuje. Najeďte myší na ikonu pro zobrazení textu." },
                 { icon: "🎨", title: "Barevné řádky", text: "Každá firma má přiřazenou barvu (nastavitelnou v Nastavení). Zelené zbarvení celého řádku signalizuje, že stavba má vyplněné číslo faktury, částku bez DPH a datum splatnosti — tedy je kompletně vyfakturována." },
-                { icon: "🧾", title: "Označení faktur", text: <span>Ve sloupci Č. faktury se zobrazují dvě faktury. Faktura 1 je označena <span style={{fontWeight:900,color:"#ef4444"}}>e</span> — E.ON. Faktura 2 je označena <span style={{fontWeight:900,color:"#facc15"}}>S</span> — sdružení.</span> },
                 { icon: "⚠️", title: "Termíny ukončení", text: "Pole Ukončení se zobrazí červeně s ikonou ⚠️ pokud je termín v minulosti a stavba nemá fakturu. Tlačítko ⏰ Termíny v hlavičce zobrazí přehled staveb s termínem do 30 dní — včetně počtu zbývajících pracovních dní." },
                 { icon: "🔍", title: "Filtry a vyhledávání", text: "Vyhledávejte podle názvu nebo čísla stavby (pole Hledat). Filtrujte podle firmy, objednatele nebo stavbyvedoucího. Filtry lze kombinovat. Graf 📊 a export vždy pracují jen s aktuálně vyfiltrovanými daty." },
-                { icon: "🔍", title: "Rozšířený filtr", text: "Tlačítko 🔍 Filtr v liště otevře plovoucí panel s rozšířenými filtry: rok (hledá v termínu ukončení a datu SOD), rozsah nabídkové ceny od/do, a přepínač pro zobrazení pouze staveb s prošlým termínem bez faktury. Panel lze přetahovat myší. Tlačítko ✕ Vymazat resetuje jen rozšířené filtry." },
                 { icon: "📊", title: "Graf nákladů", text: "Tlačítko 📊 Graf ve filtrovací liště otevře interaktivní sloupcový graf. Tři přepínače: 🏢 Firma, 📅 Měsíc, 📂 Kat. I / II (Plán.+SNK+Běžné op. vs. Plán.+Běžné op.+Poruchy). Graf vždy odráží aktuální filtr." },
                 { icon: "📤", title: "Export dat", text: "CSV — prostá tabulka. Excel (.xlsx) — standardní formát. Barevný Excel (.xls) — se zbarvením firem (potvrďte varování Excelu). PDF — tisk na A4 landscape. Vše pracuje s aktuálním filtrem." },
                 { icon: "💾", title: "Záloha DB", text: "Tlačítko Záloha DB (pouze superadmin) stáhne kompletní zálohu celé databáze jako Excel se třemi listy: Stavby, Ciselniky, Uzivatele. Doporučujeme zálohovat pravidelně, zvláště před hromadnými změnami nebo aktualizací aplikace." },
@@ -3299,12 +3288,10 @@ export default function App() {
       {/* ROZŠÍŘENÝ FILTR — plovoucí overlay */}
       {showAdvFilter && (
         <div style={{ position: "fixed", left: advFilterPos.x, top: advFilterPos.y, zIndex: 500, background: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.35)", width: 340, fontFamily: "'Segoe UI',sans-serif" }}>
-          {/* Drag handle */}
           <div onMouseDown={onAdvFilterDragStart} style={{ padding: "10px 16px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "grab", userSelect: "none", borderRadius: "12px 12px 0 0", background: isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)" }}>
             <span style={{ color: isDark ? "#60a5fa" : "#2563eb", fontWeight: 700, fontSize: 13 }}>🔍 Rozšířený filtr</span>
             <button onClick={() => setShowAdvFilter(false)} style={{ background: "none", border: "none", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
           </div>
-          {/* Obsah */}
           <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 12, width: 100, flexShrink: 0 }}>Rok:</span>
