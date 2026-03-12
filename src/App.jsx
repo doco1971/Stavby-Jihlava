@@ -97,12 +97,13 @@ import * as XLSX from "xlsx";
 //   Faktura 2 chyběla v COLUMNS/editaci/tabulce — obnovena kompletně
 //   FIX syntax error: chybějící </div> po sekci Faktura 2 v EditModal
 // BUILD0045 — Aktualizace hlavičky pro nové session (jen dokumentace)
-// BUILD0047 — 🏷️ Logo E.ON (base64) před č. faktury 1 i 2 — FIRMA_LOGO_MAP rozšiřitelný
 // BUILD0046 — FIX: Faktura 2 v buňce stejný font jako Faktura 1, skryté sloupce
 //   Č. FAKTURY 2 / Č. BEZ DPH 2 / SPLATNÁ 2 zmizely z hlavičky (hidden filter)
 //   colgroup + thead: přidán filtr !col.hidden (chyběl, data ho měly)
 //   Druhý řádek faktury: odstraněn fontSize:11 + color:textMuted → dědí styl buňky
 //   FIX: table-wrapper overflowY:"hidden" → "auto" (řádky nebyly vidět)
+// BUILD0047 — Označení faktur: červené "e" (E.ON) před Fakturou 1, žluté "S" (sdružení) před Fakturou 2
+//   Nápověda doplněna: sekce 🧾 Označení faktur
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -2767,7 +2768,7 @@ export default function App() {
                           : col.type === "number" ? fmtN(row[col.key])
                           : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
                           : isOverdue ? <span>⚠️ {row[col.key]}</span>
-                          : col.key === "cislo_faktury" && row[col.key] ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontWeight: 900, fontSize: 16, color: "#ef4444", lineHeight: 1, flexShrink: 0, textShadow: "0 0 4px rgba(239,68,68,0.5)" }}>e</span>{row[col.key]}</span>
+                          : col.key === "cislo_faktury" && row[col.key] ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontWeight: 400, fontSize: 16, color: "#ef4444", lineHeight: 1, flexShrink: 0 }}>e</span>{row[col.key]}</span>
                           : row[col.key] ?? ""}
                         </div>
                         {/* Druhý řádek pro fakturační sloupce */}
