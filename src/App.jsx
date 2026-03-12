@@ -97,7 +97,7 @@ import * as XLSX from "xlsx";
 //   Faktura 2 chyběla v COLUMNS/editaci/tabulce — obnovena kompletně
 //   FIX syntax error: chybějící </div> po sekci Faktura 2 v EditModal
 // BUILD0045 — Aktualizace hlavičky pro nové session (jen dokumentace)
-// BUILD0047 — 🧾 ikona před č. faktury 1 i 2 v tabulce (opacity 0.7, fontSize 11)
+// BUILD0047 — 🏷️ Logo E.ON (base64) před č. faktury 1 i 2 — FIRMA_LOGO_MAP rozšiřitelný
 // BUILD0046 — FIX: Faktura 2 v buňce stejný font jako Faktura 1, skryté sloupce
 //   Č. FAKTURY 2 / Č. BEZ DPH 2 / SPLATNÁ 2 zmizely z hlavičky (hidden filter)
 //   colgroup + thead: přidán filtr !col.hidden (chyběl, data ho měly)
@@ -200,6 +200,8 @@ const NUM_FIELDS = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","vyfakturovan
 const DATE_FIELDS = ["ukonceni","splatna","ze_dne","splatna_2"];
 const TEXT_FIELDS_EXTRA = ["poznamka"]; // textarea pole – nepatří do NUM ani DATE
 const FIRMA_COLOR_FALLBACK = ["#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899"];
+const EON_LOGO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIABYAOAMBEQACEQEDEQH/xAAZAAADAQEBAAAAAAAAAAAAAAAEBQYDBwH/xAAtEAABAwIEBQMDBQAAAAAAAAABAgMEBREABhIxEyFBUWEHcZEiMoEUFVKhwv/EABoBAAIDAQEAAAAAAAAAAAAAAAMEAQIFBgD/xAAwEQACAQMCAgcHBQAAAAAAAAABAgMABBEhMRJRBQYyYXGhwRQiQYGR8PETFSOx4f/aAAwDAQACEQMRAD8A7e4tDTanHFpQhIupSjYAdyce2qQCTgVF1b1IpkVxTVNYeqDiQSVI+lsAbnVuR5At5wnJeoui61vW3V+4kAaYhB37/T/c1QZXrjWYaSic02WlaihxsqvoUOl+u4P5weGUSpxCs2/sms5zExzyPMUXUKnApqErqExiMlX2l1wJ1e198XZ1XtHFAht5pziJS3gM15T6rT6mlaqfNjyQj7+E4Fafftjyurdk1M1tNAQJUK55iiEPsuNF1t1tTY3WlQI+cTkb0IowPCRrWcOfDnBZhS2JAQdKyy4F6T2NtsQrK2xq0kMkWBIpGeYxUJ6wPzUQ4LLesQXFK4xTspYtpSf7NvHjCV+WCgDauj6tJE0jse2MY8PiR5UkgRKtTcvK/T1LLrEGa2UreW4eIsKGxOm9xci3TAkR0j0YYNPTS209178chdTtjQY7s/mnuVINTgUiE3l+oU+THXLU5UH0q1BAsgaE3HP6R4N7bYNAjIgEZB11rO6RngmndrlGUhcKPrqfnU5Tp9PrmaKnWa6ppcRphbjDL6uSgOSEgHflzt3N8LI6SSs8mwrVngntLOO2tshiQCR5nPryoShF2lZXq1XJKFywIEbpcnmsj2A37g4rF/HEz89BRrwLc3sVvuF94+g+frTjKWUpk+j8WszJMWii7qYiF6eJ1KiOieXud+W5LBbsyZc4XlSPSXSsUM+LdQ0u3FvjuHf96009IoYEep1BCVJZedDTQV/FNz/oD8HBbFcBmpTrJMS8cJ3AyfE/ir+QwzKZWxJaQ60sWUhxIUlQ8g4eIBGDXNo7IwZTgip85Eyzx+N+1N6uwcXp+L2wD2WHOeGtL96v+Hh/UPl/eM0/jR2IjCGIrLbLKBZLbaQlIHsMHAAGBWc7tIxZzkmkzmTcuOPF1VJj6ibkC4HwDbAvZ4s54aeXpa+VeESGjpVEpcyNHjSYLC48cgtNaLJRbsNsXaNGGCNKWju543Z0cgnc/E0ZIYakx3I76AtlxBQtB2UkixGLEAjBoKOyMGU4IrKnQItMiIiQWUssIvpQnpc3OIVQgwtXmmkncySHJNf/2Q==";
+const FIRMA_LOGO_MAP = { "E.ON": EON_LOGO, "e.on": EON_LOGO, "EON": EON_LOGO, "E.on": EON_LOGO };
 const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
 const hexToRgbaGlobal = (hex, alpha) => `rgba(${hexToRgb(hex)},${alpha})`;
 
@@ -2766,12 +2768,12 @@ export default function App() {
                           : col.type === "number" ? fmtN(row[col.key])
                           : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
                           : isOverdue ? <span>⚠️ {row[col.key]}</span>
-                          : col.key === "cislo_faktury" && row[col.key] ? <span><span style={{ fontSize: 11, marginRight: 3, opacity: 0.7 }}>🧾</span>{row[col.key]}</span>
+                          : col.key === "cislo_faktury" && row[col.key] ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{FIRMA_LOGO_MAP[row.firma] && <img src={FIRMA_LOGO_MAP[row.firma]} alt="" style={{ height: 16, width: "auto", objectFit: "contain", flexShrink: 0 }} />}{row[col.key]}</span>
                           : row[col.key] ?? ""}
                         </div>
                         {/* Druhý řádek pro fakturační sloupce */}
                         {col.key === "cislo_faktury" && row.cislo_faktury_2 && (
-                          <div style={{ borderTop: `1px dashed ${T.cellBorder}`, marginTop: 2, paddingTop: 2 }}><span style={{ fontSize: 11, marginRight: 3, opacity: 0.7 }}>🧾</span>{row.cislo_faktury_2}</div>
+                          <div style={{ borderTop: `1px dashed ${T.cellBorder}`, marginTop: 2, paddingTop: 2, display: "flex", alignItems: "center", gap: 4 }}>{FIRMA_LOGO_MAP[row.firma] && <img src={FIRMA_LOGO_MAP[row.firma]} alt="" style={{ height: 16, width: "auto", objectFit: "contain", flexShrink: 0 }} />}{row.cislo_faktury_2}</div>
                         )}
                         {col.key === "castka_bez_dph" && row.castka_bez_dph_2 > 0 && (
                           <div style={{ borderTop: `1px dashed ${T.cellBorder}`, marginTop: 2, paddingTop: 2 }}>{fmtN(row.castka_bez_dph_2)}</div>
