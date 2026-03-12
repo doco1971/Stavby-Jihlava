@@ -2769,7 +2769,7 @@ export default function App() {
                           : col.type === "number" ? fmtN(row[col.key])
                           : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
                           : isOverdue ? <span>⚠️ {row[col.key]}</span>
-                          : col.key === "cislo_faktury" && row[col.key] ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{getFirmaLogo(row.firma) && <img src={getFirmaLogo(row.firma)} alt="" style={{ height: 16, width: "auto", objectFit: "contain", flexShrink: 0 }} />}{row[col.key]}</span>
+                          : col.key === "cislo_faktury" && row[col.key] ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{getFirmaLogo(row.firma) && <span style={{ fontWeight: 900, fontSize: 14, color: "#ef4444", lineHeight: 1, flexShrink: 0 }}>e</span>}{row[col.key]}</span>
                           : row[col.key] ?? ""}
                         </div>
                         {/* Druhý řádek pro fakturační sloupce */}
