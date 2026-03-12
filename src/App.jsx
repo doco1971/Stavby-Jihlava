@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_12_build0058
+// BUILD: 2026_03_12_build0060
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -136,6 +136,12 @@ import * as XLSX from "xlsx";
 // BUILD0057 — 3 opravy filtrovací lišty a grafu
 //   Graf labels horizontal, Export NativeSelect, height 28px
 // BUILD0058 — FIX: graf labels stále šikmé + export menu příliš úzké
+//   labels rotate odstraněn, NativeSelect minWidth 220px
+// BUILD0059 — FIX: resize sloupce — truncate maxWidth: col.width → getColWidth
+// BUILD0060 — FIX: resize sloupce nepustí za header text
+//   th: minWidth:0 + maxWidth:getColWidth → fixed layout respektuje col šířku
+//   input pro šířku: max 2000px, šířka 65px
+//   maxWidth: col.width-22 → getColWidth(col)-22
 //   labels: rotate odstraněn, textAnchor middle, font 11 bold
 //   NativeSelect dropdown: minWidth max(šířka tlačítka, 220px)
 //   1. Graf: firma labels horizontálně, font 9→11, fontWeight 600
@@ -2812,7 +2818,7 @@ export default function App() {
               <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
               {(isAdmin || isEditor) && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
               {COLUMNS.filter(col => col.key !== "id" && !col.hidden).map(col => (
-                <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", width: getColWidth(col), minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, userSelect: "none" }}>
+                <th key={col.key} style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", width: getColWidth(col), minWidth: 0, maxWidth: getColWidth(col), overflow: "hidden", position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, userSelect: "none" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                     {col.label.toUpperCase()}
                     {isSuperAdmin && (
@@ -2821,9 +2827,9 @@ export default function App() {
                             autoFocus
                             type="number"
                             defaultValue={Math.round(getColWidth(col))}
-                            onBlur={e => { const w = Math.max(40, parseInt(e.target.value)||40); setColWidths(prev => { const n = {...prev, [col.key]: w}; saveColWidths(n); return n; }); setEditingColWidth(null); }}
+                            onBlur={e => { const w = Math.max(40, Math.min(2000, parseInt(e.target.value)||40)); setColWidths(prev => { const n = {...prev, [col.key]: w}; saveColWidths(n); return n; }); setEditingColWidth(null); }}
                             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingColWidth(null); }}
-                            style={{ width: 55, fontSize: 10, padding: "1px 3px", background: "#1e3a8a", color: "#fff", border: "1px solid #60a5fa", borderRadius: 3 }}
+                            style={{ width: 65, fontSize: 10, padding: "1px 3px", background: "#1e3a8a", color: "#fff", border: "1px solid #60a5fa", borderRadius: 3 }}
                             onClick={e => e.stopPropagation()}
                           />
                         : <span
@@ -2897,7 +2903,7 @@ export default function App() {
                               {row.poznamka && row.poznamka.trim() !== "" && <span onMouseEnter={e => showTooltip(e, row.poznamka)} onMouseLeave={hideTooltip} style={{ cursor: "help", fontSize: 13, flexShrink: 0 }}>💬</span>}
                             </span>
                           : col.type === "number" ? fmtN(row[col.key])
-                          : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: col.width - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
+                          : col.truncate ? <span title={row[col.key] ?? ""} style={{ display: "inline-block", maxWidth: getColWidth(col) - 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle" }}>{row[col.key] ?? ""}</span>
                           : isOverdue ? <span>⚠️ {row[col.key]}</span>
                           : col.key === "cislo_faktury" && row[col.key] ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontWeight: 700, fontSize: 13, color: "#ef4444", lineHeight: 1, flexShrink: 0, textShadow: "0 0 6px #ef4444, 0 0 12px rgba(239,68,68,0.7)" }}>e</span>{row[col.key]}</span>
                           : row[col.key] ?? ""}
