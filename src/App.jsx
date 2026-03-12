@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_12_build0047
+// BUILD: 2026_03_12_build0048
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -104,6 +104,8 @@ import * as XLSX from "xlsx";
 //   FIX: table-wrapper overflowY:"hidden" → "auto" (řádky nebyly vidět)
 // BUILD0047 — Označení faktur: červené "e" (E.ON) před Fakturou 1, žluté "S" (sdružení) před Fakturou 2
 //   Nápověda doplněna: sekce 🧾 Označení faktur
+// BUILD0048 — 🔍 Rozšířený filtr: rok, rozsah nab. ceny, prošlé termíny bez faktury
+//   Rozbalovací panel pod filtrační lištou, stávající filtry zachovány
 // ============================================================
 // ============================================================
 // SUPABASE CONFIG
@@ -1752,6 +1754,11 @@ export default function App() {
   const [filterText, setFilterText] = useState("");
   const [filterObjed, setFilterObjed] = useState("Všichni objednatelé");
   const [filterSV, setFilterSV] = useState("Všichni stavbyvedoucí");
+  const [showAdvFilter, setShowAdvFilter] = useState(false);
+  const [filterRok, setFilterRok] = useState("");
+  const [filterCastkaOd, setFilterCastkaOd] = useState("");
+  const [filterCastkaDo, setFilterCastkaDo] = useState("");
+  const [filterProslé, setFilterProslé] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [adding, setAdding] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -2246,8 +2253,12 @@ export default function App() {
     if (filterText && !r.nazev_stavby?.toLowerCase().includes(filterText.toLowerCase()) && !r.cislo_stavby?.toLowerCase().includes(filterText.toLowerCase())) return false;
     if (filterObjed !== "Všichni objednatelé" && filterObjed && r.objednatel !== filterObjed) return false;
     if (filterSV !== "Všichni stavbyvedoucí" && filterSV && r.stavbyvedouci !== filterSV) return false;
+    if (filterRok) { const rok = filterRok; if (!((r.ukonceni && r.ukonceni.includes(rok)) || (r.ze_dne && r.ze_dne.includes(rok)))) return false; }
+    if (filterCastkaOd !== "" && Number(r.nabidkova_cena) < Number(filterCastkaOd)) return false;
+    if (filterCastkaDo !== "" && Number(r.nabidkova_cena) > Number(filterCastkaDo)) return false;
+    if (filterProslé) { const dnes = new Date(); dnes.setHours(0,0,0,0); const isFak = r.cislo_faktury && r.cislo_faktury.trim() !== "" && r.castka_bez_dph && Number(r.castka_bez_dph) !== 0 && r.splatna && r.splatna.trim() !== ""; if (isFak || !r.ukonceni) return false; const [d,m,y] = r.ukonceni.split(".").map(Number); if (new Date(y,m-1,d) >= dnes) return false; }
     return true;
-  }), [data, filterFirma, filterText, filterObjed, filterSV]);
+  }), [data, filterFirma, filterText, filterObjed, filterSV, filterRok, filterCastkaOd, filterCastkaDo, filterProslé]);
 
   const [tableHeight, setTableHeight] = useState(500);
 
@@ -2306,7 +2317,7 @@ export default function App() {
   });
 
   const [page, setPage] = useState(0);
-  useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed, filterSV]);
+  useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed, filterSV, filterRok, filterCastkaOd, filterCastkaDo, filterProslé]);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -2627,6 +2638,32 @@ export default function App() {
         </div>
       </div>
 
+      {/* ROZŠÍŘENÝ FILTR PANEL */}
+      {showAdvFilter && (
+        <div style={{ padding: "10px 18px", background: isDark ? "rgba(37,99,235,0.08)" : "rgba(37,99,235,0.05)", borderBottom: `1px solid ${isDark ? "rgba(37,99,235,0.2)" : "rgba(37,99,235,0.15)"}`, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ color: T.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>Rozšířený filtr:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: T.textMuted, fontSize: 12 }}>Rok:</span>
+            <input value={filterRok} onChange={e => setFilterRok(e.target.value)} placeholder="např. 2025" style={{ ...inputSx, width: 90, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text, padding: "5px 9px" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: T.textMuted, fontSize: 12 }}>Nab. cena od:</span>
+            <input value={filterCastkaOd} onChange={e => setFilterCastkaOd(e.target.value)} placeholder="0" type="number" style={{ ...inputSx, width: 110, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text, padding: "5px 9px" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: T.textMuted, fontSize: 12 }}>do:</span>
+            <input value={filterCastkaDo} onChange={e => setFilterCastkaDo(e.target.value)} placeholder="∞" type="number" style={{ ...inputSx, width: 110, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text, padding: "5px 9px" }} />
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: T.text, fontSize: 13 }}>
+            <input type="checkbox" checked={filterProslé} onChange={e => setFilterProslé(e.target.checked)} style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#ef4444" }} />
+            <span>⚠️ Jen prošlé termíny bez faktury</span>
+          </label>
+          {(filterRok || filterCastkaOd || filterCastkaDo || filterProslé) && (
+            <button onClick={() => { setFilterRok(""); setFilterCastkaOd(""); setFilterCastkaDo(""); setFilterProslé(false); }} style={{ padding: "5px 12px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: 12 }}>✕ Vymazat</button>
+          )}
+        </div>
+      )}
+
       {/* SUMMARY */}
       <div ref={cardsRef}><SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} isDark={isDark} firmaColors={Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#2563eb"]))} /></div>
 
@@ -2636,6 +2673,7 @@ export default function App() {
         <NativeSelect value={filterFirma} onChange={setFilterFirma} options={["Všechny firmy", ...firmy.map(f => f.hodnota)]} isDark={isDark} style={{ width: 170 }} />
         <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} isDark={isDark} style={{ width: 190 }} />
         <NativeSelect value={filterSV} onChange={setFilterSV} options={["Všichni stavbyvedoucí", ...stavbyvedouci]} isDark={isDark} style={{ width: 170 }} />
+        <button onClick={() => setShowAdvFilter(v => !v)} onMouseEnter={e => showTooltip(e, "Rozšířený filtr: rok, částka, prošlé termíny")} onMouseLeave={hideTooltip} style={{ padding: "7px 12px", background: showAdvFilter ? "rgba(37,99,235,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)"), border: `1px solid ${showAdvFilter ? "rgba(37,99,235,0.5)" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)")}`, borderRadius: 7, color: showAdvFilter ? "#60a5fa" : T.text, cursor: "pointer", fontSize: 12, fontWeight: showAdvFilter ? 700 : 400 }}>🔍 Filtr {showAdvFilter ? "▲" : "▼"}</button>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, padding: "4px 12px", color: T.text, fontSize: 13, fontWeight: 600 }}>{filtered.length} záznamů</span>
           <button onClick={() => setShowGraf(true)} onMouseEnter={e => showTooltip(e, "Sloupcový graf nákladů")} onMouseLeave={hideTooltip} style={{ padding: "7px 14px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: T.text, cursor: "pointer", fontSize: 12 }}>📊 Graf</button>
