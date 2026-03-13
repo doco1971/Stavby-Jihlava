@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0097
+// BUILD: 2026_03_13_build0098
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -154,6 +154,7 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0098 — FIX: NativeSelect hover otevírá + spolehlivé zavírání (relatedTarget)
 // BUILD0097 — FIX: NativeSelect dropdown klik místo hover (thead překrytí),
 //   Nápověda: sekce Superadmin oprávnění + tlačítko Tisk nápovědy
 // BUILD0096 — FIX + UX: Termíny plovoucí, Nápověda přeřazena PC/mobil
@@ -485,16 +486,17 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const [dropUp, setDropUp] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef(null);
+  const dropRef = useRef(null);
 
+  // Zavřít při kliknutí mimo
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target) && (!dropRef.current || !dropRef.current.contains(e.target))) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const openDropdown = (e) => {
-    e.stopPropagation();
-    if (!open && ref.current) {
+  const openDropdown = () => {
+    if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
@@ -503,7 +505,15 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
       setDropUp(goUp);
       setDropPos({ top: goUp ? rect.top : rect.bottom, left: rect.left, width: rect.width });
     }
-    setOpen(v => !v);
+    setOpen(true);
+  };
+
+  // Zavřít jen pokud myš opustila CELÝ widget (tlačítko + dropdown list)
+  const handleLeave = (e) => {
+    const to = e.relatedTarget;
+    if (ref.current && ref.current.contains(to)) return;
+    if (dropRef.current && dropRef.current.contains(to)) return;
+    setOpen(false);
   };
 
   const bg = isDark ? "#1e293b" : "#fff";
@@ -514,13 +524,18 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const dropShadow = isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)";
 
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
-      <button onClick={openDropdown} style={{ width: "auto", padding: "0 20px 0 10px", height: 28, background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 12, textAlign: "left", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", position: "relative", minWidth: 80 }}>
+    <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}
+      onMouseEnter={openDropdown}
+      onMouseLeave={handleLeave}
+    >
+      <button onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+        style={{ width: "auto", padding: "0 20px 0 10px", height: 28, background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 12, textAlign: "left", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", position: "relative", minWidth: 80 }}>
         <span>{value}</span>
         <span style={{ position: "absolute", right: 6, top: "50%", transform: `translateY(-50%) rotate(${open ? 180 : 0}deg)`, fontSize: 9, color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)", pointerEvents: "none", transition: "transform 0.15s" }}>▼</span>
       </button>
       {open && (
-        <div style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 99999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
+        <div ref={dropRef} onMouseLeave={handleLeave}
+          style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 99999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
           {options.map(o => (
             <div key={o}
               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(o); setOpen(false); }}
