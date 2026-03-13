@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0085
+// BUILD: 2026_03_13_build0086
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -156,6 +156,14 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0086 — 💎 Liquid Glass iOS 26 upgrade
+//   Animované orby na pozadí (4x tmavý / 3x světlý, blur + CSS animace)
+//   SVG filtry: feTurbulence + feDisplacementMap (simulace lomu světla)
+//   CSS třídy: lg-panel (gradient odlesk + top highlight linka)
+//              lg-shimmer (animovaný průchod světla)
+//   T objekt: inset box-shadow s horním odleskem (simulace iOS skla)
+//   Header + filtr lišta: lg-panel + lg-shimmer třídy + z-index vrstvení
+//   Výkon: orby jsou fixed/pointer-events:none, neblokují interakci
 // BUILD0085 — Aktualizace PENDING sekce v hlavičce
 //   Přidány iOS mobilní problémy (klávesnice, alert, překrývání tlačítek)
 //   Přidány dohodnuté budoucí funkce (plovoucí okna, D&D sloupce, resize sloupce)
@@ -2984,41 +2992,41 @@ export default function App() {
   };
 
   const T = isDark ? {
-    appBg: liquidGlass ? "transparent" : "#0f172a",
-    headerBg: liquidGlass ? "rgba(15,23,42,0.45)" : "rgba(255,255,255,0.03)",
-    headerBorder: liquidGlass ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
+    appBg: liquidGlass ? "#060d1a" : "#0f172a",
+    headerBg: liquidGlass ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)",
+    headerBorder: liquidGlass ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.08)",
     cardBg: liquidGlass ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)",
     cardBorder: liquidGlass ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
-    theadBg: liquidGlass ? "rgba(26,39,68,0.6)" : "#1a2744",
-    cellBorder: liquidGlass ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.07)",
+    theadBg: liquidGlass ? "rgba(255,255,255,0.05)" : "#1a2744",
+    cellBorder: liquidGlass ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.07)",
     filterBg: liquidGlass ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
     text: "#e2e8f0", textMuted: "rgba(255,255,255,0.45)", textFaint: "rgba(255,255,255,0.25)",
-    inputBg: liquidGlass ? "rgba(15,23,42,0.5)" : "#0f172a",
+    inputBg: liquidGlass ? "rgba(255,255,255,0.06)" : "#0f172a",
     inputBorder: liquidGlass ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.15)",
-    modalBg: liquidGlass ? "rgba(15,23,42,0.7)" : "#1e293b",
-    dropdownBg: liquidGlass ? "rgba(15,23,42,0.85)" : "#1e293b",
+    modalBg: liquidGlass ? "rgba(8,16,36,0.72)" : "#1e293b",
+    dropdownBg: liquidGlass ? "rgba(8,16,36,0.88)" : "#1e293b",
     hoverBg: liquidGlass ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.07)",
     numColor: "#93c5fd",
-    backdropFilter: liquidGlass ? "blur(24px) saturate(180%)" : "none",
-    boxShadow: liquidGlass ? "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)" : "none",
+    backdropFilter: liquidGlass ? "blur(28px) saturate(200%) brightness(1.08)" : "none",
+    boxShadow: liquidGlass ? "0 2px 0 rgba(255,255,255,0.12) inset, 0 -1px 0 rgba(0,0,0,0.3) inset, 0 8px 32px rgba(0,0,0,0.5)" : "none",
   } : {
-    appBg: liquidGlass ? "transparent" : "#f1f5f9",
-    headerBg: liquidGlass ? "rgba(255,255,255,0.55)" : "#ffffff",
-    headerBorder: liquidGlass ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.08)",
-    cardBg: liquidGlass ? "rgba(255,255,255,0.5)" : "#ffffff",
-    cardBorder: liquidGlass ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.08)",
-    theadBg: liquidGlass ? "rgba(221,227,237,0.6)" : "#dde3ed",
+    appBg: liquidGlass ? "#e8edf5" : "#f1f5f9",
+    headerBg: liquidGlass ? "rgba(255,255,255,0.58)" : "#ffffff",
+    headerBorder: liquidGlass ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.08)",
+    cardBg: liquidGlass ? "rgba(255,255,255,0.52)" : "#ffffff",
+    cardBorder: liquidGlass ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.08)",
+    theadBg: liquidGlass ? "rgba(255,255,255,0.45)" : "#dde3ed",
     cellBorder: liquidGlass ? "rgba(0,0,0,0.06)" : "rgba(0,0,0,0.07)",
-    filterBg: liquidGlass ? "rgba(248,250,252,0.6)" : "#f8fafc",
+    filterBg: liquidGlass ? "rgba(255,255,255,0.48)" : "#f8fafc",
     text: "#1e293b", textMuted: "rgba(0,0,0,0.5)", textFaint: "rgba(0,0,0,0.3)",
-    inputBg: liquidGlass ? "rgba(255,255,255,0.7)" : "#ffffff",
-    inputBorder: liquidGlass ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.2)",
-    modalBg: liquidGlass ? "rgba(255,255,255,0.75)" : "#ffffff",
-    dropdownBg: liquidGlass ? "rgba(255,255,255,0.9)" : "#ffffff",
-    hoverBg: liquidGlass ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.04)",
+    inputBg: liquidGlass ? "rgba(255,255,255,0.72)" : "#ffffff",
+    inputBorder: liquidGlass ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.2)",
+    modalBg: liquidGlass ? "rgba(255,255,255,0.78)" : "#ffffff",
+    dropdownBg: liquidGlass ? "rgba(255,255,255,0.92)" : "#ffffff",
+    hoverBg: liquidGlass ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.04)",
     numColor: "#2563eb",
-    backdropFilter: liquidGlass ? "blur(24px) saturate(180%)" : "none",
-    boxShadow: liquidGlass ? "0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8)" : "none",
+    backdropFilter: liquidGlass ? "blur(28px) saturate(180%) brightness(1.04)" : "none",
+    boxShadow: liquidGlass ? "0 2px 0 rgba(255,255,255,0.95) inset, 0 -1px 0 rgba(0,0,0,0.08) inset, 0 4px 24px rgba(0,0,0,0.12)" : "none",
   };
 
   const nextId = data.length > 0 ? data.reduce((max, r) => Math.max(max, r.id), 0) + 1 : 1;
@@ -3034,8 +3042,53 @@ export default function App() {
   const rowBg = (firma) => getFirmaColor(firma).bg;
 
   return (
-    <div style={{ height: "100dvh", maxHeight: "100dvh", background: liquidGlass ? (isDark ? "linear-gradient(135deg,#0f172a 0%,#1e3a5f 40%,#312e81 70%,#0f2027 100%)" : "linear-gradient(135deg,#dbeafe 0%,#e0e7ff 40%,#f0fdf4 70%,#f1f5f9 100%)") : T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
-      <style>{`html,body{overflow:hidden;height:100%;margin:0;padding:0} .table-wrapper{-webkit-overflow-scrolling:touch;} * { -webkit-tap-highlight-color: transparent; } @keyframes spin{to{transform:rotate(360deg)}} ${!isDark ? "table td:not(.colored-cell) { color: #1e293b; } table td:not(.colored-cell) input { color: #1e293b; } table td:not(.colored-cell) select { color: #1e293b; }" : ""}`}</style>
+    <div style={{ height: "100dvh", maxHeight: "100dvh", background: liquidGlass ? (isDark ? "#060d1a" : "#e8edf5") : T.appBg, fontFamily: "'Segoe UI',Tahoma,sans-serif", color: T.text, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+      <style>{`
+        html,body{overflow:hidden;height:100%;margin:0;padding:0}
+        .table-wrapper{-webkit-overflow-scrolling:touch;}
+        * { -webkit-tap-highlight-color: transparent; }
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes lgOrb1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,-40px) scale(1.15)}66%{transform:translate(-30px,50px) scale(0.9)}}
+        @keyframes lgOrb2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-80px,30px) scale(0.85)}66%{transform:translate(40px,-60px) scale(1.2)}}
+        @keyframes lgOrb3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,40px) scale(1.1)}}
+        @keyframes lgShimmer{0%{opacity:0.4;transform:translateX(-100%) skewX(-15deg)}100%{opacity:0;transform:translateX(300%) skewX(-15deg)}}
+        .lg-panel{position:relative;overflow:hidden}
+        .lg-panel::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.04) 50%,rgba(255,255,255,0.08) 100%);pointer-events:none;z-index:1}
+        .lg-panel::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);pointer-events:none;z-index:2}
+        .lg-shimmer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3}
+        .lg-shimmer::after{content:'';position:absolute;top:0;left:0;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.07),transparent);animation:lgShimmer 4s ease-in-out infinite}
+        ${!isDark ? "table td:not(.colored-cell) { color: #1e293b; } table td:not(.colored-cell) input { color: #1e293b; } table td:not(.colored-cell) select { color: #1e293b; }" : ""}
+      `}</style>
+
+      {/* Liquid Glass — animované orby na pozadí */}
+      {liquidGlass && (
+        <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+          {/* SVG displacement filter pro refrakci */}
+          <svg width="0" height="0" style={{ position: "absolute" }}>
+            <defs>
+              <filter id="lg-refract">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.008" numOctaves="3" seed="5" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale={isDark ? "8" : "5"} xChannelSelector="R" yChannelSelector="G"/>
+              </filter>
+              <filter id="lg-glow">
+                <feGaussianBlur stdDeviation="40" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+          </svg>
+          {/* Orby */}
+          {isDark ? (<>
+            <div style={{ position: "absolute", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle,rgba(59,130,246,0.35) 0%,rgba(99,102,241,0.2) 40%,transparent 70%)", top: "-100px", left: "-100px", filter: "blur(60px)", animation: "lgOrb1 18s ease-in-out infinite" }}/>
+            <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.3) 0%,rgba(168,85,247,0.15) 40%,transparent 70%)", bottom: "-80px", right: "-80px", filter: "blur(50px)", animation: "lgOrb2 22s ease-in-out infinite" }}/>
+            <div style={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(14,165,233,0.25) 0%,rgba(6,182,212,0.12) 40%,transparent 70%)", top: "40%", left: "45%", filter: "blur(55px)", animation: "lgOrb3 26s ease-in-out infinite" }}/>
+            <div style={{ position: "absolute", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle,rgba(236,72,153,0.2) 0%,transparent 70%)", top: "20%", right: "20%", filter: "blur(45px)", animation: "lgOrb1 30s ease-in-out infinite reverse" }}/>
+          </>) : (<>
+            <div style={{ position: "absolute", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle,rgba(59,130,246,0.25) 0%,rgba(147,197,253,0.15) 40%,transparent 70%)", top: "-150px", left: "-150px", filter: "blur(80px)", animation: "lgOrb1 20s ease-in-out infinite" }}/>
+            <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(167,139,250,0.2) 0%,rgba(196,181,253,0.1) 40%,transparent 70%)", bottom: "-100px", right: "-100px", filter: "blur(70px)", animation: "lgOrb2 24s ease-in-out infinite" }}/>
+            <div style={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(52,211,153,0.2) 0%,transparent 70%)", top: "35%", left: "50%", filter: "blur(65px)", animation: "lgOrb3 28s ease-in-out infinite" }}/>
+          </>)}
+        </div>
+      )}
       {toast && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.type === "error" ? "#dc2626" : "#16a34a", color: "#fff", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", maxWidth: 360 }}>
           {toast.type === "error" ? "⚠️ " : "✅ "}{toast.msg}
@@ -3048,7 +3101,7 @@ export default function App() {
       )}
 
       {/* HEADER */}
-      <div ref={headerRef} style={{ background: T.headerBg, borderBottom: `1px solid ${T.headerBorder}`, padding: isMobile ? "8px 12px" : "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, backdropFilter: T.backdropFilter, WebkitBackdropFilter: T.backdropFilter, boxShadow: T.boxShadow }}>
+      <div ref={headerRef} className={liquidGlass ? "lg-panel lg-shimmer" : ""} style={{ background: T.headerBg, borderBottom: `1px solid ${T.headerBorder}`, padding: isMobile ? "8px 12px" : "11px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, backdropFilter: T.backdropFilter, WebkitBackdropFilter: T.backdropFilter, boxShadow: T.boxShadow, position: "relative", zIndex: 10 }}>
         {/* Levá část: logo */}
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
           <svg width={isMobile ? 32 : 46} height={isMobile ? 32 : 46} viewBox="0 0 80 80" fill="none">
@@ -3117,7 +3170,7 @@ export default function App() {
       <div ref={cardsRef}><SummaryCards data={data} firmy={firmy.map(f => f.hodnota)} isDark={isDark} firmaColors={Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#2563eb"]))} isMobile={isMobile} /></div>
 
       {/* FILTERS */}
-      <div ref={filtersRef} style={{ padding: "4px 6px", display: "flex", flexDirection: "column", gap: 3, background: T.filterBg, borderBottom: `1px solid ${T.cellBorder}`, minHeight: 38, backdropFilter: T.backdropFilter, WebkitBackdropFilter: T.backdropFilter }}>
+      <div ref={filtersRef} className={liquidGlass ? "lg-panel" : ""} style={{ padding: "4px 6px", display: "flex", flexDirection: "column", gap: 3, background: T.filterBg, borderBottom: `1px solid ${T.cellBorder}`, minHeight: 38, backdropFilter: T.backdropFilter, WebkitBackdropFilter: T.backdropFilter, position: "relative", zIndex: 9 }}>
         {/* Řádek 1: hledání + firma + filtr + ▦ */}
         <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap", overflowX: isMobile ? "visible" : "auto" }}>
           <input placeholder="🔍 Hledat..." onMouseEnter={e => showTooltip(e, "Hledat podle názvu nebo čísla stavby")} onMouseLeave={hideTooltip} value={filterText} onChange={e => setFilterText(e.target.value)} style={{ ...inputSx, width: isMobile ? 110 : 150, minWidth: 80, background: T.inputBg, border: `1px solid ${T.inputBorder}`, color: T.text, padding: "4px 8px", fontSize: 11 }} />
