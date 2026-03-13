@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0094
+// BUILD: 2026_03_13_build0095
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -68,7 +68,6 @@ import * as XLSX from "xlsx";
 // [PENDING] 📱 iOS klávesnice — přihlašovací obrazovka se roztáhne při psaní
 // [PENDING] 📱 iOS klávesnice — alert okno (⚠️ Termíny) přetéká mimo obrazovku
 // [PENDING] 📱 Překrývání tlačítek Export (⬇) a + Přidat stavbu na mobilu
-// [PENDING] 🪟 Plovoucí okna — formuláře (přidat/editovat stavbu) jako draggable modály
 // [PENDING] ↔️  Změna šířky sloupců tabulky tažením myší
 //
 // PRAVIDLA EXPORTU (platí od BUILD0052)
@@ -155,6 +154,15 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0095 — 🪟 Plovoucí okna — všechny modály draggable, jednotný vzor
+//   Nový hook: useDraggable(w, h) — výchozí pozice vždy střed obrazovky
+//   Převedeny: HistorieModal, LogModal, GrafModal, SettingsModal
+//   Help a AdvFilter — sjednoceny na useDraggable hook (stávající kód nahrazen)
+//   FormModal — stávající drag zachován, refaktorován na useDraggable
+//   Vzor: overlay pointerEvents:none, okno pointerEvents:all, header = táhlo
+//   Dimming backdrop odstraněn — plovoucí okno bez zatmění pozadí
+//   Header každého okna: ⠿ přetáhnout hint, cursor grab
+//   PENDING odstraněno: 🪟 Plovoucí okna
 // BUILD0094 — FIX: drag & drop sloupců omezen pouze na superadmin
 //   Ikona ⠿ a draggable atribut zobrazeny jen pokud isSuperAdmin
 //   Ostatní role (user, user_e, admin) nemohou přehazovat sloupce
@@ -414,6 +422,55 @@ const FIRMA_COLOR_FALLBACK = ["#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9",
 const hexToRgb = hex => { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "59,130,246"; };
 const hexToRgbaGlobal = (hex, alpha) => `rgba(${hexToRgb(hex)},${alpha})`;
 
+// ── useDraggable hook — jednotný drag pro všechna plovoucí okna ───────────────
+// w, h = šířka a výška okna v px (pro výpočet středu); lze předat 0 pokud neznáme
+function useDraggable(w = 600, h = 500) {
+  const iW = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const iH = typeof window !== "undefined" ? window.innerHeight : 800;
+  const [pos, setPos] = useState({
+    x: Math.max(10, Math.round(iW / 2 - Math.min(w, iW * 0.97) / 2)),
+    y: Math.max(10, Math.round(iH / 2 - Math.min(h, iH * 0.9) / 2)),
+  });
+  const dragging = useRef(false);
+  const offset = useRef({ x: 0, y: 0 });
+  const onMouseDown = (e) => {
+    if (e.button !== 0) return;
+    dragging.current = true;
+    offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    const onMove = (ev) => {
+      if (!dragging.current) return;
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth - 60, ev.clientX - offset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 40, ev.clientY - offset.current.y)),
+      });
+    };
+    const onUp = () => {
+      dragging.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+  return { pos, onMouseDown };
+}
+
+// Sdílený styl pro drag header
+const dragHeaderStyle = (extraStyle = {}) => ({
+  padding: "13px 20px",
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  cursor: "grab",
+  userSelect: "none",
+  background: "rgba(255,255,255,0.03)",
+  borderRadius: "16px 16px 0 0",
+  ...extraStyle,
+});
+
+const dragHint = <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", fontWeight: 400, marginLeft: 8 }}>⠿ přetáhnout</span>;
+
 function Lbl({ children }) {
   return <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: 700, letterSpacing: 0.8, marginBottom: 5, textTransform: "uppercase" }}>{children}</div>;
 }
@@ -488,6 +545,7 @@ const FIELD_LABELS = {
 function HistorieModal({ row, isDark, onClose, isDemo }) {
   const [zaznamy, setZaznamy] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { pos, onMouseDown: onDragStart } = useDraggable(680, 560);
 
   useEffect(() => {
     if (isDemo) { setLoading(false); return; } // demo — žádná DB
@@ -536,15 +594,15 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
   const borderC  = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: modalBg, borderRadius: 18, width: "min(680px,96vw)", maxHeight: "88vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
-        {/* header */}
-        <div style={{ padding: "16px 22px", borderBottom: `1px solid ${borderC}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1300, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: "min(680px,96vw)", maxHeight: "88vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
+        {/* header — táhlo */}
+        <div onMouseDown={onDragStart} style={dragHeaderStyle()}>
           <div>
-            <h3 style={{ color: textC, margin: 0, fontSize: 16 }}>🕐 Historie změn</h3>
-            <div style={{ color: mutedC, fontSize: 12, marginTop: 3 }}>{row.cislo_stavby && <span style={{ fontWeight: 700, color: isDark ? "#60a5fa" : "#2563eb" }}>{row.cislo_stavby} · </span>}{row.nazev_stavby}</div>
+            <span style={{ color: isDark ? "#fff" : "#1e293b", fontWeight: 700, fontSize: 15 }}>🕐 Historie změn{dragHint}</span>
+            <div style={{ color: mutedC, fontSize: 12, marginTop: 2 }}>{row.cislo_stavby && <span style={{ fontWeight: 700, color: isDark ? "#60a5fa" : "#2563eb" }}>{row.cislo_stavby} · </span>}{row.nazev_stavby}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer", lineHeight: 1, marginLeft: 16 }}>✕</button>
+          <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer", lineHeight: 1, marginLeft: 16 }}>✕</button>
         </div>
 
         {/* obsah */}
@@ -649,6 +707,7 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
 function LogModal({ isDark, firmy, onClose, isDemo }) {
   const [zaznamy, setZaznamy] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { pos, onMouseDown: onDragStart } = useDraggable(900, 580);
   const [filterUser, setFilterUser]   = useState("");
   const [filterAkce, setFilterAkce]   = useState("");
   const [filterOd,   setFilterOd]     = useState("");
@@ -756,16 +815,16 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 1250, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: modalBg, borderRadius: 18, width: "min(900px,97vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.65)" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1250, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: "min(900px,97vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.65)" }}>
 
-        {/* header */}
-        <div style={{ padding: "16px 22px", borderBottom: `1px solid ${borderC}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {/* header — táhlo */}
+        <div onMouseDown={onDragStart} style={dragHeaderStyle()}>
           <div>
-            <h3 style={{ color: textC, margin: 0, fontSize: 16 }}>📜 Log zakázek</h3>
+            <span style={{ color: isDark ? "#fff" : "#1e293b", fontWeight: 700, fontSize: 15 }}>📜 Log zakázek{dragHint}</span>
             <div style={{ color: mutedC, fontSize: 12, marginTop: 2 }}>Přidání · Editace · Smazání staveb</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer" }}>✕</button>
         </div>
 
         {/* RLS varování pokud se zdá že vidíme jen své záznamy */}
@@ -870,6 +929,7 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
 // ============================================================
 function GrafModal({ data, firmy, isDark, onClose }) {
   const [mode, setMode] = useState("firma"); // "firma" | "mesic" | "kat"
+  const { pos, onMouseDown: onDragStart } = useDraggable(1100, 560);
 
   const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || "#3b82f6"]));
 
@@ -1139,17 +1199,17 @@ function GrafModal({ data, firmy, isDark, onClose }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: modalBg, borderRadius: 18, width: "min(1100px,97vw)", maxHeight: "95vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
-        {/* header */}
-        <div style={{ padding: "16px 22px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1200, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: "min(1100px,97vw)", maxHeight: "95vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.6)" }}>
+        {/* header — táhlo */}
+        <div onMouseDown={onDragStart} style={dragHeaderStyle({ flexWrap: "wrap", gap: 10 })}>
           <div>
-            <h3 style={{ color: textC, margin: 0, fontSize: 16 }}>📊 Graf nákladů</h3>
+            <span style={{ color: isDark ? "#fff" : "#1e293b", fontWeight: 700, fontSize: 15 }}>📊 Graf nákladů{dragHint}</span>
             <div style={{ color: mutedC, fontSize: 11, marginTop: 2 }}>
               {mode === "kat" ? "Kat. I (Plán.+SNK+Běžné op.) vs Kat. II (Plán.+Běžné op.+Poruchy)" : "Nabídka · Vyfakturováno · Zrealizováno"}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div onMouseDown={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 8, overflow: "hidden" }}>
               {[["firma","🏢 Firma"],["mesic","📅 Měsíc"],["kat","📂 Kat. I / II"]].map(([val, lbl]) => (
                 <button key={val} onClick={() => setMode(val)} style={{ padding: "6px 13px", background: mode === val ? (isDark ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.15)") : "transparent", border: "none", borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, color: mode === val ? "#60a5fa" : mutedC, cursor: "pointer", fontSize: 12, fontWeight: mode === val ? 700 : 400, transition: "all 0.15s", whiteSpace: "nowrap" }}>{lbl}</button>
@@ -1422,27 +1482,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
   const [saveErr, setSaveErr] = useState("");
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const computed = computeRow(form);
-
-  const [pos, setPos] = useState({ x: window.innerWidth - Math.min(1100, window.innerWidth * 0.97) - 10, y: 10 });
-  const dragging = useRef(false);
-  const dragOffset = useRef({ x: 0, y: 0 });
-
-  const onDragStart = (e) => {
-    dragging.current = true;
-    const rect = e.currentTarget.closest("[data-modal]").getBoundingClientRect();
-    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    document.addEventListener("mousemove", onDragMove);
-    document.addEventListener("mouseup", onDragEnd);
-  };
-  const onDragMove = (e) => {
-    if (!dragging.current) return;
-    setPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y });
-  };
-  const onDragEnd = () => {
-    dragging.current = false;
-    document.removeEventListener("mousemove", onDragMove);
-    document.removeEventListener("mouseup", onDragEnd);
-  };
+  const { pos, onMouseDown: onDragStart } = useDraggable(1100, 560);
 
   const handleSave = () => {
     for (const k of NUM_FIELDS) {
@@ -1464,17 +1504,17 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
     onSave(computeRow(form));
   };
 
-  const modalStyle = { position: "fixed", left: pos.x, top: pos.y, margin: 0 };
+  const modalRef = useRef(null);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div data-modal style={{ ...modalStyle, pointerEvents: "all", background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
+      <div ref={modalRef} style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
 
-        {/* Header – táhlo pro přesun */}
-        <div onMouseDown={onDragStart} style={{ padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, cursor: "grab", userSelect: "none" }}>
-          <h3 style={{ color: "#fff", margin: 0, fontSize: 16, flexShrink: 0 }}>{title} <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>⠿ přetáhnout</span></h3>
-          <input onMouseDown={e => e.stopPropagation()} value={form["nazev_stavby"] ?? ""} onChange={e => set("nazev_stavby", e.target.value)} placeholder="Název stavby..." onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); const modal = e.target.closest("[data-modal]"); if (modal) { const inputs = Array.from(modal.querySelectorAll("input:not([disabled]),select:not([disabled])")); const idx = inputs.indexOf(e.target); if (idx < inputs.length - 1) inputs[idx + 1].focus(); } } }} style={{ flex: 1, padding: "7px 14px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, outline: "none", cursor: "text" }} />
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer", flexShrink: 0 }}>✕</button>
+        {/* Header — táhlo */}
+        <div onMouseDown={onDragStart} style={dragHeaderStyle({ gap: 16 })}>
+          <h3 style={{ color: "#fff", margin: 0, fontSize: 16, flexShrink: 0 }}>{title}{dragHint}</h3>
+          <input onMouseDown={e => e.stopPropagation()} value={form["nazev_stavby"] ?? ""} onChange={e => set("nazev_stavby", e.target.value)} placeholder="Název stavby..." onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); const modal = modalRef.current; if (modal) { const inputs = Array.from(modal.querySelectorAll("input:not([disabled]),select:not([disabled])")); const idx = inputs.indexOf(e.target); if (idx < inputs.length - 1) inputs[idx + 1].focus(); } } }} style={{ flex: 1, padding: "7px 14px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, outline: "none", cursor: "text" }} />
+          <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer", flexShrink: 0 }}>✕</button>
         </div>
 
         {/* Body – dva sloupce */}
@@ -1791,19 +1831,20 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const modalMuted = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
   const modalDivider = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
   const modalCardBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
+  const { pos, onMouseDown: onDragStart } = useDraggable(780, 560);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: modalBg, borderRadius: 16, width: 780, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1100, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: 780, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
 
-        {/* header */}
-        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${modalDivider}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ color: modalText, margin: 0, fontSize: 17 }}>⚙️ Nastavení</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: modalMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
+        {/* header — táhlo */}
+        <div onMouseDown={onDragStart} style={dragHeaderStyle()}>
+          <span style={{ color: modalText, fontWeight: 700, fontSize: 17 }}>⚙️ Nastavení{dragHint}</span>
+          <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: modalMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
         </div>
 
         {/* tabs */}
-        <div style={{ display: "flex", gap: 4, padding: "10px 24px 0", borderBottom: `1px solid ${modalDivider}` }}>
+        <div onMouseDown={e => e.stopPropagation()} style={{ display: "flex", gap: 4, padding: "10px 24px 0", borderBottom: `1px solid ${modalDivider}` }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 18px", background: tab === t.key ? "rgba(37,99,235,0.2)" : "transparent", border: "none", borderBottom: tab === t.key ? "2px solid #2563eb" : "2px solid transparent", borderRadius: "6px 6px 0 0", color: tab === t.key ? "#60a5fa" : modalMuted, cursor: "pointer", fontSize: 13, fontWeight: tab === t.key ? 700 : 400 }}>
               {t.label}
@@ -2220,21 +2261,13 @@ export default function App() {
   const [filterObjed, setFilterObjed] = useState("Všichni objednatelé");
   const [filterSV, setFilterSV] = useState("Všichni stavbyvedoucí");
   const [showAdvFilter, setShowAdvFilter] = useState(false);
+  const { pos: advFilterPos, onMouseDown: onAdvFilterDragStart } = useDraggable(340, 300);
   const [filterRok, setFilterRok] = useState("");
   const [filterCastkaOd, setFilterCastkaOd] = useState("");
   const [filterCastkaDo, setFilterCastkaDo] = useState("");
   const [filterProslé, setFilterProslé] = useState(false);
   const [filterFakturace, setFilterFakturace] = useState("");
   const [filterKat, setFilterKat] = useState("");
-  const [advFilterPos, setAdvFilterPos] = useState({ x: Math.max(20, window.innerWidth/2 - 220), y: 120 });
-  const onAdvFilterDragStart = (e) => {
-    e.preventDefault();
-    const startX = e.clientX - advFilterPos.x, startY = e.clientY - advFilterPos.y;
-    const onMove = (ev) => setAdvFilterPos({ x: Math.max(0, Math.min(window.innerWidth-100, ev.clientX-startX)), y: Math.max(0, Math.min(window.innerHeight-60, ev.clientY-startY)) });
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
   const [editRow, setEditRow] = useState(null);
   const [adding, setAdding] = useState(false);
   const [copyRow, setCopyRow] = useState(null);
@@ -2244,16 +2277,7 @@ export default function App() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [helpPos, setHelpPos] = useState({ x: Math.max(20, window.innerWidth/2 - 350), y: 60 });
-  const helpDragRef = useRef(null);
-  const onHelpDragStart = (e) => {
-    e.preventDefault();
-    const startX = e.clientX - helpPos.x, startY = e.clientY - helpPos.y;
-    const onMove = (ev) => setHelpPos({ x: Math.max(0, Math.min(window.innerWidth-100, ev.clientX-startX)), y: Math.max(0, Math.min(window.innerHeight-60, ev.clientY-startY)) });
-    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  };
+  const { pos: helpPos, onMouseDown: onHelpDragStart } = useDraggable(680, 500);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // ── Graf ──────────────────────────────────────────────────
   const [showGraf, setShowGraf] = useState(false);
@@ -3677,12 +3701,11 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, zIndex: 1400, pointerEvents: "none", fontFamily: "'Segoe UI',sans-serif" }}>
           <div style={{ position: "fixed", left: helpPos.x, top: helpPos.y, pointerEvents: "all", background: "#1e293b", borderRadius: 16, width: "min(680px,95vw)", maxHeight: "88vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.18)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
             {/* Header — táhlo */}
-            <div onMouseDown={onHelpDragStart} style={{ padding: "14px 22px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "grab", userSelect: "none", background: "rgba(255,255,255,0.03)" }}>
+            <div onMouseDown={onHelpDragStart} style={dragHeaderStyle()}>
               <div>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Znojmo</span>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontWeight: 400, marginLeft: 10 }}>⠿ přetáhnout</span>
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Znojmo{dragHint}</span>
               </div>
-              <button onClick={() => setShowHelp(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer", pointerEvents: "all" }}>✕</button>
+              <button onClick={() => setShowHelp(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
             {/* Obsah */}
             <div style={{ overflowY: "auto", padding: "18px 22px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.7 }}>
@@ -4134,7 +4157,7 @@ export default function App() {
         <div style={{ position: "fixed", left: advFilterPos.x, top: advFilterPos.y, zIndex: 500, background: isDark ? "#1e293b" : "#fff", border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)"}`, borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.35)", width: 340, fontFamily: "'Segoe UI',sans-serif" }}>
           <div onMouseDown={onAdvFilterDragStart} style={{ padding: "10px 16px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "grab", userSelect: "none", borderRadius: "12px 12px 0 0", background: isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)" }}>
             <span style={{ color: isDark ? "#60a5fa" : "#2563eb", fontWeight: 700, fontSize: 13 }}>🔍 Rozšířený filtr</span>
-            <button onClick={() => setShowAdvFilter(false)} style={{ background: "none", border: "none", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+            <button onClick={() => setShowAdvFilter(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
           </div>
           <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
