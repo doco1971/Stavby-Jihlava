@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0075
+// BUILD: 2026_03_13_build0076
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -150,6 +150,10 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0076 — FIX: kartičky nefungovaly na iPhone (Chrome/Safari/Firefox)
+//   window.innerWidth nespolehlivý na iOS WebKit → přechod na window.matchMedia
+//   useIsMobile: mq.matches + mq.addEventListener("change") místo resize listeneru
+//   cardView init: window.matchMedia("(max-width: 767px)").matches
 // BUILD0075 — FIX: kartičky na mobilu nezobrazovaly se (zobrazovala se tabulka)
 //   cardView inicializován lazy: useState(() => window.innerWidth < 768)
 //   Odstraněn useEffect který nastavoval cardView až po prvním renderu — příliš pozdě
@@ -1920,12 +1924,13 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
 // MOBILE HOOK
 // ============================================================
 function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
+  const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+  const [isMobile, setIsMobile] = useState(() => mq.matches);
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  }, [breakpoint]);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   return isMobile;
 }
 
@@ -2083,7 +2088,7 @@ export default function App() {
   const [copyRow, setCopyRow] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const isMobile = useIsMobile(768);
-  const [cardView, setCardView] = useState(() => window.innerWidth < 768);
+  const [cardView, setCardView] = useState(() => window.matchMedia("(max-width: 767px)").matches);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
