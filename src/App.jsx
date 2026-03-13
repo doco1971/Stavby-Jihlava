@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0074
+// BUILD: 2026_03_13_build0075
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -150,6 +150,9 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0075 — FIX: kartičky na mobilu nezobrazovaly se (zobrazovala se tabulka)
+//   cardView inicializován lazy: useState(() => window.innerWidth < 768)
+//   Odstraněn useEffect který nastavoval cardView až po prvním renderu — příliš pozdě
 // BUILD0074 — 📱 Mobilní kartičky
 //   useIsMobile hook (breakpoint 768px, resize listener)
 //   Výchozí pohled na mobilu: kartičky; na desktopu: tabulka
@@ -2080,8 +2083,8 @@ export default function App() {
   const [copyRow, setCopyRow] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const isMobile = useIsMobile(768);
-  const [cardView, setCardView] = useState(false);
-  useEffect(() => { if (isMobile) setCardView(true); }, [isMobile]);
+  const [cardView, setCardView] = useState(() => window.innerWidth < 768);
+
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [helpPos, setHelpPos] = useState({ x: Math.max(20, window.innerWidth/2 - 350), y: 60 });
