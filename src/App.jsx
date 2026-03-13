@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0098
+// BUILD: 2026_03_13_build0099
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -154,6 +155,7 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0099 — FIX: NativeSelect dropdown portál do body (přes overflow:hidden + stacking context)
 // BUILD0098 — FIX: NativeSelect hover otevírá + spolehlivé zavírání (relatedTarget)
 // BUILD0097 — FIX: NativeSelect dropdown klik místo hover (thead překrytí),
 //   Nápověda: sekce Superadmin oprávnění + tlačítko Tisk nápovědy
@@ -490,7 +492,11 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
 
   // Zavřít při kliknutí mimo
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target) && (!dropRef.current || !dropRef.current.contains(e.target))) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -508,7 +514,6 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
     setOpen(true);
   };
 
-  // Zavřít jen pokud myš opustila CELÝ widget (tlačítko + dropdown list)
   const handleLeave = (e) => {
     const to = e.relatedTarget;
     if (ref.current && ref.current.contains(to)) return;
@@ -523,29 +528,33 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const dropBg = isDark ? "#1e293b" : "#fff";
   const dropShadow = isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)";
 
+  // Portál — renderuje přímo do body, mimo jakýkoliv overflow/stacking context
+  const dropdown = open ? createPortal(
+    <div ref={dropRef} onMouseLeave={handleLeave}
+      style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 999999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
+      {options.map(o => (
+        <div key={o}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(o); setOpen(false); }}
+          style={{ padding: "9px 14px", color: o === value ? (isDark ? "#60a5fa" : "#2563eb") : textColor, background: o === value ? (isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)") : "transparent", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }}
+          onMouseEnter={e => { if (o !== value) e.currentTarget.style.background = hoverBg; }}
+          onMouseLeave={e => { if (o !== value) e.currentTarget.style.background = "transparent"; }}
+        >{o}</div>
+      ))}
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}
       onMouseEnter={openDropdown}
       onMouseLeave={handleLeave}
     >
-      <button onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+      <button onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : openDropdown(); }}
         style={{ width: "auto", padding: "0 20px 0 10px", height: 28, background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 12, textAlign: "left", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", position: "relative", minWidth: 80 }}>
         <span>{value}</span>
         <span style={{ position: "absolute", right: 6, top: "50%", transform: `translateY(-50%) rotate(${open ? 180 : 0}deg)`, fontSize: 9, color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)", pointerEvents: "none", transition: "transform 0.15s" }}>▼</span>
       </button>
-      {open && (
-        <div ref={dropRef} onMouseLeave={handleLeave}
-          style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 99999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
-          {options.map(o => (
-            <div key={o}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(o); setOpen(false); }}
-              style={{ padding: "9px 14px", color: o === value ? (isDark ? "#60a5fa" : "#2563eb") : textColor, background: o === value ? (isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)") : "transparent", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }}
-              onMouseEnter={e => { if (o !== value) e.currentTarget.style.background = hoverBg; }}
-              onMouseLeave={e => { if (o !== value) e.currentTarget.style.background = "transparent"; }}
-            >{o}</div>
-          ))}
-        </div>
-      )}
+      {dropdown}
     </div>
   );
 }
