@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0090
+// BUILD: 2026_03_13_build0091
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -156,6 +156,16 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0091 — 🌞/🌙 posuvník intenzity pozadí + auto-hide po 2s nečinnosti
+//   themeStrength state (0–100, default 50), uložen v localStorage
+//   themeSliderVisible state + themeSliderTimer ref (stejný princip jako lgSlider)
+//   changeTheme(): přepne režim + zobrazí slider + spustí 2s timer
+//   changeThemeStrength(): změní intenzitu + resetuje timer
+//   Slider onMouseEnter=zastaví timer, onMouseLeave=spustí timer
+//   Mobilní slider: onTouchStart/onTouchEnd pro dotykové displeje
+//   T.appBg tmavý: interpolace #060818 (0%) ↔ #1e293b (100%)
+//   T.appBg světlý: interpolace #ffffff (0%) ↔ #d0d8e8 (100%)
+//   Slider akcent: 🌞 #fbbf24 žlutá / 🌙 #818cf8 modrá
 // BUILD0090 — 💎 Liquid Glass posuvník: auto-hide po nečinnosti 2s
 //   lgSliderVisible state (výchozí false) — slider se zobrazí jen po kliknutí na 💎
 //   lgSliderTimer ref — setTimeout 2000ms schová slider
@@ -2311,6 +2321,22 @@ export default function App() {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("theme") || "dark"; } catch { return "dark"; }
   });
+  const [themeStrength, setThemeStrength] = useState(() => {
+    try { return parseInt(localStorage.getItem("themeStrength") || "50", 10); } catch { return 50; }
+  });
+  const [themeSliderVisible, setThemeSliderVisible] = useState(false);
+  const themeSliderTimer = useRef(null);
+
+  const themeSliderStartTimer = () => {
+    if (themeSliderTimer.current) clearTimeout(themeSliderTimer.current);
+    themeSliderTimer.current = setTimeout(() => setThemeSliderVisible(false), 2000);
+  };
+  const changeThemeStrength = (v) => {
+    setThemeStrength(v);
+    try { localStorage.setItem("themeStrength", String(v)); } catch {}
+    if (themeSliderTimer.current) clearTimeout(themeSliderTimer.current);
+    themeSliderTimer.current = setTimeout(() => setThemeSliderVisible(false), 2000);
+  };
   const [liquidGlass, setLiquidGlass] = useState(() => {
     try { return localStorage.getItem("liquidGlass") === "1"; } catch { return false; }
   });
@@ -3025,6 +3051,9 @@ export default function App() {
   const changeTheme = (t) => {
     setTheme(t);
     try { localStorage.setItem("theme", t); } catch {}
+    setThemeSliderVisible(true);
+    if (themeSliderTimer.current) clearTimeout(themeSliderTimer.current);
+    themeSliderTimer.current = setTimeout(() => setThemeSliderVisible(false), 2000);
   };
   const toggleLiquidGlass = () => {
     setLiquidGlass(v => {
@@ -3044,9 +3073,26 @@ export default function App() {
   };
 
   const lgS = liquidGlass ? lgStrength / 100 : 0;
+  const themeS = themeStrength / 100; // 0 = nejsvětlejší/nejtmavší, 1 = střední
+
+  // Interpolace barvy pozadí dle themeStrength
+  // Tmavý: 0%=#060818 (skoro černá) ↔ 100%=#1e293b (výchozí slate)
+  const darkAppBg = lgS > 0 ? "#060d1a" : (() => {
+    const r = Math.round(6 + themeS * (30 - 6));
+    const g = Math.round(8 + themeS * (41 - 8));
+    const b = Math.round(24 + themeS * (59 - 24));
+    return `rgb(${r},${g},${b})`;
+  })();
+  // Světlý: 0%=#ffffff (čistě bílá) ↔ 100%=#d0d8e8 (výchozí slate-200)
+  const lightAppBg = lgS > 0 ? "#e8edf5" : (() => {
+    const r = Math.round(255 - themeS * (255 - 208));
+    const g = Math.round(255 - themeS * (255 - 216));
+    const b = Math.round(255 - themeS * (255 - 232));
+    return `rgb(${r},${g},${b})`;
+  })();
 
   const T = isDark ? {
-    appBg: lgS > 0 ? "#060d1a" : "#0f172a",
+    appBg: darkAppBg,
     headerBg: lgS > 0 ? `rgba(255,255,255,${(0.03 + lgS * 0.07).toFixed(3)})` : "rgba(255,255,255,0.03)",
     headerBorder: lgS > 0 ? `rgba(255,255,255,${(0.08 + lgS * 0.18).toFixed(3)})` : "rgba(255,255,255,0.08)",
     cardBg: lgS > 0 ? `rgba(255,255,255,${(0.04 + lgS * 0.06).toFixed(3)})` : "rgba(255,255,255,0.04)",
@@ -3065,7 +3111,7 @@ export default function App() {
     boxShadow: lgS > 0 ? `0 2px 0 rgba(255,255,255,${(lgS * 0.14).toFixed(3)}) inset, 0 -1px 0 rgba(0,0,0,0.3) inset, 0 8px 32px rgba(0,0,0,${(0.2 + lgS * 0.3).toFixed(3)})` : "none",
     orbOpacity: lgS,
   } : {
-    appBg: lgS > 0 ? "#e8edf5" : "#f1f5f9",
+    appBg: lightAppBg,
     headerBg: lgS > 0 ? `rgba(255,255,255,${(0.4 + lgS * 0.22).toFixed(3)})` : "#ffffff",
     headerBorder: lgS > 0 ? `rgba(255,255,255,${(0.5 + lgS * 0.45).toFixed(3)})` : "rgba(0,0,0,0.08)",
     cardBg: lgS > 0 ? `rgba(255,255,255,${(0.35 + lgS * 0.22).toFixed(3)})` : "#ffffff",
@@ -3183,11 +3229,21 @@ export default function App() {
             <button onClick={() => setShowHelp(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
-            <div style={{ display: "flex", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               {[["🌞","light","Světlý"],["🌙","dark","Tmavý"]].map(([icon, val, label]) => (
-                <button key={val} onClick={() => changeTheme(val)} onMouseEnter={e => showTooltip(e, label + " režim")} onMouseLeave={hideTooltip} style={{ padding: "5px 9px", background: theme === val ? (isDark ? "rgba(37,99,235,0.3)" : "rgba(37,99,235,0.15)") : "transparent", border: "none", color: theme === val ? "#60a5fa" : T.textMuted, cursor: "pointer", fontSize: 13 }}>{icon}</button>
+                <button key={val} onClick={() => changeTheme(val)} onMouseEnter={e => showTooltip(e, label + " režim")} onMouseLeave={hideTooltip} style={{ padding: "5px 9px", background: theme === val ? (isDark ? "rgba(37,99,235,0.3)" : "rgba(37,99,235,0.15)") : "transparent", border: `1px solid ${theme === val ? "rgba(37,99,235,0.5)" : "rgba(255,255,255,0.1)"}`, borderRadius: 8, color: theme === val ? "#60a5fa" : T.textMuted, cursor: "pointer", fontSize: 13 }}>{icon}</button>
               ))}
             </div>
+            {themeSliderVisible && (
+              <div style={{ display: "flex", alignItems: "center", gap: 5, background: isDark ? "rgba(129,140,248,0.12)" : "rgba(251,191,36,0.12)", border: `1px solid ${isDark ? "rgba(129,140,248,0.3)" : "rgba(251,191,36,0.3)"}`, borderRadius: 8, padding: "3px 8px" }}
+                onMouseEnter={() => { if (themeSliderTimer.current) clearTimeout(themeSliderTimer.current); }}
+                onMouseLeave={themeSliderStartTimer}
+                title={`Intenzita pozadí: ${themeStrength}%`}
+              >
+                <span style={{ fontSize: 10, color: isDark ? "#818cf8" : "#f59e0b", fontWeight: 700, minWidth: 26, textAlign: "right" }}>{themeStrength}%</span>
+                <input type="range" min="0" max="100" step="5" value={themeStrength} onChange={e => changeThemeStrength(Number(e.target.value))} style={{ width: 70, accentColor: isDark ? "#818cf8" : "#f59e0b", cursor: "pointer" }} />
+              </div>
+            )}
             <button onClick={toggleLiquidGlass} onMouseEnter={e => showTooltip(e, liquidGlass ? "Vypnout Liquid Glass" : "Zapnout Liquid Glass")} onMouseLeave={hideTooltip} style={{ padding: "5px 9px", background: liquidGlass ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.05)", border: `1px solid ${liquidGlass ? "rgba(139,92,246,0.6)" : "rgba(255,255,255,0.1)"}`, borderRadius: 8, color: liquidGlass ? "#a78bfa" : T.textMuted, cursor: "pointer", fontSize: 14, fontWeight: liquidGlass ? 700 : 400, boxShadow: liquidGlass ? "0 0 12px rgba(139,92,246,0.4)" : "none" }}>💎</button>
             {liquidGlass && lgSliderVisible && (
               <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 8, padding: "3px 8px" }} onMouseEnter={() => { if (lgSliderTimer.current) clearTimeout(lgSliderTimer.current); }} onMouseLeave={lgSliderStartTimer} title={`Síla efektu: ${lgStrength}%`}>
@@ -3213,11 +3269,22 @@ export default function App() {
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               {[["🌞","light"],["🌙","dark"]].map(([icon, val]) => (
-                <button key={val} onClick={() => changeTheme(val)} style={{ padding: "6px 12px", background: theme === val ? "rgba(37,99,235,0.3)" : "transparent", border: "none", color: theme === val ? "#60a5fa" : T.textMuted, cursor: "pointer", fontSize: 14 }}>{icon}</button>
+                <button key={val} onClick={() => changeTheme(val)} style={{ padding: "6px 12px", background: theme === val ? "rgba(37,99,235,0.3)" : "transparent", border: `1px solid ${theme === val ? "rgba(37,99,235,0.5)" : "rgba(255,255,255,0.1)"}`, borderRadius: 8, color: theme === val ? "#60a5fa" : T.textMuted, cursor: "pointer", fontSize: 14 }}>{icon}</button>
               ))}
             </div>
+            {themeSliderVisible && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: isDark ? "rgba(129,140,248,0.12)" : "rgba(251,191,36,0.12)", border: `1px solid ${isDark ? "rgba(129,140,248,0.3)" : "rgba(251,191,36,0.3)"}`, borderRadius: 8, padding: "6px 10px" }}
+                onMouseEnter={() => { if (themeSliderTimer.current) clearTimeout(themeSliderTimer.current); }}
+                onMouseLeave={themeSliderStartTimer}
+                onTouchStart={() => { if (themeSliderTimer.current) clearTimeout(themeSliderTimer.current); }}
+                onTouchEnd={themeSliderStartTimer}
+              >
+                <span style={{ fontSize: 11, color: isDark ? "#818cf8" : "#f59e0b", fontWeight: 700, minWidth: 30 }}>{themeStrength}%</span>
+                <input type="range" min="0" max="100" step="5" value={themeStrength} onChange={e => changeThemeStrength(Number(e.target.value))} style={{ flex: 1, accentColor: isDark ? "#818cf8" : "#f59e0b", cursor: "pointer" }} />
+              </div>
+            )}
             <button onClick={toggleLiquidGlass} style={{ padding: "6px 12px", background: liquidGlass ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.05)", border: `1px solid ${liquidGlass ? "rgba(139,92,246,0.6)" : "rgba(255,255,255,0.1)"}`, borderRadius: 8, color: liquidGlass ? "#a78bfa" : T.textMuted, cursor: "pointer", fontSize: 14, fontWeight: liquidGlass ? 700 : 400 }}>💎</button>
             {liquidGlass && lgSliderVisible && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 8, padding: "6px 10px" }} onMouseEnter={() => { if (lgSliderTimer.current) clearTimeout(lgSliderTimer.current); }} onMouseLeave={lgSliderStartTimer} onTouchStart={() => { if (lgSliderTimer.current) clearTimeout(lgSliderTimer.current); }} onTouchEnd={lgSliderStartTimer}>
