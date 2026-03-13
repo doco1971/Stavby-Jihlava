@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0080
+// BUILD: 2026_03_13_build0081
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -150,6 +150,12 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0081 — FIX: login + deadline modál mimo obrazovku; filtr ⋯ rozbalovací
+//   Login: alignItems flex-start + overflowY auto → scrollovatelná na mobilu
+//   Deadline modál: overlay scrollovatelný (alignItems flex-start + overflowY auto)
+//     obsah modálu: bez maxHeight (scrolluje overlay, ne vnitřek)
+//   Filtrovací lišta: tlačítko ⋯ rozbalí/schová řádek 2 (objednatel,SV,view,export...)
+//   State: showFilterRow2 přidán
 // BUILD0080 — FIX: header přetékal na mobilu, Nastavení/Odhlášení nedosažitelné
 //   Header: mobilní varianta — logo + Termíny + ☰ hamburger
 //   Hamburger menu (dropdown): jméno, role, téma, Nápověda, Nastavení, Log, Odhlásit
@@ -1101,7 +1107,7 @@ function Login({ onLogin, users, onLogAction }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f2027 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f2027 100%)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "clamp(16px,5vh,60px) 0", fontFamily: "'Segoe UI',sans-serif" }}>
       <div style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "clamp(24px,5vw,48px) clamp(18px,5vw,40px)", width: "min(380px, 94vw)", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ display: "block", margin: "0 auto 14px" }}>
@@ -2394,6 +2400,7 @@ export default function App() {
   const [showDeadlines, setShowDeadlines] = useState(false);
   const [showOrphanWarning, setShowOrphanWarning] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showFilterRow2, setShowFilterRow2] = useState(false);
 
   const pracovniDny = (from, to) => {
     const d0 = new Date(from); d0.setHours(0,0,0,0);
@@ -3063,6 +3070,9 @@ export default function App() {
           {isMobile && (
             <button onClick={() => setCardView(v => !v)} onMouseEnter={e => showTooltip(e, cardView ? "Přepnout na tabulku" : "Přepnout na kartičky")} onMouseLeave={hideTooltip} style={{ padding: "0 8px", height: 28, background: cardView ? "rgba(37,99,235,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)"), border: `1px solid ${cardView ? "rgba(37,99,235,0.5)" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)")}`, borderRadius: 7, color: cardView ? "#60a5fa" : T.text, cursor: "pointer", fontSize: 13, fontWeight: cardView ? 700 : 400, flexShrink: 0 }} title={cardView ? "Tabulka" : "Kartičky"}>{cardView ? "☰" : "▦"}</button>
           )}
+          {isMobile && (
+            <button onClick={() => setShowFilterRow2(v => !v)} style={{ padding: "0 8px", height: 28, background: showFilterRow2 ? "rgba(37,99,235,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)"), border: `1px solid ${showFilterRow2 ? "rgba(37,99,235,0.5)" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)")}`, borderRadius: 7, color: showFilterRow2 ? "#60a5fa" : T.text, cursor: "pointer", fontSize: 14, fontWeight: 600, flexShrink: 0 }} title="Více možností">⋯</button>
+          )}
           {!isMobile && (
             <>
               <div style={{ display: "flex", gap: 2, flexShrink: 0, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", borderRadius: 7, padding: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.12)"}` }}>
@@ -3082,7 +3092,7 @@ export default function App() {
           )}
         </div>
         {/* Řádek 2 (pouze mobil): objednatel + SV + view + počet + graf + export + přidat */}
-        {isMobile && (
+        {isMobile && showFilterRow2 && (
           <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap", overflowX: "auto" }}>
             <NativeSelect value={filterObjed} onChange={setFilterObjed} options={["Všichni objednatelé", ...objednatele]} isDark={isDark} style={{ width: 130, flexShrink: 0 }} />
             <NativeSelect value={filterSV} onChange={setFilterSV} options={["Všichni SV", ...stavbyvedouci]} isDark={isDark} style={{ width: 110, flexShrink: 0 }} />
@@ -3647,8 +3657,8 @@ export default function App() {
       })()}
 
       {showDeadlines && deadlineWarnings.length > 0 && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", fontFamily: "'Segoe UI',sans-serif" }}>
-          <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 16, width: "min(820px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", border: "1px solid rgba(239,68,68,0.4)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 2000, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "10px", overflowY: "auto", fontFamily: "'Segoe UI',sans-serif" }}>
+          <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 16, width: "min(820px, 96vw)", display: "flex", flexDirection: "column", border: "1px solid rgba(239,68,68,0.4)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)", flexShrink: 0 }}>
             {/* header */}
             <div style={{ padding: "14px 18px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(239,68,68,0.1)", borderRadius: "16px 16px 0 0", gap: 10 }}>
               <div style={{ minWidth: 0 }}>
@@ -3658,7 +3668,7 @@ export default function App() {
               <button onClick={() => setShowDeadlines(false)} style={{ background: "none", border: "none", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 22, cursor: "pointer", flexShrink: 0, padding: "0 4px" }}>✕</button>
             </div>
             {/* tabulka */}
-            <div style={{ overflowY: "auto", overflowX: "auto", flex: 1, padding: isMobile ? "12px" : 24 }} id="deadline-print-area">
+            <div style={{ overflowX: "auto", padding: isMobile ? "12px" : 24 }} id="deadline-print-area">
               <div style={{ marginBottom: 16, display: "none" }} className="print-header">
                 <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Znojmo – Blížící se termíny</div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>Vygenerováno: {new Date().toLocaleDateString("cs-CZ")} | Zakázky s termínem do 30 pracovních dní</div>
