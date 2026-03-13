@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0096
+// BUILD: 2026_03_13_build0097
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -154,6 +154,8 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0097 — FIX: NativeSelect dropdown klik místo hover (thead překrytí),
+//   Nápověda: sekce Superadmin oprávnění + tlačítko Tisk nápovědy
 // BUILD0096 — FIX + UX: Termíny plovoucí, Nápověda přeřazena PC/mobil
 //   ⚠️ Termíny — převedeno na plovoucí okno (useDraggable 820×500)
 //   Nápověda — PC funkce nahoře, mobilní sekce dole (☰, ⋯, mobilní karty)
@@ -483,14 +485,16 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const [dropUp, setDropUp] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef(null);
+
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const openDropdown = () => {
-    if (ref.current) {
+  const openDropdown = (e) => {
+    e.stopPropagation();
+    if (!open && ref.current) {
       const rect = ref.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
@@ -499,7 +503,7 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
       setDropUp(goUp);
       setDropPos({ top: goUp ? rect.top : rect.bottom, left: rect.left, width: rect.width });
     }
-    setOpen(true);
+    setOpen(v => !v);
   };
 
   const bg = isDark ? "#1e293b" : "#fff";
@@ -508,19 +512,18 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   const hoverBg = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)";
   const dropBg = isDark ? "#1e293b" : "#fff";
   const dropShadow = isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)";
+
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}
-      onMouseEnter={openDropdown}
-      onMouseLeave={() => setTimeout(() => setOpen(false), 480)}
-    >
-      <button style={{ width: "auto", padding: "0 20px 0 10px", height: 28, background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 12, textAlign: "left", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", position: "relative", minWidth: 80 }}>
+    <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
+      <button onClick={openDropdown} style={{ width: "auto", padding: "0 20px 0 10px", height: 28, background: bg, border: `1px solid ${border}`, borderRadius: 7, color: textColor, cursor: "pointer", fontSize: 12, textAlign: "left", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", position: "relative", minWidth: 80 }}>
         <span>{value}</span>
-        <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", fontSize: 9, color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)", pointerEvents: "none" }}>▼</span>
+        <span style={{ position: "absolute", right: 6, top: "50%", transform: `translateY(-50%) rotate(${open ? 180 : 0}deg)`, fontSize: 9, color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)", pointerEvents: "none", transition: "transform 0.15s" }}>▼</span>
       </button>
       {open && (
-        <div style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 9999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
+        <div style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 99999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
           {options.map(o => (
-            <div key={o} onClick={() => { onChange(o); setOpen(false); }}
+            <div key={o}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(o); setOpen(false); }}
               style={{ padding: "9px 14px", color: o === value ? (isDark ? "#60a5fa" : "#2563eb") : textColor, background: o === value ? (isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)") : "transparent", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }}
               onMouseEnter={e => { if (o !== value) e.currentTarget.style.background = hoverBg; }}
               onMouseLeave={e => { if (o !== value) e.currentTarget.style.background = "transparent"; }}
@@ -3712,7 +3715,7 @@ export default function App() {
               <button onClick={() => setShowHelp(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
             {/* Obsah */}
-            <div style={{ overflowY: "auto", padding: "18px 22px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.7 }}>
+            <div id="help-print-content" style={{ overflowY: "auto", padding: "18px 22px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.7 }}>
               {/* Intro */}
               <div style={{ marginBottom: 18, padding: "11px 15px", background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.35)", borderRadius: 10, fontSize: 12, color: "#93c5fd", lineHeight: 1.6 }}>
                 <strong style={{ color: "#60a5fa" }}>Stavby Znojmo</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
@@ -3744,6 +3747,20 @@ export default function App() {
                 { icon: "📱", title: "Mobilní zobrazení — kartičky", text: "Na mobilu (šířka < 768px) se automaticky přepne do kartičkového pohledu. Tlačítko ▦/☰ v liště přepíná mezi kartičkami a tabulkou. Každá kartička zobrazuje: firmu (barevná tečka), číslo stavby, název, 3 finanční metriky (nabídka / vyfakturováno / rozdíl), termín s barevným stavem (žlutý = do 10 dní, červený = prošlý, zelený = vyfakturováno), poznámku a faktury. Akce (🕐 hist, 📋 kopie, ✏️ editovat, 🗑️ smazat) jsou dostupné dle role." },
                 { icon: "☰", title: "Mobilní menu (hamburger)", text: "Na mobilu jsou tlačítka hlavičky (Nastavení, Nápověda, Odhlásit...) skryta za tlačítkem ☰ vpravo nahoře. Kliknutím se rozbalí dropdown s: jménem a rolí uživatele, přepínačem tmavý/světlý režim, Nápovědou, Nastavením (admin), Logem (admin) a tlačítkem Odhlásit." },
                 { icon: "⋯", title: "Mobilní filtr — rozbalovací řádek", text: "Filtrovací lišta na mobilu má dva řádky. Řádek 1 (vždy viditelný): Hledat · Firmy · Filtr▼ · ▦ (kartičky) · ⋯. Kliknutím na ⋯ se zobrazí řádek 2: Objednatel · Stavbyvedoucí · Stránky/Vše · počet záznamů · 📊 Graf · ⬇ Export · + Přidat stavbu." },
+                { icon: "🔐", title: "Oprávnění dle role", text: <span>
+                  <span style={{display:"block",marginBottom:6,color:"rgba(255,255,255,0.5)",fontSize:11}}>Co smí která role:</span>
+                  {[
+                    { role: "USER", color: "#94a3b8", ops: "Čtení tabulky, filtrování, export dat" },
+                    { role: "USER EDITOR", color: "#60a5fa", ops: "Vše výše + přidání, editace a kopírování staveb" },
+                    { role: "ADMIN", color: "#a78bfa", ops: "Vše výše + smazání staveb, správa uživatelů, log zakázek, export logu" },
+                    { role: "SUPERADMIN", color: "#f59e0b", ops: "Vše výše + nastavení aplikace, záloha DB, import staveb, šířky a pořadí sloupců, reset nastavení" },
+                  ].map(({ role, color, ops }) => (
+                    <div key={role} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:5}}>
+                      <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0,marginTop:1}}>{role}</span>
+                      <span style={{color:"rgba(255,255,255,0.55)",fontSize:12}}>{ops}</span>
+                    </div>
+                  ))}
+                </span> },
               ].map(({ icon, title, text }) => {
                 const emojiRe = /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu;
                 const glowEmoji = (str) => {
@@ -3774,7 +3791,30 @@ export default function App() {
                 );
               })}
             </div>
-            <div style={{ padding: "11px 22px", borderTop: "1px solid rgba(255,255,255,0.08)", textAlign: "right", background: "rgba(255,255,255,0.02)" }}>
+            <div style={{ padding: "11px 22px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)" }}>
+              <button onClick={() => {
+                const content = document.getElementById("help-print-content");
+                if (!content) return;
+                const w = window.open("", "_blank");
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Znojmo</title><style>
+                  @page { size: A4; margin: 12mm; }
+                  body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; }
+                  h1 { font-size: 16px; margin: 0 0 4px; }
+                  .subtitle { color: #64748b; font-size: 10px; margin-bottom: 14px; }
+                  .item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; break-inside: avoid; }
+                  .item-title { font-weight: 700; font-size: 12px; color: #1e3a8a; margin-bottom: 3px; }
+                  .item-text { color: #475569; font-size: 11px; line-height: 1.5; }
+                  .role-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
+                  .role-badge { font-weight: 700; font-size: 9px; border: 1px solid #94a3b8; border-radius: 3px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0; }
+                  @media print { button { display: none; } }
+                </style></head><body>
+                <h1>❓ Nápověda — Stavby Znojmo</h1>
+                <div class="subtitle">Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")}</div>
+                ${content.innerHTML}
+                <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
+                </body></html>`);
+                w.document.close();
+              }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨️ Tisk nápovědy</button>
               <button onClick={() => setShowHelp(false)} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
             </div>
           </div>
