@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_14_build0104
+// BUILD: 2026_03_14_build0105
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -155,6 +155,8 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0105 — 📧 Email notifikace: pole pro emaily v Nastavení → Aplikace,
+//   uloženo v DB (nastaveni, klic=notify_emails), načteno při startu
 // BUILD0104 — FIX: 💎 se nevypíná při klik 🌞/🌙 — liquidGlassRef + setLiquidGlass(false) vždy
 // BUILD0103 — FIX: NativeSelect dropdown font — portal dědí font z body, přidán fontFamily
 // BUILD0102 — Sjednocení fontFamily: všude 'Segoe UI',Tahoma,sans-serif
@@ -1792,7 +1794,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -1859,6 +1861,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [editVerze, setEditVerze] = useState(appVerze);
   const [confirmResetCols, setConfirmResetCols] = useState(false);
   const [editDatum, setEditDatum] = useState(appDatum);
+  const [editNotifyEmails, setEditNotifyEmails] = useState(notifyEmails || "");
 
   const modalBg = isDark ? "#1e293b" : "#ffffff";
   const modalBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -1992,6 +1995,22 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                   <button onClick={() => setConfirmResetCols(true)} style={{ padding: "10px 20px", background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", borderRadius: 8, color: "#c084fc", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>↺ Reset šířek sloupců na výchozí</button>
                   <button onClick={() => { onResetColOrder(); }} style={{ padding: "10px 20px", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", borderRadius: 8, color: "#60a5fa", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>↺ Reset pořadí sloupců na výchozí</button>
                   <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>Obnoví původní šířky všech sloupců tabulky.</div>
+                </div>
+                <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
+                  <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>📧 EMAIL NOTIFIKACE — TERMÍNY</div>
+                  <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Emaily pro denní souhrn termínů (do 30 dní + prošlé). Oddělte čárkou nebo novým řádkem. Odesílá Supabase Edge Function každý den ráno.</div>
+                  <textarea
+                    value={editNotifyEmails}
+                    onChange={e => setEditNotifyEmails(e.target.value)}
+                    placeholder={"jan@firma.cz\neva@firma.cz"}
+                    rows={4}
+                    style={{ width: "100%", padding: "9px 12px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 8, color: modalText, fontSize: 13, boxSizing: "border-box", resize: "vertical", fontFamily: "monospace" }}
+                  />
+                  <button
+                    onClick={() => { onSaveNotifyEmails(editNotifyEmails); }}
+                    style={{ marginTop: 8, padding: "9px 20px", background: "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                  >💾 Uložit emaily</button>
+                  <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Uloženo v databázi (tabulka nastaveni, klic = notify_emails)</div>
                 </div>
               </div>
             </div>
@@ -2506,6 +2525,23 @@ export default function App() {
       }
     }).catch(() => {});
   }, []);
+
+  // Notifikační emaily — uloženy v DB pod klicem notify_emails
+  const [notifyEmails, setNotifyEmails] = useState("");
+  useEffect(() => {
+    if (isDemo) return;
+    sb("nastaveni?klic=eq.notify_emails").then(res => {
+      if (res && res[0]) setNotifyEmails(res[0].hodnota || "");
+    }).catch(() => {});
+  }, [isDemo]);
+
+  const saveNotifyEmails = async (val) => {
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "notify_emails", hodnota: val }), prefer: "resolution=merge-duplicates,return=minimal" });
+      setNotifyEmails(val);
+    } catch {}
+  };
 
   const saveAppInfo = async (verze, datum) => {
     if (isDemo) { setAppVerze(verze); setAppDatum(datum); return; }
@@ -4056,7 +4092,7 @@ export default function App() {
       {adding && <FormModal title="➕ Nová stavba" initial={emptyRow} onSave={handleAdd} onClose={() => setAdding(false)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {editRow && <FormModal title={`✏️ Editace stavby #${editRow.id}`} initial={editRow} onSave={handleSave} onClose={() => setEditRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {copyRow && <FormModal title="📋 Kopírovat stavbu" initial={copyRow} onSave={handleCopySave} onClose={() => setCopyRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} />}
+      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} />}
 
       {showOrphanWarning && (() => {
         const firmyNames = firmy.map(f => f.hodnota);
