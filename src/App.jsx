@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_13_build0099
+// BUILD: 2026_03_13_build0100
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -155,6 +155,7 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0100 — UX: klik 🌞/🌙 při aktivním 💎 → vypne LG + zobrazí theme slider
 // BUILD0099 — FIX: NativeSelect dropdown portál do body (přes overflow:hidden + stacking context)
 // BUILD0098 — FIX: NativeSelect hover otevírá + spolehlivé zavírání (relatedTarget)
 // BUILD0097 — FIX: NativeSelect dropdown klik místo hover (thead překrytí),
@@ -3200,6 +3201,11 @@ export default function App() {
   const changeTheme = (t) => {
     setTheme(t);
     try { localStorage.setItem("theme", t); } catch {}
+    // Pokud je Liquid Glass zapnutý — vypneme ho a zobrazíme theme slider
+    if (liquidGlass) {
+      setLiquidGlass(false);
+      try { localStorage.setItem("liquidGlass", "0"); } catch {}
+    }
     sliderShow("theme");
   };
   const toggleLiquidGlass = () => {
