@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_14_build0102
+// BUILD: 2026_03_14_build0103
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -155,6 +155,7 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0103 — FIX: NativeSelect dropdown font — portal dědí font z body, přidán fontFamily
 // BUILD0102 — Sjednocení fontFamily: všude 'Segoe UI',Tahoma,sans-serif
 // BUILD0101 — Oprava data exportu: 2026_03_13 → 2026_03_14 (aktuální datum)
 // BUILD0100 — UX: klik 🌞/🌙 při aktivním 💎 → vypne LG + zobrazí theme slider
@@ -534,7 +535,7 @@ function NativeSelect({ value, onChange, options, style, isDark = true }) {
   // Portál — renderuje přímo do body, mimo jakýkoliv overflow/stacking context
   const dropdown = open ? createPortal(
     <div ref={dropRef} onMouseLeave={handleLeave}
-      style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 999999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280 }}>
+      style={{ position: "fixed", top: dropUp ? "auto" : dropPos.top, bottom: dropUp ? window.innerHeight - dropPos.top : "auto", left: dropPos.left, minWidth: Math.max(dropPos.width, 220), background: dropBg, border: `1px solid ${border}`, borderRadius: 8, zIndex: 999999, boxShadow: dropShadow, overflow: "auto", maxHeight: 280, fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
       {options.map(o => (
         <div key={o}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(o); setOpen(false); }}
