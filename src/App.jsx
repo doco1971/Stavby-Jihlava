@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_14_build0103
+// BUILD: 2026_03_14_build0104
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -155,6 +155,7 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0104 — FIX: 💎 se nevypíná při klik 🌞/🌙 — liquidGlassRef + setLiquidGlass(false) vždy
 // BUILD0103 — FIX: NativeSelect dropdown font — portal dědí font z body, přidán fontFamily
 // BUILD0102 — Sjednocení fontFamily: všude 'Segoe UI',Tahoma,sans-serif
 // BUILD0101 — Oprava data exportu: 2026_03_13 → 2026_03_14 (aktuální datum)
@@ -2411,6 +2412,8 @@ export default function App() {
   const [liquidGlass, setLiquidGlass] = useState(() => {
     try { return localStorage.getItem("liquidGlass") === "1"; } catch { return false; }
   });
+  const liquidGlassRef = useRef(false);
+  useEffect(() => { liquidGlassRef.current = liquidGlass; }, [liquidGlass]);
   const [lgStrength, setLgStrength] = useState(() => {
     try { return parseInt(localStorage.getItem("lgStrength") || "60", 10); } catch { return 60; }
   });
@@ -3204,9 +3207,10 @@ export default function App() {
   const changeTheme = (t) => {
     setTheme(t);
     try { localStorage.setItem("theme", t); } catch {}
-    // Pokud je Liquid Glass zapnutý — vypneme ho a zobrazíme theme slider
-    if (liquidGlass) {
+    // Pokud je Liquid Glass zapnutý — vždy vypnout (čteme ref, ne closure)
+    if (liquidGlassRef.current) {
       setLiquidGlass(false);
+      liquidGlassRef.current = false;
       try { localStorage.setItem("liquidGlass", "0"); } catch {}
     }
     sliderShow("theme");
