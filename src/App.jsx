@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_14_build0105
+// BUILD: 2026_03_16_build0108
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -15,6 +15,60 @@ import * as XLSX from "xlsx";
 //   Soubor patří do: src/App.jsx
 //
 // TRANSCRIPT: /mnt/transcripts/ — přečíst pro kontext předchozích session
+//
+// ============================================================
+// EMAIL NOTIFIKACE — AKTUÁLNÍ STAV (session 2026-03-16)
+// ============================================================
+// ✅ Resend.com funguje — odesílá na doco@seznam.cz (registrační adresa)
+// ✅ pg_cron nastaven — job "stavby-deadline-emails-v2" (jobid=2)
+//   Schedule: 0 5 * * * = 5:00 UTC = 6:00 CZ zimní / 7:00 CZ letní
+// ✅ Duplicitní job "send-deadline-emails-daily" (jobid=3) byl smazán
+//
+// PLÁN — více adres (až bude ověřeno spolehlivé denní odesílání):
+//   1. Sledovat několik dní jestli email chodí každý den spolehlivě
+//   2. Koupit doménu (např. stavby-znojmo.cz, ~150 Kč/rok, Wedos.cz)
+//   3. V Resend přidat doménu → DNS záznamy (TXT/MX/DKIM) u registrátora
+//   4. Po ověření domény Resend pošle na libovolný email
+//   5. Přidat pole pro více emailů v Nastavení → Aplikace
+//
+// PENDING ÚKOLY:
+//   [ ] Sledovat několik dní — chodí email každý den spolehlivě?
+//   [ ] Po ověření: koupit doménu + ověřit v Resend
+//   [ ] Po ověření domény: otestovat odesílání na více adres
+//
+// ============================================================
+// MULTI-TENANT ARCHITEKTURA — DOHODNUTO (session 2026-03-16)
+// ============================================================
+// Aplikaci budou používat minimálně 2 firmy.
+// Každá firma = vlastní instance (Supabase + GitHub fork + Vercel)
+// Data jsou 100% oddělená — jedna firma neovlivní druhou.
+//
+// STRUKTURA:
+//   Template repo: doco1971/stavby-template (GitHub) — hlavní šablona
+//   Firma 1 (Znojmo):
+//     GitHub fork: doco1971/stavby-znojmo (aktuální)
+//     Vercel: vlastní URL, Supabase: vlastní DB
+//     .env: VITE_SB_URL=znojmo.supabase.co + vlastní klíče
+//   Firma 2 (další):
+//     GitHub fork: doco1971/stavby-[nazev]
+//     Vercel: vlastní URL, Supabase: vlastní DB
+//     .env: jiné VITE_SB_URL + jiné klíče
+//
+// JAK ŠÍŘIT OPRAVY KÓDU:
+//   1. Opravit kód v template repo (stavby-template)
+//   2. Každý fork: git pull upstream main → změna se přenese
+//   3. Pokud firma nechce Git → udělat za ně (5 minut práce)
+//
+// .ENV PROMĚNNÉ (jediná věc která se liší mezi firmami):
+//   VITE_SB_URL      — URL jejich Supabase projektu
+//   VITE_SB_KEY      — jejich Supabase anon klíč
+//   RESEND_API_KEY   — jejich Resend klíč (nebo sdílený při stejné doméně)
+//
+// PENDING ÚKOLY:
+//   [ ] Vytvořit template repozitář stavby-template na GitHubu
+//   [ ] Nastavit fork pro Firmu 1 (Znojmo) = aktuální instance
+//   [ ] Připravit .env šablonu s VITE_SB_URL, VITE_SB_KEY, RESEND_API_KEY
+//   [ ] Připravit postup onboardingu pro Firmu 2 (git pull upstream main)
 //
 // ============================================================
 // TECHNICKÉ DETAILY
@@ -70,6 +124,13 @@ import * as XLSX from "xlsx";
 // [PENDING] 📱 iOS klávesnice — alert okno (⚠️ Termíny) přetéká mimo obrazovku
 // [PENDING] 📱 Překrývání tlačítek Export (⬇) a + Přidat stavbu na mobilu
 // [PENDING] ↔️  Změna šířky sloupců tabulky tažením myší
+// [PENDING] 📈 Dashboard — přehledová stránka s KPI kartami a grafy
+//   KPI karty: celkem staveb, prošlé termíny, vyfakturováno, celková nab. cena
+//   Grafy: stavby per firma, vyfakturováno vs nevyfakturováno, nab. ceny per rok
+//   Nový pohled (třetí záložka vedle 📋 Stránky / 📜 Vše)
+// [PENDING] 🗓️ Kalendářní pohled — termíny ukončení v kalendáři
+//   Zobrazení termínů ukončení staveb v měsíčním kalendáři
+//   Barevné odlišení dle firmy nebo stavu (prošlé / aktivní / vyfakturované)
 //
 // PRAVIDLA EXPORTU (platí od BUILD0052)
 // ============================================================
@@ -155,6 +216,16 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0108 — Aktualizace hlavičky: Dashboard + Kalendář do PENDING, multi-tenant rozšířen
+//   [PENDING] přidán 📈 Dashboard (KPI karty + grafy, třetí pohled)
+//   [PENDING] přidán 🗓️ Kalendářní pohled (termíny ukončení v kalendáři)
+//   Multi-tenant sekce rozšířena: .env proměnné, postup šíření oprav, detaily onboardingu
+// BUILD0107 — Aktualizace hlavičky: email funguje, pg_cron ověřen, plán více adres
+//   ✅ Email odesílá na doco@seznam.cz, pg_cron job2 běží 0 5 * * *
+//   ✅ Duplicitní job3 smazán, EMAIL sekce přepsána na aktuální stav
+// BUILD0106 — Aktualizace hlavičky: multi-tenant architektura + email řešení (jen dokumentace)
+//   Přidána sekce MULTI-TENANT do poznámek pro Claude
+//   Přidána sekce EMAIL NOTIFIKACE — aktuální stav a plán řešení
 // BUILD0105 — 📧 Email notifikace: pole pro emaily v Nastavení → Aplikace,
 //   uloženo v DB (nastaveni, klic=notify_emails), načteno při startu
 // BUILD0104 — FIX: 💎 se nevypíná při klik 🌞/🌙 — liquidGlassRef + setLiquidGlass(false) vždy
