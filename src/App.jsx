@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_17_build0117
+// BUILD: 2026_03_17_build0119
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -262,6 +262,16 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0119 — FIX: záloha exportuje vše, import filtruje dynamicky podle chyb DB
+//   zalohaJSON: vrácen na export celé DB (žádný VALID_FIELDS filtr) — plná záloha
+//   doImportJSON: ALWAYS_SKIP (id, created_at, nabidka, rozdil, bez_dph_2, bez_dph)
+//     + self-healing: při chybě PGRST204 automaticky odstraní problematický sloupec
+//     a zkusí vložit znovu (max 10 pokusů) — funguje i pro budoucí neznámé sloupce
+// BUILD0118 — FIX: záloha + import JSON — legacy sloupce a computed pole
+//   zalohaJSON: exportuje jen platné DB sloupce (VALID_FIELDS)
+//     odstraněno: nabidka, rozdil (computed), bez_dph_2 (legacy)
+//   doImportJSON: SKIP_FIELDS = id, created_at, nabidka, rozdil, bez_dph_2, bez_dph
+//     zálohy z prod DB (s legacy sloupci) se importují do staging bez chyby
 // BUILD0117 — FIX: fallback starých názvů sloupců při importu JSON
 //   bez_dph_2 → castka_bez_dph_2, bez_dph → castka_bez_dph
 //   Zálohy z před migrace se importují správně
@@ -3303,28 +3313,61 @@ export default function App() {
     try {
       let ok = 0, chyby = [];
       const NUM_FIELDS_IMPORT = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidkova_cena","vyfakturovano","zrealizovano","castka_bez_dph","castka_bez_dph_2"];
+      // Zjisti skutečné sloupce cílové DB
+      let dbKolumny = new Set();
+      try {
+        const schemaRes = await sb("stavby?limit=0");
+        // Supabase vrátí prázdné pole — sloupce zjistíme z OPTIONS nebo z prvního záznamu
+        // Alternativa: poslat jeden prázdný dotaz a přečíst hlavičky
+      } catch {}
+      // Spolehlivější: zjistit sloupce z prvního záznamu zálohy a odfiltrovat SKIP_FIELDS
+      // + dynamicky ověřit při prvním vložení — pokud selže, vyhodit konkrétní sloupec
+      const ALWAYS_SKIP = new Set(["id","created_at","nabidka","rozdil","bez_dph_2","bez_dph"]);
       // Smaž stávající stavby
       await sb("stavby?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+      // Zjisti platné sloupce pomocí testovacího vložení prvního záznamu
+      let validKolumny = null;
       const cleaned = payload.stavby.map(r => {
         const c = { ...r };
-        delete c.id; // nechat DB generovat nové ID
-        delete c.created_at;
-        // Fallback: staré názvy sloupců → nové
-        if ("bez_dph_2" in c && !("castka_bez_dph_2" in c)) { c.castka_bez_dph_2 = c.bez_dph_2; delete c.bez_dph_2; }
-        if ("bez_dph" in c && !("castka_bez_dph" in c)) { c.castka_bez_dph = c.bez_dph; delete c.bez_dph; }
-        NUM_FIELDS_IMPORT.forEach(k => { c[k] = Number(c[k]) || 0; });
-        Object.keys(c).forEach(k => {
-          if (!NUM_FIELDS_IMPORT.includes(k) && (c[k] === null || c[k] === undefined)) c[k] = "";
-        });
+        // Vždy odstraň systémové a known-bad sloupce
+        ALWAYS_SKIP.forEach(k => delete c[k]);
+        // Fallback: staré názvy → nové
+        if ("bez_dph_2" in c && !("castka_bez_dph_2" in c)) { c.castka_bez_dph_2 = c.bez_dph_2; }
+        if ("bez_dph" in c && !("castka_bez_dph" in c)) { c.castka_bez_dph = c.bez_dph; }
+        ALWAYS_SKIP.forEach(k => delete c[k]); // druhý průchod po fallback
+        // Pokud už víme platné sloupce, odfiltruj neznámé
+        if (validKolumny) { Object.keys(c).forEach(k => { if (!validKolumny.has(k)) delete c[k]; }); }
+        NUM_FIELDS_IMPORT.forEach(k => { if (k in c) c[k] = Number(c[k]) || 0; });
+        Object.keys(c).forEach(k => { if (!NUM_FIELDS_IMPORT.includes(k) && (c[k] === null || c[k] === undefined)) c[k] = ""; });
         return c;
       });
-      // Vkládej po 50 kusech
+      // Vkládej po 50 kusech — při chybě PGRST204 odstraň problematický sloupec a zkus znovu
       for (let i = 0; i < cleaned.length; i += 50) {
-        const chunk = cleaned.slice(i, i+50);
-        try {
-          await sb("stavby", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
-          ok += chunk.length;
-        } catch(e) { chyby.push(`Řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+        let chunk = cleaned.slice(i, i+50);
+        let pokus = 0;
+        while (pokus < 10) {
+          try {
+            await sb("stavby", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+            ok += chunk.length;
+            // Po prvním úspěšném vložení zapamatuj platné sloupce
+            if (!validKolumny) {
+              validKolumny = new Set(Object.keys(chunk[0]));
+              // Odfiltruj zbytek cleaned podle validKolumny
+              cleaned.forEach(r => { Object.keys(r).forEach(k => { if (!validKolumny.has(k)) delete r[k]; }); });
+            }
+            break;
+          } catch(e) {
+            const match = e.message.match(/'([^']+)' column of 'stavby'/);
+            if (match) {
+              const badCol = match[1];
+              chunk = chunk.map(r => { const c = { ...r }; delete c[badCol]; return c; });
+              pokus++;
+            } else {
+              chyby.push(`Řádky ${i+1}-${i+chunk.length}: ${e.message}`);
+              break;
+            }
+          }
+        }
       }
       await loadAll();
       logAkce(user?.email, "Import JSON", `${ok} staveb importováno z ${fileName}`);
