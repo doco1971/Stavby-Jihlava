@@ -3299,7 +3299,7 @@ export default function App() {
 
         // ── Uložit do DB — DELETE vše + POST nové ──
         await sb("stavby?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
-        const NUM = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidkova_cena","vyfakturovano","zrealizovano","castka_bez_dph"];
+          const NUM = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidkova_cena","vyfakturovano","zrealizovano","castka_bez_dph","castka_bez_dph_2"];
         const cleaned = stavbyRows.map(r => {
           const c = { ...r };
           NUM.forEach(k => { c[k] = Number(c[k]) || 0; });
