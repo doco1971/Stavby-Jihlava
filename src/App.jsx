@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_17_build0113
+// BUILD: 2026_03_17_build0115
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -170,6 +170,8 @@ import * as XLSX from "xlsx";
 //   Heartbeat YAML přidat přímo do multi-tenant template → forky zdědí automaticky
 // [DONE] 🏗️  Multi-tenant template + testovací prostředí — BUILD0112
 // [DONE] 💾 JSON záloha + 📥 Import JSON — BUILD0113
+// [DONE] 🔒 Ochrana importu JSON: potvrzovací dialog + detekce prostředí — BUILD0114
+// [DONE] ⚠️  TEST banner na přihlašovací obrazovce — BUILD0115
 // [DONE] ⚠️  TEST banner + badge na staging — BUILD0113
 //   ✅ .env.template — šablona proměnných pro každou instanci
 //   ✅ .github/workflows/supabase-heartbeat.yml — keep-alive Pro+Čt 9:00 UTC
@@ -260,6 +262,20 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0115 — TEST banner na přihlašovací obrazovce (staging detekce)
+//   Login komponenta: isLoginStaging detekce podle hostname (stejná logika jako hlavní app)
+//   Blikající oranžový banner nahoře obrazovky (loginStagingPulse + loginStagingBlink)
+//   Přihlašovací karta: oranžový border + box-shadow + marginTop při staging
+//   Banner text: "TESTOVACÍ PROSTŘEDÍ — přihlašujete se do testovací databáze"
+// BUILD0114 — Ochrana importu JSON: potvrzovací dialog + detekce prostředí
+//   Záloha JSON nově obsahuje pole "prostredi" (PRODUKCE / STAGING) + "sb_url"
+//   Import JSON: před smazáním dat zobrazí dialog se shrnutím zálohy
+//     - název prostředí zálohy vs. aktuálního prostředí
+//     - datum a čas zálohy
+//     - počet staveb v záloze vs. aktuálně v DB
+//     - varování že se smažou všechna stávající data
+//     - při neshodě prostředí: červené varování, nutné napsat POTVRDIT
+//     - při shodě prostředí: žluté varování, nutné napsat POTVRDIT
 // BUILD0113 — JSON záloha + import, TEST banner/badge na staging, oprava importu XLS
 //   💾 Záloha DB přepnuta z Excel na JSON (přesnější, bez problémů s názvy sloupců)
 //   📥 Import JSON — nový handler pro zálohu JSON (bez konverze, přímý přenos dat)
@@ -1422,6 +1438,12 @@ function Login({ onLogin, users, onLogAction }) {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isLoginStaging = typeof window !== "undefined" && (
+    window.location.hostname.includes("staging") ||
+    window.location.hostname.includes("preview") ||
+    window.location.hostname === "localhost"
+  );
+
   const handle = () => {
     setLoading(true);
     setTimeout(() => {
@@ -1437,7 +1459,18 @@ function Login({ onLogin, users, onLogAction }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f2027 100%)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "clamp(16px,5vh,60px) 0 24px", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
-      <div style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "clamp(24px,5vw,48px) clamp(18px,5vw,40px)", width: "min(380px, 94vw)", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
+      <style>{`
+        @keyframes loginStagingBlink{0%,100%{opacity:1;box-shadow:0 0 12px rgba(249,115,22,0.9)}50%{opacity:0.45;box-shadow:0 0 3px rgba(249,115,22,0.2)}}
+        @keyframes loginStagingPulse{0%,100%{background:rgba(249,115,22,0.95)}50%{background:rgba(234,88,12,0.75)}}
+      `}</style>
+      {isLoginStaging && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, animation: "loginStagingPulse 1.5s ease-in-out infinite", background: "rgba(249,115,22,0.95)", borderBottom: "2px solid rgba(249,115,22,0.6)", color: "#fff", textAlign: "center", padding: "6px 16px", fontSize: 12, fontWeight: 800, letterSpacing: 1, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ animation: "loginStagingBlink 1.5s ease-in-out infinite", display: "inline-block" }}>⚠️</span>
+          TESTOVACÍ PROSTŘEDÍ — přihlašujete se do testovací databáze
+          <span style={{ animation: "loginStagingBlink 1.5s ease-in-out infinite", display: "inline-block" }}>⚠️</span>
+        </div>
+      )}
+      <div style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: isLoginStaging ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "clamp(24px,5vw,48px) clamp(18px,5vw,40px)", width: "min(380px, 94vw)", boxShadow: isLoginStaging ? "0 32px 80px rgba(0,0,0,0.5), 0 0 0 2px rgba(249,115,22,0.25)" : "0 32px 80px rgba(0,0,0,0.5)", marginTop: isLoginStaging ? 20 : 0 }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ display: "block", margin: "0 auto 14px" }}>
             <defs>
@@ -3182,9 +3215,12 @@ export default function App() {
         sb("ciselniky?order=typ,poradi"),
         sb("uzivatele?order=id"),
       ]);
+      const prostredi = SB_URL && SB_URL.includes("znojmo-staging") ? "STAGING" : "PRODUKCE";
       const payload = {
         version: 1,
         created: new Date().toISOString(),
+        prostredi,
+        sb_url: SB_URL,
         stavby: stavbyRes || [],
         ciselniky: cisRes || [],
         uzivatele: (uzRes || []).map(u => ({ id: u.id, jmeno: u.jmeno, email: u.email, role: u.role })), // bez hesel
@@ -3201,6 +3237,8 @@ export default function App() {
   // ── Import původní tabulky (superadmin) ──────────────────────
   const importRef = useRef(null);
   const [importLog, setImportLog] = useState(null); // { ok, chyby, zprava }
+  const [importConfirm, setImportConfirm] = useState(null); // { payload, fileName, prostrediZalohy, prostrediAktualni, mismatch, stavbyVDB }
+  const [importConfirmText, setImportConfirmText] = useState("");
 
   const fmtDateFromXls = (v) => {
     if (!v) return "";
@@ -3234,40 +3272,56 @@ export default function App() {
           setImportLog({ ok: 0, chyby: ["Neplatný formát JSON zálohy — chybí pole 'stavby'."] });
           return;
         }
-        let ok = 0, chyby = [];
-        const NUM_FIELDS_IMPORT = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidkova_cena","vyfakturovano","zrealizovano","castka_bez_dph","castka_bez_dph_2"];
-        // Smaž stávající stavby
-        await sb("stavby?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
-        const cleaned = payload.stavby.map(r => {
-          const c = { ...r };
-          delete c.id; // nechat DB generovat nové ID
-          delete c.created_at;
-          delete c.nabidka;  // computed field
-          delete c.rozdil;   // computed field
-          // Přejmenuj bez_dph_2 → castka_bez_dph_2 (starší zálohy)
-          if ("bez_dph_2" in c) { c.castka_bez_dph_2 = c.bez_dph_2; delete c.bez_dph_2; }
-          NUM_FIELDS_IMPORT.forEach(k => { c[k] = Number(c[k]) || 0; });
-          Object.keys(c).forEach(k => {
-            if (!NUM_FIELDS_IMPORT.includes(k) && (c[k] === null || c[k] === undefined)) c[k] = "";
-          });
-          return c;
-        });
-        // Vkládej po 50 kusech
-        for (let i = 0; i < cleaned.length; i += 50) {
-          const chunk = cleaned.slice(i, i+50);
-          try {
-            await sb("stavby", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
-            ok += chunk.length;
-          } catch(e) { chyby.push(`Řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
-        }
-        await loadAll();
-        logAkce(user?.email, "Import JSON", `${ok} staveb importováno z ${file.name}`);
-        setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb z "${file.name}"` });
+        // Zjisti aktuální prostředí
+        const prostrediAktualni = SB_URL && SB_URL.includes("znojmo-staging") ? "STAGING" : "PRODUKCE";
+        const prostrediZalohy = payload.prostredi || "NEZNÁMÉ";
+        const mismatch = prostrediZalohy !== "NEZNÁMÉ" && prostrediZalohy !== prostrediAktualni;
+        // Zjisti počet staveb v aktuální DB
+        let stavbyVDB = "?";
+        try { const res = await sb("stavby?select=id"); stavbyVDB = res.length; } catch {}
+        setImportConfirmText("");
+        setImportConfirm({ payload, fileName: file.name, prostrediZalohy, prostrediAktualni, mismatch, stavbyVDB });
       } catch(e) {
         setImportLog({ ok: 0, chyby: ["Chyba čtení JSON: " + e.message] });
       }
     };
     reader.readAsText(file);
+  };
+
+  const doImportJSON = async () => {
+    if (!importConfirm) return;
+    const { payload, fileName } = importConfirm;
+    setImportConfirm(null);
+    setImportConfirmText("");
+    try {
+      let ok = 0, chyby = [];
+      const NUM_FIELDS_IMPORT = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidkova_cena","vyfakturovano","zrealizovano","castka_bez_dph","castka_bez_dph_2"];
+      // Smaž stávající stavby
+      await sb("stavby?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+      const cleaned = payload.stavby.map(r => {
+        const c = { ...r };
+        delete c.id; // nechat DB generovat nové ID
+        delete c.created_at;
+        NUM_FIELDS_IMPORT.forEach(k => { c[k] = Number(c[k]) || 0; });
+        Object.keys(c).forEach(k => {
+          if (!NUM_FIELDS_IMPORT.includes(k) && (c[k] === null || c[k] === undefined)) c[k] = "";
+        });
+        return c;
+      });
+      // Vkládej po 50 kusech
+      for (let i = 0; i < cleaned.length; i += 50) {
+        const chunk = cleaned.slice(i, i+50);
+        try {
+          await sb("stavby", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+          ok += chunk.length;
+        } catch(e) { chyby.push(`Řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+      }
+      await loadAll();
+      logAkce(user?.email, "Import JSON", `${ok} staveb importováno z ${fileName}`);
+      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb z "${fileName}"` });
+    } catch(e) {
+      setImportLog({ ok: 0, chyby: ["Chyba importu: " + e.message] });
+    }
   };
 
   const handleImport = (e) => {
@@ -4543,6 +4597,85 @@ export default function App() {
 
       {/* GRAF MODAL */}
       {showGraf && <GrafModal data={filtered} firmy={firmy} isDark={isDark} onClose={() => setShowGraf(false)} />}
+
+      {/* IMPORT JSON — POTVRZOVACÍ DIALOG */}
+      {importConfirm && (() => {
+        const { payload, fileName, prostrediZalohy, prostrediAktualni, mismatch, stavbyVDB } = importConfirm;
+        const fmtCreated = payload.created ? new Date(payload.created).toLocaleString("cs-CZ", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "?";
+        const confirmed = importConfirmText.trim().toUpperCase() === "POTVRDIT";
+        const borderColor = mismatch ? "rgba(239,68,68,0.5)" : "rgba(251,191,36,0.4)";
+        const accentColor = mismatch ? "#f87171" : "#fbbf24";
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+            <div style={{ background: "#1e293b", borderRadius: 16, padding: "28px 32px", width: 440, border: `1px solid ${borderColor}`, boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}>
+              <div style={{ fontSize: 36, textAlign: "center", marginBottom: 10 }}>{mismatch ? "🚨" : "⚠️"}</div>
+              <h3 style={{ color: "#fff", margin: "0 0 18px", fontSize: 16, textAlign: "center" }}>
+                {mismatch ? "Neshoda prostředí — opravdu importovat?" : "Potvrdit import zálohy"}
+              </h3>
+
+              {/* Info tabulka */}
+              <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "14px 16px", marginBottom: 14, fontSize: 13, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "rgba(255,255,255,0.45)" }}>Prostředí zálohy:</span>
+                  <span style={{ color: prostrediZalohy === "PRODUKCE" ? "#4ade80" : "#60a5fa", fontWeight: 700 }}>{prostrediZalohy}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "rgba(255,255,255,0.45)" }}>Aktuální prostředí:</span>
+                  <span style={{ color: prostrediAktualni === "PRODUKCE" ? "#4ade80" : "#60a5fa", fontWeight: 700 }}>{prostrediAktualni}</span>
+                </div>
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "rgba(255,255,255,0.45)" }}>Datum zálohy:</span>
+                  <span style={{ color: "#e2e8f0" }}>{fmtCreated}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "rgba(255,255,255,0.45)" }}>Staveb v záloze:</span>
+                  <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{payload.stavby.length}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "rgba(255,255,255,0.45)" }}>Staveb aktuálně v DB:</span>
+                  <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{stavbyVDB}</span>
+                </div>
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 8 }}>
+                  <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 12 }}>Soubor: </span>
+                  <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>{fileName}</span>
+                </div>
+              </div>
+
+              {/* Varování */}
+              {mismatch && (
+                <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "#fca5a5" }}>
+                  🚨 <strong>Záloha pochází z jiného prostředí ({prostrediZalohy}) než je aktuální ({prostrediAktualni})!</strong> Importovat do špatné DB může způsobit vážné problémy.
+                </div>
+              )}
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 8, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: "#fca5a5" }}>
+                ⚠️ Všechna stávající data v DB budou <strong>trvale smazána</strong> a nahrazena daty ze zálohy. Tato akce je <strong>nevratná</strong>.
+              </div>
+
+              {/* Pole POTVRDIT */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 6 }}>Pro pokračování napište <strong style={{ color: accentColor }}>POTVRDIT</strong>:</div>
+                <input
+                  value={importConfirmText}
+                  onChange={e => setImportConfirmText(e.target.value)}
+                  placeholder="POTVRDIT"
+                  autoFocus
+                  style={{ width: "100%", padding: "9px 12px", background: "#0f172a", border: `1px solid ${confirmed ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", textAlign: "center", letterSpacing: 2, fontWeight: 700 }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { setImportConfirm(null); setImportConfirmText(""); }} style={{ flex: 1, padding: "10px 0", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13 }}>Zrušit</button>
+                <button
+                  onClick={doImportJSON}
+                  disabled={!confirmed}
+                  style={{ flex: 1, padding: "10px 0", background: confirmed ? (mismatch ? "linear-gradient(135deg,#dc2626,#b91c1c)" : "linear-gradient(135deg,#d97706,#b45309)") : "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, color: confirmed ? "#fff" : "rgba(255,255,255,0.2)", cursor: confirmed ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700, transition: "all 0.15s" }}>
+                  {mismatch ? "🚨 Přesto importovat" : "✅ Importovat"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* AUTO-LOGOUT VAROVÁNÍ */}
       {autoLogoutWarning && (
