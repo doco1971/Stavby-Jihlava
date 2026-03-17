@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_17_build0115
+// BUILD: 2026_03_17_build0116
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -262,6 +262,10 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0116 — FIX: detekce prostředí v importu/záloze JSON — hostname místo SB_URL
+//   prostrediAktualni + prostredi v záloze: hostname.includes("staging/preview/localhost")
+//   Příčina bugu: SB_URL nemusí obsahovat "znojmo-staging" → vždy vrátilo PRODUKCE
+//   Sjednoceno s isStaging logikou v hlavní app a Login komponentě
 // BUILD0115 — TEST banner na přihlašovací obrazovce (staging detekce)
 //   Login komponenta: isLoginStaging detekce podle hostname (stejná logika jako hlavní app)
 //   Blikající oranžový banner nahoře obrazovky (loginStagingPulse + loginStagingBlink)
@@ -3215,7 +3219,7 @@ export default function App() {
         sb("ciselniky?order=typ,poradi"),
         sb("uzivatele?order=id"),
       ]);
-      const prostredi = SB_URL && SB_URL.includes("znojmo-staging") ? "STAGING" : "PRODUKCE";
+      const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
       const payload = {
         version: 1,
         created: new Date().toISOString(),
@@ -3273,7 +3277,7 @@ export default function App() {
           return;
         }
         // Zjisti aktuální prostředí
-        const prostrediAktualni = SB_URL && SB_URL.includes("znojmo-staging") ? "STAGING" : "PRODUKCE";
+        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
         const prostrediZalohy = payload.prostredi || "NEZNÁMÉ";
         const mismatch = prostrediZalohy !== "NEZNÁMÉ" && prostrediZalohy !== prostrediAktualni;
         // Zjisti počet staveb v aktuální DB
