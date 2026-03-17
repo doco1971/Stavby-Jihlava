@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_16_build0108
+// BUILD: 2026_03_16_build0112
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -19,56 +19,81 @@ import * as XLSX from "xlsx";
 // ============================================================
 // EMAIL NOTIFIKACE — AKTUÁLNÍ STAV (session 2026-03-16)
 // ============================================================
-// ✅ Resend.com funguje — odesílá na doco@seznam.cz (registrační adresa)
+// ✅ Resend.com funguje a je plně nakonfigurován
+// ✅ Doména zmes.cz ověřena v Resend (DNS záznamy přidal IT správce Forpsi)
+//   DNS záznamy přidány:
+//     TXT  resend._domainkey.zmes.cz  → DKIM klíč
+//     MX   send.zmes.cz               → feedback-smtp.eu-west-1.amazonses.com (priorita 10)
+//     TXT  send.zmes.cz               → v=spf1 include:amazonses.com ~all
+//   Domain verified: Mar 16, 6:21 PM (Ireland eu-west-1)
+// ✅ FROM_EMAIL nastaven v Supabase Secrets: stavby_znojmo@zmes.cz
+// ✅ Edge Function aktualizována — FROM_EMAIL fallback = stavby_znojmo@zmes.cz
+// ✅ Edge Function načítá emaily z DB (tabulka nastaveni, klic=notify_emails)
 // ✅ pg_cron nastaven — job "stavby-deadline-emails-v2" (jobid=2)
 //   Schedule: 0 5 * * * = 5:00 UTC = 6:00 CZ zimní / 7:00 CZ letní
 // ✅ Duplicitní job "send-deadline-emails-daily" (jobid=3) byl smazán
+// ✅ Emaily lze spravovat v aplikaci: Nastavení → Aplikace → 📧 EMAIL NOTIFIKACE
+//   Pole notify_emails: adresy oddělené čárkou nebo novým řádkem, uloženo v DB
 //
-// PLÁN — více adres (až bude ověřeno spolehlivé denní odesílání):
-//   1. Sledovat několik dní jestli email chodí každý den spolehlivě
-//   2. Koupit doménu (např. stavby-znojmo.cz, ~150 Kč/rok, Wedos.cz)
-//   3. V Resend přidat doménu → DNS záznamy (TXT/MX/DKIM) u registrátora
-//   4. Po ověření domény Resend pošle na libovolný email
-//   5. Přidat pole pro více emailů v Nastavení → Aplikace
+// SUPABASE SECRETS (Edge Functions → Secrets):
+//   RESEND_API_KEY          — API klíč z resend.com
+//   FROM_EMAIL              — stavby_znojmo@zmes.cz
+//   SUPABASE_URL            — automaticky dostupná
+//   SUPABASE_SERVICE_ROLE_KEY — automaticky dostupná
 //
 // PENDING ÚKOLY:
 //   [ ] Sledovat několik dní — chodí email každý den spolehlivě?
-//   [ ] Po ověření: koupit doménu + ověřit v Resend
-//   [ ] Po ověření domény: otestovat odesílání na více adres
 //
 // ============================================================
-// MULTI-TENANT ARCHITEKTURA — DOHODNUTO (session 2026-03-16)
+// MULTI-TENANT ARCHITEKTURA — ROZPRACOVÁNO (session 2026-03-16)
 // ============================================================
-// Aplikaci budou používat minimálně 2 firmy.
-// Každá firma = vlastní instance (Supabase + GitHub fork + Vercel)
-// Data jsou 100% oddělená — jedna firma neovlivní druhou.
+// Plán: 3–5 firem. Každá firma = vlastní instance, data 100% oddělená.
+// Hosting: Cloudflare Pages (zdarma, komerční použití povoleno)
+//          Vercel Hobby ZAKÁZÁN pro komerční použití — nepoužívat!
 //
-// STRUKTURA:
-//   Template repo: doco1971/stavby-template (GitHub) — hlavní šablona
-//   Firma 1 (Znojmo):
-//     GitHub fork: doco1971/stavby-znojmo (aktuální)
-//     Vercel: vlastní URL, Supabase: vlastní DB
-//     .env: VITE_SB_URL=znojmo.supabase.co + vlastní klíče
-//   Firma 2 (další):
-//     GitHub fork: doco1971/stavby-[nazev]
-//     Vercel: vlastní URL, Supabase: vlastní DB
-//     .env: jiné VITE_SB_URL + jiné klíče
+// STRUKTURA REPOZITÁŘŮ:
+//   Template: doco1971/stavby-template — základ, nikdy se nenasazuje přímo
+//   Každá firma = fork: doco1971/stavby-[nazev]
+//   Každý fork má 2 větve: main (produkce) + staging (testování)
+//
+// STRUKTURA JEDNÉ INSTANCE (každá firma):
+//   GitHub fork:       doco1971/stavby-[nazev]
+//     větev main    → Cloudflare Pages (produkce)  + Supabase PROD DB
+//     větev staging → Cloudflare Pages (staging)   + Supabase STAGING DB
+//   .env: VITE_SB_URL + VITE_SB_KEY (liší se mezi firmami i prostředími)
+//
+// SOUBORY TEMPLATE (vytvořeny v BUILD0112):
+//   .env.template                            — šablona proměnných
+//   .github/workflows/supabase-heartbeat.yml — keep-alive pro Supabase Free
+//   README.md                                — onboarding CZ + EN
 //
 // JAK ŠÍŘIT OPRAVY KÓDU:
-//   1. Opravit kód v template repo (stavby-template)
-//   2. Každý fork: git pull upstream main → změna se přenese
-//   3. Pokud firma nechce Git → udělat za ně (5 minut práce)
+//   1. Opravit v stavby-template (main větev)
+//   2. V každém forku: git fetch upstream && git merge upstream/main
+//   3. Firma nechce Git? → udělat za ně (5 minut)
 //
-// .ENV PROMĚNNÉ (jediná věc která se liší mezi firmami):
-//   VITE_SB_URL      — URL jejich Supabase projektu
-//   VITE_SB_KEY      — jejich Supabase anon klíč
-//   RESEND_API_KEY   — jejich Resend klíč (nebo sdílený při stejné doméně)
+// SUPABASE FREE — HEARTBEAT:
+//   Free tier pauzuje po 7 dnech nečinnosti
+//   Řešení: .github/workflows/supabase-heartbeat.yml (ping Po+Čt 9:00 UTC)
+//   GitHub Secrets nutné: VITE_SB_URL + VITE_SB_KEY (Settings → Secrets → Actions)
+//   Produkce s vysokými nároky: zvážit Supabase Pro ($25/měsíc)
 //
-// PENDING ÚKOLY:
-//   [ ] Vytvořit template repozitář stavby-template na GitHubu
-//   [ ] Nastavit fork pro Firmu 1 (Znojmo) = aktuální instance
-//   [ ] Připravit .env šablonu s VITE_SB_URL, VITE_SB_KEY, RESEND_API_KEY
-//   [ ] Připravit postup onboardingu pro Firmu 2 (git pull upstream main)
+// .ENV PROMĚNNÉ:
+//   VITE_SB_URL      — URL Supabase projektu (prod nebo staging)
+//   VITE_SB_KEY      — Supabase anon klíč
+//   (Resend + FROM_EMAIL = Supabase Secrets, ne .env)
+//
+// CHECKLIST PRO KAŽDOU NOVOU FIRMU:
+//   [ ] Fork stavby-template → stavby-[nazev] (Private)
+//   [ ] Vytvořit 2 Supabase projekty (prod + staging)
+//   [ ] Spustit SQL migrace v obou projektech
+//   [ ] Vyplnit .env (prod hodnoty), nepushovat do Gitu
+//   [ ] Vytvořit větev staging, pushnout
+//   [ ] Nasadit na Cloudflare Pages (main → prod, staging → staging)
+//   [ ] Přidat GitHub Actions Secrets (VITE_SB_URL + VITE_SB_KEY)
+//   [ ] Nastavit Resend emaily (volitelné)
+//   [ ] Otestovat přihlášení, CRUD, export na staging
+//   [ ] Předat přístupy firmě
 //
 // ============================================================
 // TECHNICKÉ DETAILY
@@ -131,6 +156,23 @@ import * as XLSX from "xlsx";
 // [PENDING] 🗓️ Kalendářní pohled — termíny ukončení v kalendáři
 //   Zobrazení termínů ukončení staveb v měsíčním kalendáři
 //   Barevné odlišení dle firmy nebo stavu (prošlé / aktivní / vyfakturované)
+// [PENDING] ☁️  Přechod Vercel → Cloudflare Pages
+//   Vercel Hobby zakazuje komerční použití → Cloudflare Pages zdarma bez omezení
+//   Postup: napojit GitHub repo, build = npm run build / output = dist, přenést .env
+//   Odhadovaný čas: 15–30 min na instanci, žádná změna v kódu App.jsx
+//   Provést pro všechny instance při vytváření multi-tenant template
+// [PENDING] 😴 Supabase pauzování — heartbeat workaround
+//   Free tier uspí projekt po 7 dnech nečinnosti (data zůstanou, app offline)
+//   Řešení A (staging/free): GitHub Actions YAML ping každé Po+Čt 9:00 UTC
+//     Soubor: .github/workflows/supabase-heartbeat.yml
+//     Secrets v GitHub: VITE_SB_URL + VITE_SB_KEY → Settings → Secrets → Actions
+//   Řešení B (produkce): Supabase Pro $25/měsíc — pauzování odstraněno
+//   Heartbeat YAML přidat přímo do multi-tenant template → forky zdědí automaticky
+// [DONE] 🏗️  Multi-tenant template + testovací prostředí — BUILD0112
+//   ✅ .env.template — šablona proměnných pro každou instanci
+//   ✅ .github/workflows/supabase-heartbeat.yml — keep-alive Pro+Čt 9:00 UTC
+//   ✅ README.md — onboarding CZ + EN, SQL migrace, checklist
+//   ✅ MULTI-TENANT sekce v hlavičce aktualizována
 //
 // PRAVIDLA EXPORTU (platí od BUILD0052)
 // ============================================================
@@ -216,6 +258,26 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0112 — Multi-tenant template: .env.template, heartbeat YAML, README CZ+EN
+//   ✅ .env.template — šablona s VITE_SB_URL, VITE_SB_KEY + komentáře kde najít hodnoty
+//   ✅ supabase-heartbeat.yml — GitHub Actions keep-alive Po+Čt 9:00 UTC
+//   ✅ README.md — onboarding CZ+EN, SQL migrace, Cloudflare Pages setup, checklist
+//   ✅ MULTI-TENANT sekce přepsána: 3–5 firem, staging větev, Cloudflare Pages
+//   ✅ PENDING 🏗️ označen jako DONE
+// BUILD0111 — Aktualizace PENDING: Cloudflare Pages, Supabase heartbeat, multi-tenant
+//   [PENDING] ☁️  Přechod Vercel → Cloudflare Pages (komerční omezení Hobby plánu)
+//   [PENDING] 😴 Supabase heartbeat workaround (Free tier pauzování po 7 dnech)
+//   [PENDING] 🏗️  Multi-tenant template + testovací prostředí — příští krok
+// BUILD0110 — Aktualizace hlavičky: email na více adres otestován a funguje
+//   ✅ Odesílání na více adres otestováno — funguje
+//   ✅ Správa emailů přes Nastavení → Aplikace funguje end-to-end
+//   PENDING emailu: zbývá jen sledovat spolehlivost denního odesílání
+// BUILD0109 — Aktualizace hlavičky: kompletní stav emailu po dokončení konfigurace
+//   ✅ Doména zmes.cz ověřena v Resend (DNS přidal IT správce Forpsi)
+//   ✅ FROM_EMAIL = stavby_znojmo@zmes.cz (Supabase Secret + Edge Function)
+//   ✅ Edge Function čte emaily z DB (notify_emails), posílá na více adres
+//   ✅ Emaily lze spravovat v Nastavení → Aplikace bez zásahu do kódu
+//   EMAIL sekce kompletně přepsána s aktuálním stavem + Supabase Secrets popisem
 // BUILD0108 — Aktualizace hlavičky: Dashboard + Kalendář do PENDING, multi-tenant rozšířen
 //   [PENDING] přidán 📈 Dashboard (KPI karty + grafy, třetí pohled)
 //   [PENDING] přidán 🗓️ Kalendářní pohled (termíny ukončení v kalendáři)
