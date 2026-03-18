@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0133
+// BUILD: 2026_03_18_build0134
 // ============================================================
-// POZNÁMKY PRO CLAUDE (čti na začátku každé session) 
+// POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
 // PRAVIDLO: Každá změna = dva soubory:
 //   stavby-app_DATUM_buildXXXX.jsx
@@ -3986,7 +3986,7 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: "rgba(15,23,42,0.6)", border: "1px solid rgba(168,85,247,0.25)", color: "rgba(192,132,252,0.55)", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0133</span>}
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: "rgba(15,23,42,0.6)", border: "1px solid rgba(168,85,247,0.25)", color: "rgba(192,132,252,0.55)", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0134</span>}
             <button onClick={() => setShowHelp(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
@@ -4440,28 +4440,47 @@ export default function App() {
             </div>
             <div style={{ padding: "11px 22px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)" }}>
               <button onClick={() => {
-                const content = document.getElementById("help-print-content");
-                if (!content) return;
+                const helpItems = [
+                  ["🏗️","Přidání stavby","Klikněte na zelené tlačítko + Přidat stavbu v hlavičce. Vyplňte název stavby (povinný) a ostatní pole dle potřeby. Klávesa Enter přeskočí na další pole. Uložte tlačítkem Uložit — stavba se okamžitě zobrazí v tabulce."],
+                  ["✏️","Editace stavby","Klikněte na modré tlačítko ✏️ v levém sloupci u řádku stavby. Otevře se formulář s předvyplněnými hodnotami — změňte co potřebujete a uložte. Všechny změny se automaticky zaznamenají do Historie změn."],
+                  ["🗑️","Smazání stavby","Klikněte na červené tlačítko 🗑️ v levém sloupci. Systém požádá o potvrzení — musíte kliknout dvakrát (ochrana proti náhodnému smazání). Smazanou stavbu nelze obnovit."],
+                  ["📋","Kopírování stavby","Tlačítko 📋 vedle editace otevře formulář s předvyplněnými daty dané stavby. Číslo stavby dostane příponu (kopie). Po uložení se vytvoří nový samostatný záznam — původní zůstane nezměněn."],
+                  ["🕐","Historie změn stavby","Fialové tlačítko 🕐 v levém sloupci otevře historii změn — kdo, kdy a která pole změnil. Červená tečka na ikoně = stavba má záznamy v historii. Export jako Excel nebo PDF."],
+                  ["📜","Log zakázek","Tlačítko 📜 Log v hlavičce (pouze admin) otevře kompletní přehled všech akcí na zakázkách — přidání, editace i smazání. Záznamy lze filtrovat podle uživatele, typu akce a datumového rozsahu."],
+                  ["💬","Poznámka ke stavbě","V editačním formuláři najdete fialovou sekci 💬 POZNÁMKA. Ikona 💬 se zobrazí vedle názvu stavby pokud poznámka existuje — najeďte myší pro zobrazení textu."],
+                  ["🎨","Barevné řádky","Každá firma má přiřazenou barvu (nastavitelnou v Nastavení). Zelený řádek = stavba má fakturu, částku i datum splatnosti — kompletně vyfakturována."],
+                  ["⚠️","Termíny ukončení","Pole Ukončení se zobrazí červeně ⚠️ pokud je termín v minulosti a stavba nemá fakturu. Tlačítko ⚠️ Termíny v hlavičce zobrazí přehled staveb s termínem do 30 dní."],
+                  ["🔍","Filtry a vyhledávání","Vyhledávejte podle názvu nebo čísla stavby. Filtrujte podle firmy, objednatele nebo stavbyvedoucího. Tlačítko Filtr▼ otevře rozšířený filtr: rok, rozsah částky, prošlé termíny, fakturace, kategorie."],
+                  ["📊","Graf nákladů","Tlačítko 📊 Graf otevře interaktivní sloupcový graf. Tři přepínače: Firma, Měsíc, Kat. I / II. Graf vždy odráží aktuální filtr."],
+                  ["📤","Export dat","CSV, Excel, Barevný Excel, PDF. Vše pracuje s aktuálním filtrem."],
+                  ["📥","Import staveb","Tlačítko 📥 Import (pouze superadmin) načte stavby z Excelu nebo JSON zálohy."],
+                  ["💾","Záloha DB","Tlačítko Záloha DB (pouze superadmin) stáhne kompletní zálohu celé databáze."],
+                  ["↔️","Šířky a pořadí sloupců","Superadmin: Táhněte ⟺ pro změnu šířky, ⠿ pro změnu pořadí sloupců. Ukládá se automaticky."],
+                  ["🪟","Plovoucí okna","Všechna okna jsou plovoucí — přetáhněte je za záhlaví kamkoliv na plochu."],
+                  ["⚙️","Nastavení","Správa firem, číselníků, uživatelů a aplikace. Role: USER, USER EDITOR, ADMIN, SUPERADMIN."],
+                  ["🌙","Tmavý / světlý režim","Přepínejte mezi 🌞 světlým a 🌙 tmavým režimem. Tlačítko 💎 aktivuje Liquid Glass efekt."],
+                  ["⏱️","Automatické odhlášení","Aplikace se odhlásí po 15 minutách nečinnosti. Před odhlášením zobrazí varování s odpočítáváním."],
+                  ["📱","Mobilní zobrazení","Na mobilu se zobrazí kartičky místo tabulky. Tlačítko ▦/☰ přepíná mezi kartičkami a tabulkou."],
+                ];
+                const rows = helpItems.map(([icon, title, text]) => `
+                  <div class="item">
+                    <div class="item-title">${icon} ${title}</div>
+                    <div class="item-text">${text}</div>
+                  </div>`).join("");
                 const w = window.open("", "_blank");
                 w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Znojmo</title><style>
                   @page { size: A4; margin: 12mm; }
-                  body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b !important; }
-                  h1 { font-size: 16px; margin: 0 0 4px; }
+                  body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
+                  h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
                   .subtitle { color: #64748b; font-size: 10px; margin-bottom: 14px; }
                   .item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; break-inside: avoid; }
                   .item-title { font-weight: 700; font-size: 12px; color: #1e3a8a; margin-bottom: 3px; }
-                  .item-text { color: #1e293b; font-size: 11px; line-height: 1.5; }
-                  .role-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
-                  .role-badge { font-weight: 700; font-size: 9px; border: 1px solid #94a3b8; border-radius: 3px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0; }
-                  * { color: #1e293b !important; background: transparent !important; }
-                  strong { color: #1e293b !important; }
-                  span { color: #1e293b !important; }
-                  div { color: #1e293b !important; }
+                  .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
                 <h1>❓ Nápověda — Stavby Znojmo</h1>
                 <div class="subtitle">Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")}</div>
-                ${content.innerHTML}
+                ${rows}
                 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
                 </body></html>`);
                 w.document.close();
