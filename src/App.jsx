@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0142
+// BUILD: 2026_03_18_build0143
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -3546,27 +3546,29 @@ export default function App() {
   const zalohaJSON = async () => {
     const datum = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
     try {
-      const [stavbyRes, cisRes, uzRes] = await Promise.all([
+      const [stavbyRes, cisRes, uzRes, logRes] = await Promise.all([
         sb("stavby?order=id"),
         sb("ciselniky?order=typ,poradi"),
         sb("uzivatele?order=id"),
+        sb("log_aktivit?order=id"),
       ]);
       const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
       const payload = {
-        version: 1,
+        version: 2,
         created: new Date().toISOString(),
         prostredi,
         sb_url: SB_URL,
         stavby: stavbyRes || [],
         ciselniky: cisRes || [],
         uzivatele: (uzRes || []).map(u => ({ id: u.id, jmeno: u.jmeno, email: u.email, role: u.role })), // bez hesel
+        log_aktivit: logRes || [],
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `zaloha_DB_${datum}.json`;
       a.click();
-      logAkce(user?.email, "Záloha", `${payload.stavby.length} staveb + ciselniky + uzivatele (JSON)`);
+      logAkce(user?.email, "Záloha", `${payload.stavby.length} staveb + ciselniky + uzivatele + ${payload.log_aktivit.length} logů (JSON)`);
     } catch(e) { showToast("Chyba zálohy: " + e.message, "error"); }
   };
 
@@ -3689,8 +3691,29 @@ export default function App() {
         }
       }
       await loadAll();
-      logAkce(user?.email, "Import JSON", `${ok} staveb importováno z ${fileName}`);
-      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb z "${fileName}"` });
+      // Import logů pokud jsou v záloze
+      let okLogy = 0;
+      if (payload.log_aktivit && Array.isArray(payload.log_aktivit) && payload.log_aktivit.length > 0) {
+        try {
+          await sb("log_aktivit?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+          const SKIP_LOG = new Set(["id","created_at"]);
+          const cleanedLogy = payload.log_aktivit.map(r => {
+            const c = { ...r };
+            SKIP_LOG.forEach(k => delete c[k]);
+            if (c.hidden === null || c.hidden === undefined) c.hidden = false;
+            return c;
+          });
+          for (let i = 0; i < cleanedLogy.length; i += 100) {
+            const chunk = cleanedLogy.slice(i, i+100);
+            try {
+              await sb("log_aktivit", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+              okLogy += chunk.length;
+            } catch(e) { chyby.push(`Logy řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+          }
+        } catch(e) { chyby.push(`Chyba importu logů: ${e.message}`); }
+      }
+      logAkce(user?.email, "Import JSON", `${ok} staveb + ${okLogy} logů importováno z ${fileName}`);
+      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb + ${okLogy} logů z "${fileName}"` });
     } catch(e) {
       setImportLog({ ok: 0, chyby: ["Chyba importu: " + e.message] });
     }
@@ -4055,7 +4078,7 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0142</span>}
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0143</span>}
             <button onClick={() => { resetHelp(); setShowHelp(true); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
@@ -5026,6 +5049,12 @@ export default function App() {
                   <span style={{ color: "rgba(255,255,255,0.45)" }}>Staveb v záloze:</span>
                   <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{payload.stavby.length}</span>
                 </div>
+                {payload.log_aktivit && (
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "rgba(255,255,255,0.45)" }}>Logů v záloze:</span>
+                    <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{payload.log_aktivit.length}</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "rgba(255,255,255,0.45)" }}>Staveb aktuálně v DB:</span>
                   <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{stavbyVDB}</span>
