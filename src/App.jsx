@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_17_build0117
+// BUILD: 2026_03_18_build0125
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -262,6 +262,38 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0125 — FIX: dialog "Nevyplněná položka" — zIndex zvýšen na 9500 (tlačítka nereagovala)
+// BUILD0124 — Skrývání záznamů logů (hidden=true místo DELETE) + přepínač Aktivní/Skryté/Vše
+//   DB migrace nutná: ALTER TABLE log_aktivit ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT false;
+//   🕐 Historie změn: admin/superadmin skryje (hidden=true), superadmin obnoví (↩)
+//     červená tečka zhasne když všechny záznamy stavby jsou hidden
+//   📜 Log zakázek: superadmin skryje/obnoví, přepínač Aktivní/Skryté/Vše v headeru
+//   ⚙️ Nastavení → Log aktivit: superadmin skryje/obnoví, přepínač v toolbaru
+//   Záznamy se nikdy fyzicky nemažou — superadmin vidí vše a může obnovit
+// BUILD0123 — Mazání záznamů ve všech třech lozích s různými právy
+//   📜 Log zakázek: mazání jen superadmin (opraveno z build0121 kde byl admin+superadmin)
+//   ⚙️ Nastavení → Log aktivit: mazání jen superadmin
+//   🕐 Historie změn: mazání admin + superadmin
+//   Všude: tlačítko ✕, potvrzovací dialog, okamžité odebrání ze state
+// BUILD0122 — FIX: mazání logu — ikona 🗑 → ✕ (lepší kompatibilita fontů)
+// BUILD0121 — Mazání záznamů logu (admin + superadmin)
+//   LogModal: tlačítko 🗑 na každém záznamu (jen admin/superadmin, ne demo)
+//   Potvrzovací dialog před smazáním
+//   DELETE na log_aktivit?id=eq.{id}, okamžité odebrání ze state
+// BUILD0120 — Build badge v hlavičce pro superadmina
+//   Zobrazí "build0120" badge hned za role badge SUPERADMIN
+//   Viditelný jen pro superadmina, tooltip "Číslo buildu aplikace"
+//   Každý nový build = aktualizovat text badge
+// BUILD0119 — FIX: záloha exportuje vše, import filtruje dynamicky podle chyb DB
+//   zalohaJSON: vrácen na export celé DB (žádný VALID_FIELDS filtr) — plná záloha
+//   doImportJSON: ALWAYS_SKIP (id, created_at, nabidka, rozdil, bez_dph_2, bez_dph)
+//     + self-healing: při chybě PGRST204 automaticky odstraní problematický sloupec
+//     a zkusí vložit znovu (max 10 pokusů) — funguje i pro budoucí neznámé sloupce
+// BUILD0118 — FIX: záloha + import JSON — legacy sloupce a computed pole
+//   zalohaJSON: exportuje jen platné DB sloupce (VALID_FIELDS)
+//     odstraněno: nabidka, rozdil (computed), bez_dph_2 (legacy)
+//   doImportJSON: SKIP_FIELDS = id, created_at, nabidka, rozdil, bez_dph_2, bez_dph
+//     zálohy z prod DB (s legacy sloupci) se importují do staging bez chyby
 // BUILD0117 — FIX: fallback starých názvů sloupců při importu JSON
 //   bez_dph_2 → castka_bez_dph_2, bez_dph → castka_bez_dph
 //   Zálohy z před migrace se importují správně
@@ -744,13 +776,16 @@ const FIELD_LABELS = {
   splatna: "Splatná", poznamka: "Poznámka",
 };
 
-function HistorieModal({ row, isDark, onClose, isDemo }) {
+function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, onAllHidden }) {
   const [zaznamy, setZaznamy] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [zobrazit, setZobrazit] = useState("aktivni"); // "aktivni" | "skryte" | "vse"
   const { pos, onMouseDown: onDragStart } = useDraggable(680, 560);
 
   useEffect(() => {
-    if (isDemo) { setLoading(false); return; } // demo — žádná DB
+    if (isDemo) { setLoading(false); return; }
     const load = async () => {
       try {
         const res = await sb(`log_aktivit?order=cas.desc&limit=500`);
@@ -774,7 +809,6 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
     return d.toLocaleString("cs-CZ", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
-  // Parsuj JSON diff z detailu pokud existuje
   const parseDetail = (detail) => {
     if (!detail) return null;
     try {
@@ -783,6 +817,35 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
       return JSON.parse(detail.slice(jsonStart));
     } catch { return null; }
   };
+
+  const handleDelete = async (id) => {
+    if (isDemo) return;
+    setDeleting(true);
+    try {
+      await sb(`log_aktivit?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ hidden: true }), prefer: "return=minimal" });
+      const updated = zaznamy.map(r => r.id === id ? { ...r, hidden: true } : r);
+      setZaznamy(updated);
+      // Zhasni tečku pokud nejsou žádné aktivní záznamy
+      if (updated.every(r => r.hidden) && onAllHidden) onAllHidden(row.id);
+    } catch(e) { console.warn("Chyba skrytí:", e); }
+    finally { setDeleting(false); setDeleteId(null); }
+  };
+
+  const handleUnhide = async (id) => {
+    if (!isSuperAdmin || isDemo) return;
+    try {
+      await sb(`log_aktivit?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ hidden: false }), prefer: "return=minimal" });
+      setZaznamy(prev => prev.map(r => r.id === id ? { ...r, hidden: false } : r));
+    } catch(e) { console.warn("Chyba obnovení:", e); }
+  };
+
+  const canDelete = (isAdmin || isSuperAdmin) && !isDemo;
+
+  const zobrazeneZaznamy = zaznamy.filter(r => {
+    if (zobrazit === "aktivni") return !r.hidden;
+    if (zobrazit === "skryte") return r.hidden;
+    return true; // vse
+  });
 
   const AKCE_STYLE = {
     "Přidání stavby":  { bg: "rgba(34,197,94,0.15)",  border: "rgba(34,197,94,0.4)",  color: "#4ade80",  icon: "➕" },
@@ -804,7 +867,16 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
             <span style={{ color: isDark ? "#fff" : "#1e293b", fontWeight: 700, fontSize: 15 }}>🕐 Historie změn{dragHint}</span>
             <div style={{ color: mutedC, fontSize: 12, marginTop: 2 }}>{row.cislo_stavby && <span style={{ fontWeight: 700, color: isDark ? "#60a5fa" : "#2563eb" }}>{row.cislo_stavby} · </span>}{row.nazev_stavby}</div>
           </div>
-          <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer", lineHeight: 1, marginLeft: 16 }}>✕</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {isSuperAdmin && (
+              <div style={{ display: "flex", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", borderRadius: 7, overflow: "hidden", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }}>
+                {[["aktivni","Aktivní"],["skryte","Skryté"],["vse","Vše"]].map(([val, label]) => (
+                  <button key={val} onClick={() => setZobrazit(val)} style={{ padding: "4px 10px", background: zobrazit === val ? (isDark ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.15)") : "transparent", border: "none", color: zobrazit === val ? "#60a5fa" : mutedC, cursor: "pointer", fontSize: 11, fontWeight: zobrazit === val ? 700 : 400 }}>{label}</button>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer", lineHeight: 1, marginLeft: 4 }}>✕</button>
+          </div>
         </div>
 
         {/* obsah */}
@@ -818,19 +890,43 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
               <div style={{ color: mutedC, fontSize: 12, marginTop: 6 }}>Historie se zapisuje od tohoto buildu.</div>
             </div>
           )}
-          {!loading && zaznamy.map((z, i) => {
+          {!loading && zaznamy.length > 0 && zobrazeneZaznamy.length === 0 && (
+            <div style={{ textAlign: "center", padding: 48 }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🫙</div>
+              <div style={{ color: mutedC, fontSize: 14 }}>
+                {zobrazit === "skryte" ? "Žádné skryté záznamy" : "Žádné záznamy"}
+              </div>
+            </div>
+          )}
+          {!loading && zobrazeneZaznamy.map((z, i) => {
             const style = AKCE_STYLE[z.akce] || { bg: "rgba(100,116,139,0.1)", border: "rgba(100,116,139,0.3)", color: "#94a3b8", icon: "•" };
             const diff  = parseDetail(z.detail);
+            const isHidden = z.hidden;
             return (
-              <div key={i} style={{ marginBottom: 12, padding: "12px 14px", background: style.bg, border: `1px solid ${style.border}`, borderRadius: 10 }}>
+              <div key={i} style={{ marginBottom: 12, padding: "12px 14px", background: isHidden ? "rgba(100,116,139,0.06)" : style.bg, border: `1px solid ${isHidden ? "rgba(100,116,139,0.2)" : style.border}`, borderRadius: 10, opacity: isHidden ? 0.6 : 1 }}>
                 {/* řádek: ikona akce + čas + uživatel */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: diff ? 10 : 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 14 }}>{style.icon}</span>
-                    <span style={{ color: style.color, fontWeight: 700, fontSize: 13 }}>{z.akce}</span>
+                    <span style={{ color: isHidden ? mutedC : style.color, fontWeight: 700, fontSize: 13 }}>{z.akce}</span>
                     <span style={{ color: mutedC, fontSize: 12 }}>— {z.uzivatel}</span>
+                    {isHidden && <span style={{ fontSize: 10, color: mutedC, background: "rgba(100,116,139,0.15)", padding: "1px 6px", borderRadius: 4, fontWeight: 600 }}>skryto</span>}
                   </div>
-                  <span style={{ color: mutedC, fontSize: 11, whiteSpace: "nowrap", marginLeft: 12 }}>{fmtCas(z.cas)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <span style={{ color: mutedC, fontSize: 11, whiteSpace: "nowrap" }}>{fmtCas(z.cas)}</span>
+                    {isSuperAdmin && isHidden && !isDemo && (
+                      <button onClick={() => handleUnhide(z.id)} title="Obnovit záznam" style={{ background: "none", border: "none", color: "rgba(34,197,94,0.5)", cursor: "pointer", fontSize: 13, padding: "0 2px", fontWeight: 700, transition: "color 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#4ade80"}
+                        onMouseLeave={e => e.currentTarget.style.color = "rgba(34,197,94,0.5)"}
+                      >↩</button>
+                    )}
+                    {canDelete && !isHidden && (
+                      <button onClick={() => setDeleteId(z.id)} title="Skrýt záznam" style={{ background: "none", border: "none", color: "rgba(239,68,68,0.4)", cursor: "pointer", fontSize: 13, padding: "0 2px", fontWeight: 700, transition: "color 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                        onMouseLeave={e => e.currentTarget.style.color = "rgba(239,68,68,0.4)"}
+                      >✕</button>
+                    )}
+                  </div>
                 </div>
                 {/* diff tabulka */}
                 {diff && diff.zmeny && diff.zmeny.length > 0 && (
@@ -898,6 +994,21 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
           </div>
           <button onClick={onClose} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
         </div>
+
+        {/* POTVRZENÍ SMAZÁNÍ */}
+        {deleteId && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+            <div style={{ background: "#1e293b", borderRadius: 14, padding: "28px 32px", width: 340, border: "1px solid rgba(239,68,68,0.4)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>👁️</div>
+              <h3 style={{ color: "#fff", margin: "0 0 8px", fontSize: 15 }}>Skrýt záznam historie?</h3>
+              <p style={{ color: "rgba(255,255,255,0.4)", margin: "0 0 22px", fontSize: 13 }}>Záznam bude skryt. Superadmin ho může kdykoli obnovit.</p>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setDeleteId(null)} disabled={deleting} style={{ padding: "9px 20px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", cursor: "pointer" }}>Zrušit</button>
+                <button onClick={() => handleDelete(deleteId)} disabled={deleting} style={{ padding: "9px 20px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 }}>{deleting ? "Skrývám..." : "Skrýt"}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -906,7 +1017,7 @@ function HistorieModal({ row, isDark, onClose, isDemo }) {
 // ============================================================
 // LOG MODAL (kompletní log zakázek pro admina)
 // ============================================================
-function LogModal({ isDark, firmy, onClose, isDemo }) {
+function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
   const [zaznamy, setZaznamy] = useState([]);
   const [loading, setLoading] = useState(true);
   const { pos, onMouseDown: onDragStart } = useDraggable(900, 580);
@@ -914,12 +1025,15 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
   const [filterAkce, setFilterAkce]   = useState("");
   const [filterOd,   setFilterOd]     = useState("");
   const [filterDo,   setFilterDo]     = useState("");
+  const [deleteId, setDeleteId]       = useState(null);
+  const [deleting, setDeleting]       = useState(false);
+  const [zobrazit, setZobrazit]       = useState("aktivni"); // "aktivni" | "skryte" | "vse"
 
   const AKCE_ZAKÁZKY = ["Přidání stavby","Editace stavby","Smazání stavby"];
   const [totalLoaded, setTotalLoaded] = useState(0);
 
   useEffect(() => {
-    if (isDemo) { setLoading(false); return; } // demo — žádná DB
+    if (isDemo) { setLoading(false); return; }
     const load = async () => {
       try {
         const res = await sb(`log_aktivit?order=cas.desc&limit=10000`);
@@ -938,14 +1052,10 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
   const filtered = zaznamy.filter(r => {
     if (filterUser && r.uzivatel !== filterUser) return false;
     if (filterAkce && r.akce !== filterAkce) return false;
-    if (filterOd) {
-      const d = new Date(r.cas); const od = new Date(filterOd);
-      if (d < od) return false;
-    }
-    if (filterDo) {
-      const d = new Date(r.cas); const doo = new Date(filterDo); doo.setHours(23,59,59);
-      if (d > doo) return false;
-    }
+    if (filterOd) { const d = new Date(r.cas); const od = new Date(filterOd); if (d < od) return false; }
+    if (filterDo) { const d = new Date(r.cas); const doo = new Date(filterDo); doo.setHours(23,59,59); if (d > doo) return false; }
+    if (zobrazit === "aktivni") return !r.hidden;
+    if (zobrazit === "skryte") return r.hidden;
     return true;
   });
 
@@ -1016,6 +1126,24 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
     w.document.close();
   };
 
+  const handleDeleteLog = async (id) => {
+    if (isDemo) return;
+    setDeleting(true);
+    try {
+      await sb(`log_aktivit?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ hidden: true }), prefer: "return=minimal" });
+      setZaznamy(prev => prev.map(r => r.id === id ? { ...r, hidden: true } : r));
+    } catch(e) { console.warn("Chyba skrytí logu:", e); }
+    finally { setDeleting(false); setDeleteId(null); }
+  };
+
+  const handleUnhideLog = async (id) => {
+    if (!isSuperAdmin || isDemo) return;
+    try {
+      await sb(`log_aktivit?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ hidden: false }), prefer: "return=minimal" });
+      setZaznamy(prev => prev.map(r => r.id === id ? { ...r, hidden: false } : r));
+    } catch(e) { console.warn("Chyba obnovení logu:", e); }
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1250, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
       <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: "min(900px,97vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)"}`, boxShadow: "0 32px 80px rgba(0,0,0,0.65)" }}>
@@ -1026,7 +1154,16 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
             <span style={{ color: isDark ? "#fff" : "#1e293b", fontWeight: 700, fontSize: 15 }}>📜 Log zakázek{dragHint}</span>
             <div style={{ color: mutedC, fontSize: 12, marginTop: 2 }}>Přidání · Editace · Smazání staveb</div>
           </div>
-          <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer" }}>✕</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {isSuperAdmin && (
+              <div style={{ display: "flex", background: "rgba(255,255,255,0.06)", borderRadius: 7, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
+                {[["aktivni","Aktivní"],["skryte","Skryté"],["vse","Vše"]].map(([val, label]) => (
+                  <button key={val} onClick={() => setZobrazit(val)} onMouseDown={e => e.stopPropagation()} style={{ padding: "4px 10px", background: zobrazit === val ? "rgba(37,99,235,0.4)" : "transparent", border: "none", color: zobrazit === val ? "#60a5fa" : mutedC, cursor: "pointer", fontSize: 11, fontWeight: zobrazit === val ? 700 : 400 }}>{label}</button>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: mutedC, fontSize: 20, cursor: "pointer" }}>✕</button>
+          </div>
         </div>
 
         {/* RLS varování pokud se zdá že vidíme jen své záznamy */}
@@ -1086,15 +1223,31 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
             const st   = AKCE_STYLE[z.akce] || { bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)", color: "#94a3b8" };
             const diff = parseDetail(z.detail);
             const nazev = diff?.nazev || z.detail?.replace(/^ID:\s*\d+,\s*/,"").split(" {")[0] || "";
+            const isHidden = z.hidden;
             return (
-              <div key={i} style={{ marginBottom: 8, padding: "10px 14px", background: st.bg, border: `1px solid ${st.border}`, borderRadius: 9 }}>
+              <div key={i} style={{ marginBottom: 8, padding: "10px 14px", background: isHidden ? "rgba(100,116,139,0.06)" : st.bg, border: `1px solid ${isHidden ? "rgba(100,116,139,0.2)" : st.border}`, borderRadius: 9, opacity: isHidden ? 0.6 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ color: st.color, fontWeight: 700, fontSize: 12 }}>{z.akce}</span>
+                    <span style={{ color: isHidden ? mutedC : st.color, fontWeight: 700, fontSize: 12 }}>{z.akce}</span>
                     {nazev && <span style={{ color: textC, fontSize: 12, fontWeight: 600 }}>· {nazev}</span>}
                     <span style={{ color: mutedC, fontSize: 11 }}>— {z.uzivatel}</span>
+                    {isHidden && <span style={{ fontSize: 10, color: mutedC, background: "rgba(100,116,139,0.15)", padding: "1px 6px", borderRadius: 4, fontWeight: 600 }}>skryto</span>}
                   </div>
-                  <span style={{ color: mutedC, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}>{fmtCas(z.cas)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <span style={{ color: mutedC, fontSize: 11, whiteSpace: "nowrap" }}>{fmtCas(z.cas)}</span>
+                    {isSuperAdmin && isHidden && !isDemo && (
+                      <button onClick={() => handleUnhideLog(z.id)} title="Obnovit záznam" style={{ background: "none", border: "none", color: "rgba(34,197,94,0.5)", cursor: "pointer", fontSize: 13, padding: "0 2px", fontWeight: 700, transition: "color 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#4ade80"}
+                        onMouseLeave={e => e.currentTarget.style.color = "rgba(34,197,94,0.5)"}
+                      >↩</button>
+                    )}
+                    {isSuperAdmin && !isHidden && !isDemo && (
+                      <button onClick={() => setDeleteId(z.id)} title="Skrýt záznam" style={{ background: "none", border: "none", color: "rgba(239,68,68,0.4)", cursor: "pointer", fontSize: 13, padding: "0 2px", fontWeight: 700, transition: "color 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                        onMouseLeave={e => e.currentTarget.style.color = "rgba(239,68,68,0.4)"}
+                      >✕</button>
+                    )}
+                  </div>
                 </div>
                 {diff?.zmeny?.length > 0 && (
                   <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
@@ -1121,6 +1274,21 @@ function LogModal({ isDark, firmy, onClose, isDemo }) {
           </div>
           <button onClick={onClose} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
         </div>
+
+        {/* POTVRZENÍ SMAZÁNÍ ZÁZNAMU LOGU */}
+        {deleteId && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+            <div style={{ background: "#1e293b", borderRadius: 14, padding: "28px 32px", width: 340, border: "1px solid rgba(239,68,68,0.4)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)", textAlign: "center" }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>👁️</div>
+              <h3 style={{ color: "#fff", margin: "0 0 8px", fontSize: 15 }}>Skrýt záznam logu?</h3>
+              <p style={{ color: "rgba(255,255,255,0.4)", margin: "0 0 22px", fontSize: 13 }}>Záznam bude skryt. Superadmin ho může kdykoli obnovit přes přepínač Skryté.</p>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setDeleteId(null)} disabled={deleting} style={{ padding: "9px 20px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", cursor: "pointer" }}>Zrušit</button>
+                <button onClick={() => handleDeleteLog(deleteId)} disabled={deleting} style={{ padding: "9px 20px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 }}>{deleting ? "Skrývám..." : "Skrýt"}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1988,10 +2156,14 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [localLogData, setLocalLogData] = useState([]);
   const [logFilterUser, setLogFilterUser] = useState("");
   const [logFilterAkce, setLogFilterAkce] = useState("");
-  const localLogFiltered = localLogData.filter(r =>
-    (!logFilterUser || r.uzivatel === logFilterUser) &&
-    (!logFilterAkce || r.akce === logFilterAkce)
-  );
+  const [logZobrazit, setLogZobrazit] = useState("aktivni"); // "aktivni" | "skryte" | "vse"
+  const localLogFiltered = localLogData.filter(r => {
+    if (logFilterUser && r.uzivatel !== logFilterUser) return false;
+    if (logFilterAkce && r.akce !== logFilterAkce) return false;
+    if (logZobrazit === "aktivni") return !r.hidden;
+    if (logZobrazit === "skryte") return r.hidden;
+    return true;
+  });
 
   // Users
   const [uList, setUList] = useState(users.map(u => ({ ...u })));
@@ -2023,6 +2195,27 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
       const res = await onLoadLog();
       setLocalLogData(Array.isArray(res) ? res : []);
     } catch(e) { setLocalLogData([]); }
+  };
+
+  const [logDeleteId, setLogDeleteId] = useState(null);
+  const [logDeleting, setLogDeleting] = useState(false);
+
+  const handleDeleteLogSettings = async (id) => {
+    if (isDemo) return;
+    setLogDeleting(true);
+    try {
+      await sb(`log_aktivit?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ hidden: true }), prefer: "return=minimal" });
+      setLocalLogData(prev => prev.map(r => r.id === id ? { ...r, hidden: true } : r));
+    } catch(e) { console.warn("Chyba skrytí:", e); }
+    finally { setLogDeleting(false); setLogDeleteId(null); }
+  };
+
+  const handleUnhideLogSettings = async (id) => {
+    if (!isSuperAdmin || isDemo) return;
+    try {
+      await sb(`log_aktivit?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ hidden: false }), prefer: "return=minimal" });
+      setLocalLogData(prev => prev.map(r => r.id === id ? { ...r, hidden: false } : r));
+    } catch(e) { console.warn("Chyba obnovení:", e); }
   };
 
   useEffect(() => { if (tab === "log") handleLoadLog(); }, [tab]);
@@ -2223,6 +2416,13 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <span style={{ color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)", fontSize: 12 }}>{localLogFiltered.length} záznamů</span>
+                  {isSuperAdmin && (
+                    <div style={{ display: "flex", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", borderRadius: 7, overflow: "hidden", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }}>
+                      {[["aktivni","Aktivní"],["skryte","Skryté"],["vse","Vše"]].map(([val, label]) => (
+                        <button key={val} onClick={() => setLogZobrazit(val)} style={{ padding: "3px 9px", background: logZobrazit === val ? (isDark ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.15)") : "transparent", border: "none", color: logZobrazit === val ? (isDark ? "#60a5fa" : "#2563eb") : isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", cursor: "pointer", fontSize: 11, fontWeight: logZobrazit === val ? 700 : 400 }}>{label}</button>
+                      ))}
+                    </div>
+                  )}
                   <button onClick={handleLoadLog} style={{ padding: "5px 12px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 6, color: isDark ? "#fff" : "#1e293b", cursor: "pointer", fontSize: 12 }}>🔄 Obnovit</button>
                   <button onClick={() => {
                     const akceColors = {
@@ -2263,20 +2463,38 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                   <thead>
                     <tr style={{ background: isDark ? "#1a2744" : "#e2e8f0" }}>
-                      {["Čas", "Uživatel", "Akce", "Detail"].map(h => (
+                      {["Čas", "Uživatel", "Akce", "Detail", ...(isSuperAdmin && !isDemo ? [""] : [])].map(h => (
                         <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {localLogFiltered.map((r, i) => (
-                      <tr key={r.id} style={{ background: i % 2 === 0 ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)") : "transparent" }}>
+                      <tr key={r.id} style={{ background: i % 2 === 0 ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)") : "transparent", opacity: r.hidden ? 0.55 : 1 }}>
                         <td style={{ padding: "7px 12px", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)", whiteSpace: "nowrap" }}>{fmtCas(r.cas)}</td>
-                        <td style={{ padding: "7px 12px", color: isDark ? "#e2e8f0" : "#1e293b" }}>{r.uzivatel}</td>
+                        <td style={{ padding: "7px 12px", color: isDark ? "#e2e8f0" : "#1e293b" }}>
+                          {r.uzivatel}
+                          {r.hidden && <span style={{ marginLeft: 6, fontSize: 10, color: "rgba(148,163,184,0.8)", background: "rgba(100,116,139,0.15)", padding: "1px 5px", borderRadius: 4, fontWeight: 600 }}>skryto</span>}
+                        </td>
                         <td style={{ padding: "7px 12px" }}>
                           <span style={{ background: (AKCE_COLOR[r.akce] || "#94a3b8") + "22", color: AKCE_COLOR[r.akce] || "#94a3b8", border: `1px solid ${(AKCE_COLOR[r.akce] || "#94a3b8")}44`, borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{r.akce}</span>
                         </td>
                         <td style={{ padding: "7px 12px", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 12 }}>{r.detail}</td>
+                        {isSuperAdmin && !isDemo && (
+                          <td style={{ padding: "7px 8px", textAlign: "center" }}>
+                            {r.hidden ? (
+                              <button onClick={() => handleUnhideLogSettings(r.id)} title="Obnovit záznam" style={{ background: "none", border: "none", color: "rgba(34,197,94,0.5)", cursor: "pointer", fontSize: 13, padding: "0 2px", fontWeight: 700, transition: "color 0.15s" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#4ade80"}
+                                onMouseLeave={e => e.currentTarget.style.color = "rgba(34,197,94,0.5)"}
+                              >↩</button>
+                            ) : (
+                              <button onClick={() => setLogDeleteId(r.id)} title="Skrýt záznam" style={{ background: "none", border: "none", color: "rgba(239,68,68,0.4)", cursor: "pointer", fontSize: 13, padding: "0 2px", fontWeight: 700, transition: "color 0.15s" }}
+                                onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                                onMouseLeave={e => e.currentTarget.style.color = "rgba(239,68,68,0.4)"}
+                              >✕</button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                     {localLogFiltered.length === 0 && (
@@ -2288,6 +2506,21 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
             </div>
           )}
         </div>
+
+        {/* POTVRZENÍ SMAZÁNÍ ZÁZNAMU LOGU */}
+        {logDeleteId && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1600, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+            <div style={{ background: "#1e293b", borderRadius: 14, padding: "28px 32px", width: 340, border: "1px solid rgba(239,68,68,0.4)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>👁️</div>
+              <h3 style={{ color: "#fff", margin: "0 0 8px", fontSize: 15 }}>Skrýt záznam logu?</h3>
+              <p style={{ color: "rgba(255,255,255,0.4)", margin: "0 0 22px", fontSize: 13 }}>Záznam bude skryt. Superadmin ho může kdykoli obnovit přes přepínač Skryté.</p>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => setLogDeleteId(null)} disabled={logDeleting} style={{ padding: "9px 20px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", cursor: "pointer" }}>Zrušit</button>
+                <button onClick={() => handleDeleteLogSettings(logDeleteId)} disabled={logDeleting} style={{ padding: "9px 20px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 }}>{logDeleting ? "Skrývám..." : "Skrýt"}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* footer */}
         <div style={{ padding: "14px 24px", borderTop: `1px solid ${modalDivider}`, display: "flex", gap: 10, justifyContent: "flex-end", background: modalBg }}>
@@ -2330,7 +2563,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
 
       {/* Varování – nevyplněná položka */}
       {pendingWarn && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1400, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9500, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
           <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 14, padding: "28px 32px", width: 380, border: `1px solid ${isDark ? "rgba(255,165,0,0.3)" : "rgba(255,165,0,0.4)"}`, boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
             <div style={{ color: isDark ? "#f8fafc" : "#1e293b", fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Nevyplněná položka</div>
@@ -2530,7 +2763,7 @@ export default function App() {
         const res = await sb(`log_aktivit?order=cas.desc&limit=5000`);
         const novinky = {};
         (res || []).forEach(r => {
-          // Editace/Smazání — ID na začátku detailu
+          if (r.hidden) return; // skryté záznamy nezapočítávat
           const match = r.detail?.match(/^ID:\s*(\d+)[,\s]/);
           if (match) novinky[match[1]] = true;
         });
@@ -3303,28 +3536,61 @@ export default function App() {
     try {
       let ok = 0, chyby = [];
       const NUM_FIELDS_IMPORT = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch","nabidkova_cena","vyfakturovano","zrealizovano","castka_bez_dph","castka_bez_dph_2"];
+      // Zjisti skutečné sloupce cílové DB
+      let dbKolumny = new Set();
+      try {
+        const schemaRes = await sb("stavby?limit=0");
+        // Supabase vrátí prázdné pole — sloupce zjistíme z OPTIONS nebo z prvního záznamu
+        // Alternativa: poslat jeden prázdný dotaz a přečíst hlavičky
+      } catch {}
+      // Spolehlivější: zjistit sloupce z prvního záznamu zálohy a odfiltrovat SKIP_FIELDS
+      // + dynamicky ověřit při prvním vložení — pokud selže, vyhodit konkrétní sloupec
+      const ALWAYS_SKIP = new Set(["id","created_at","nabidka","rozdil","bez_dph_2","bez_dph"]);
       // Smaž stávající stavby
       await sb("stavby?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+      // Zjisti platné sloupce pomocí testovacího vložení prvního záznamu
+      let validKolumny = null;
       const cleaned = payload.stavby.map(r => {
         const c = { ...r };
-        delete c.id; // nechat DB generovat nové ID
-        delete c.created_at;
-        // Fallback: staré názvy sloupců → nové
-        if ("bez_dph_2" in c && !("castka_bez_dph_2" in c)) { c.castka_bez_dph_2 = c.bez_dph_2; delete c.bez_dph_2; }
-        if ("bez_dph" in c && !("castka_bez_dph" in c)) { c.castka_bez_dph = c.bez_dph; delete c.bez_dph; }
-        NUM_FIELDS_IMPORT.forEach(k => { c[k] = Number(c[k]) || 0; });
-        Object.keys(c).forEach(k => {
-          if (!NUM_FIELDS_IMPORT.includes(k) && (c[k] === null || c[k] === undefined)) c[k] = "";
-        });
+        // Vždy odstraň systémové a known-bad sloupce
+        ALWAYS_SKIP.forEach(k => delete c[k]);
+        // Fallback: staré názvy → nové
+        if ("bez_dph_2" in c && !("castka_bez_dph_2" in c)) { c.castka_bez_dph_2 = c.bez_dph_2; }
+        if ("bez_dph" in c && !("castka_bez_dph" in c)) { c.castka_bez_dph = c.bez_dph; }
+        ALWAYS_SKIP.forEach(k => delete c[k]); // druhý průchod po fallback
+        // Pokud už víme platné sloupce, odfiltruj neznámé
+        if (validKolumny) { Object.keys(c).forEach(k => { if (!validKolumny.has(k)) delete c[k]; }); }
+        NUM_FIELDS_IMPORT.forEach(k => { if (k in c) c[k] = Number(c[k]) || 0; });
+        Object.keys(c).forEach(k => { if (!NUM_FIELDS_IMPORT.includes(k) && (c[k] === null || c[k] === undefined)) c[k] = ""; });
         return c;
       });
-      // Vkládej po 50 kusech
+      // Vkládej po 50 kusech — při chybě PGRST204 odstraň problematický sloupec a zkus znovu
       for (let i = 0; i < cleaned.length; i += 50) {
-        const chunk = cleaned.slice(i, i+50);
-        try {
-          await sb("stavby", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
-          ok += chunk.length;
-        } catch(e) { chyby.push(`Řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+        let chunk = cleaned.slice(i, i+50);
+        let pokus = 0;
+        while (pokus < 10) {
+          try {
+            await sb("stavby", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+            ok += chunk.length;
+            // Po prvním úspěšném vložení zapamatuj platné sloupce
+            if (!validKolumny) {
+              validKolumny = new Set(Object.keys(chunk[0]));
+              // Odfiltruj zbytek cleaned podle validKolumny
+              cleaned.forEach(r => { Object.keys(r).forEach(k => { if (!validKolumny.has(k)) delete r[k]; }); });
+            }
+            break;
+          } catch(e) {
+            const match = e.message.match(/'([^']+)' column of 'stavby'/);
+            if (match) {
+              const badCol = match[1];
+              chunk = chunk.map(r => { const c = { ...r }; delete c[badCol]; return c; });
+              pokus++;
+            } else {
+              chyby.push(`Řádky ${i+1}-${i+chunk.length}: ${e.message}`);
+              break;
+            }
+          }
+        }
       }
       await loadAll();
       logAkce(user?.email, "Import JSON", `${ok} staveb importováno z ${fileName}`);
@@ -3693,6 +3959,7 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: "rgba(15,23,42,0.6)", border: "1px solid rgba(168,85,247,0.25)", color: "rgba(192,132,252,0.55)", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0125</span>}
             <button onClick={() => setShowHelp(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
@@ -4600,10 +4867,10 @@ export default function App() {
       )}
 
       {/* LOG MODAL */}
-      {showLog && <LogModal isDark={isDark} firmy={firmy} onClose={() => setShowLog(false)} isDemo={isDemo} />}
+      {showLog && <LogModal isDark={isDark} firmy={firmy} onClose={() => setShowLog(false)} isDemo={isDemo} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />}
 
       {/* HISTORIE MODAL */}
-      {historieRow && <HistorieModal row={historieRow} isDark={isDark} onClose={() => setHistorieRow(null)} isDemo={isDemo} />}
+      {historieRow && <HistorieModal row={historieRow} isDark={isDark} onClose={() => setHistorieRow(null)} isDemo={isDemo} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onAllHidden={(rowId) => setHistorieNovinky(prev => { const n = {...prev}; delete n[String(rowId)]; return n; })} />}
 
       {/* GRAF MODAL */}
       {showGraf && <GrafModal data={filtered} firmy={firmy} isDark={isDark} onClose={() => setShowGraf(false)} />}
