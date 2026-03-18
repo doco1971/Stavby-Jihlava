@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0149
+// BUILD: 2026_03_18_build0150
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -2085,7 +2085,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                     <div style={{ color: isDark ? "#fbbf24" : "#b45309", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>⚠️ Nutná jednorázová instalace na každém PC</div>
                     <div style={{ color: modalMuted, fontSize: 11, marginBottom: 8 }}>Pro přímé otevření složky klikem na 💡 stáhněte a spusťte instalátor jako správce (trvá ~10 sekund). Funguje i přes VPN.</div>
                     <button onClick={() => {
-                      const bat = `@echo off\r\nnet session >nul 2>&1\r\nif %errorLevel% neq 0 (echo Spustte jako spravce! & pause & exit /b 1)\r\necho Registruji protokol stavby://...\r\nset "D=%ProgramFiles%\\StavbyZnojmo"\r\nmkdir "%D%" 2>nul\r\n(echo @echo off\r\necho set "U=%%~1"\r\necho set "U=%%U:stavby://=%%"\r\necho set "U=%%U:/=\\%%"\r\necho explorer "%%U%%") > "%D%\\open.bat"\r\nreg add "HKLM\\SOFTWARE\\Classes\\stavby" /ve /d "Stavby Znojmo" /f >nul\r\nreg add "HKLM\\SOFTWARE\\Classes\\stavby" /v "URL Protocol" /d "" /f >nul\r\nreg add "HKLM\\SOFTWARE\\Classes\\stavby\\shell\\open\\command" /ve /d "cmd /c \\"%D%\\open.bat\\" \\"%%1\\"" /f >nul\r\necho.\r\necho Hotovo! Klikani na zlutou zarovku nyni otvira slozky.\r\npause`;
+                      const bat = `@echo off\r\nnet session >nul 2>&1\r\nif %errorLevel% neq 0 (echo Spustte jako spravce! & pause & exit /b 1)\r\necho Registruji protokol stavby://...\r\nset "D=%ProgramFiles%\\StavbyZnojmo"\r\nmkdir "%D%" 2>nul\r\n(echo Set objShell = CreateObject("WScript.Shell")\r\necho Dim sURL\r\necho sURL = WScript.Arguments(0)\r\necho sURL = Mid(sURL, 10)\r\necho sURL = Replace(sURL, "/", "\\")\r\necho objShell.Run "explorer.exe """ & sURL & """", 0, False) > "%D%\\open.vbs"\r\nreg add "HKLM\\SOFTWARE\\Classes\\stavby" /ve /d "Stavby Znojmo" /f >nul\r\nreg add "HKLM\\SOFTWARE\\Classes\\stavby" /v "URL Protocol" /d "" /f >nul\r\nreg add "HKLM\\SOFTWARE\\Classes\\stavby\\shell\\open\\command" /ve /d "wscript.exe \\"%D%\\open.vbs\\" \\"%%1\\"" /f >nul\r\necho.\r\necho Hotovo! Klikani na zlutou zarovku nyni otvira slozky.\r\npause`;
                       const blob = new Blob([bat], { type: "application/octet-stream" });
                       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "install_stavby_protocol.bat"; a.click();
                     }} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📥 Stáhnout instalátor (Windows)</button>
