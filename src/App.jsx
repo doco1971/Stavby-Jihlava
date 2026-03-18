@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0150
+// BUILD: 2026_03_18_build0151
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -4029,9 +4029,12 @@ export default function App() {
                           if (row.slozka_url) {
                             // Žlutá — otevři složku přes protokol
                             const url = row.slozka_url.replace(/\\/g, "/").replace(/^\/\//, "");
-                            const a = document.createElement("a");
-                            a.href = "stavby://" + url;
-                            a.click();
+                            // Použij iframe trick — nezmění URL záložky ani nezavře okno
+                            const iframe = document.createElement("iframe");
+                            iframe.style.display = "none";
+                            document.body.appendChild(iframe);
+                            iframe.src = "stavby://" + url;
+                            setTimeout(() => document.body.removeChild(iframe), 2000);
                             navigator.clipboard.writeText(row.slozka_url).catch(() => {});
                           } else if (isEditor) {
                             // Šedá — otevři popup pro zadání cesty
