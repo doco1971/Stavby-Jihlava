@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0131
+// BUILD: 2026_03_18_build0143
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -262,6 +262,7 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
+// BUILD0132 — FIX: tisk nápovědy — text sekci černý místo světle šedého
 // BUILD0131 — FIX: RLS hláška zmizí pro superadmina + loadLog předává isSuperAdmin
 //   1) RLS varování skryto pro superadmina (ten vidí 1 uživatele legitimně)
 //   2) loadLog() přijímá parametr superAdmin — volá se s isSuperAdmin hodnotou
@@ -651,12 +652,19 @@ const hexToRgbaGlobal = (hex, alpha) => `rgba(${hexToRgb(hex)},${alpha})`;
 // ── useDraggable hook — jednotný drag pro všechna plovoucí okna ───────────────
 // w, h = šířka a výška okna v px (pro výpočet středu); lze předat 0 pokud neznáme
 function useDraggable(w = 600, h = 500) {
-  const iW = typeof window !== "undefined" ? window.innerWidth : 1200;
-  const iH = typeof window !== "undefined" ? window.innerHeight : 800;
-  const [pos, setPos] = useState({
-    x: Math.max(10, Math.round(iW / 2 - Math.min(w, iW * 0.97) / 2)),
-    y: Math.max(10, Math.round(iH / 2 - Math.min(h, iH * 0.9) / 2)),
-  });
+  const calcPos = () => {
+    const iW = typeof window !== "undefined" ? window.innerWidth : 1200;
+    const iH = typeof window !== "undefined" ? window.innerHeight : 800;
+    const winW = Math.min(w, iW * 0.97);
+    const winH = Math.min(h, iH * 0.9);
+    return {
+      x: Math.max(10, Math.round(iW / 2 - winW / 2)),
+      y: Math.max(10, Math.min(60, Math.round(iH / 2 - winH / 2))),
+    };
+  };
+  const [pos, setPos] = useState(calcPos);
+  useEffect(() => { setPos(calcPos()); }, []);
+  const reset = useCallback(() => setPos(calcPos()), []);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const onMouseDown = (e) => {
@@ -678,7 +686,7 @@ function useDraggable(w = 600, h = 500) {
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
-  return { pos, onMouseDown };
+  return { pos, onMouseDown, reset };
 }
 
 // Sdílený styl pro drag header
@@ -2042,6 +2050,30 @@ function ListEditor({ label, color, list, setList, nv, setNv, isDark }) {
   const itemBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
   const itemBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
   const itemText = isDark ? "#e2e8f0" : "#1e293b";
+  const [dragOver, setDragOver] = useState(null);
+  const dragIdx = useRef(null);
+
+  const handleDragStart = (i) => (e) => {
+    dragIdx.current = i;
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (i) => (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(i);
+  };
+  const handleDrop = (i) => (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragIdx.current === null || dragIdx.current === i) { setDragOver(null); return; }
+    const next = [...list];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(i, 0, moved);
+    setList(next);
+    dragIdx.current = null;
+    setDragOver(null);
+  };
+
   return (
     <div style={{ flex: 1 }}>
       <div style={{ color, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: `3px solid ${color}`, paddingLeft: 8 }}>{label}</div>
@@ -2050,9 +2082,19 @@ function ListEditor({ label, color, list, setList, nv, setNv, isDark }) {
           placeholder="Přidat..." style={{ ...inputSx, flex: 1, fontSize: 12, background: isDark ? "#0f172a" : "#f8fafc", color: itemText, border: `1px solid ${itemBorder}` }} />
         <button onClick={add} style={{ padding: "8px 12px", background: `${color}33`, border: `1px solid ${color}55`, borderRadius: 7, color, cursor: "pointer", fontWeight: 700 }}>+</button>
       </div>
-      {list.map(v => (
-        <div key={v} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${itemBorder}` }}>
-          <span style={{ color: itemText, fontSize: 13 }}>{v}</span>
+      {list.map((v, i) => (
+        <div key={v}
+          draggable
+          onDragStart={handleDragStart(i)}
+          onDragOver={handleDragOver(i)}
+          onDragLeave={() => setDragOver(null)}
+          onDrop={handleDrop(i)}
+          onDragEnd={() => { dragIdx.current = null; setDragOver(null); }}
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${dragOver === i ? color : itemBorder}`, borderLeft: dragOver === i ? `3px solid ${color}` : `1px solid ${itemBorder}`, transition: "border 0.1s", cursor: "default" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)", cursor: "grab", fontSize: 13, lineHeight: 1, flexShrink: 0, userSelect: "none" }} title="Přetáhnout pro změnu pořadí">⠿</span>
+            <span style={{ color: itemText, fontSize: 13 }}>{v}</span>
+          </div>
           <button onClick={() => rem(v)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14 }}>✕</button>
         </div>
       ))}
@@ -2063,12 +2105,26 @@ function ListEditor({ label, color, list, setList, nv, setNv, isDark }) {
 function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   const [newNazev, setNewNazev] = useState("");
   const [newBarva, setNewBarva] = useState("#3b82f6");
-  const [confirmDelete, setConfirmDelete] = useState(null); // { hodnota, count }
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmStep2, setConfirmStep2] = useState(false);
+  const [dragOver, setDragOver] = useState(null);
+  const dragIdx = useRef(null);
   const PRESET_COLORS = ["#3b82f6","#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899","#f59e0b","#6366f1"];
   const itemBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
   const itemBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
   const itemText = isDark ? "#e2e8f0" : "#1e293b";
+
+  const handleDragStart = (i) => (e) => { dragIdx.current = i; e.dataTransfer.effectAllowed = "move"; };
+  const handleDragOver = (i) => (e) => { e.preventDefault(); e.stopPropagation(); setDragOver(i); };
+  const handleDrop = (i) => (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (dragIdx.current === null || dragIdx.current === i) { setDragOver(null); return; }
+    const next = [...list];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(i, 0, moved);
+    setList(next);
+    dragIdx.current = null; setDragOver(null);
+  };
 
   const setNazev = (v) => { setNewNazev(v); onNvChange?.(v); };
 
@@ -2106,9 +2162,17 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
           <div key={c} onClick={() => setNewBarva(c)} style={{ width: 20, height: 20, borderRadius: 4, background: c, cursor: "pointer", border: newBarva === c ? "2px solid #fff" : "2px solid transparent" }} />
         ))}
       </div>
-      {list.map(f => (
-        <div key={f.hodnota} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${itemBorder}` }}>
+      {list.map((f, i) => (
+        <div key={f.hodnota}
+          draggable
+          onDragStart={handleDragStart(i)}
+          onDragOver={handleDragOver(i)}
+          onDragLeave={() => setDragOver(null)}
+          onDrop={handleDrop(i)}
+          onDragEnd={() => { dragIdx.current = null; setDragOver(null); }}
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${dragOver === i ? "#60a5fa" : itemBorder}`, borderLeft: dragOver === i ? "3px solid #60a5fa" : `1px solid ${itemBorder}`, transition: "border 0.1s", cursor: "default" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)", cursor: "grab", fontSize: 13, lineHeight: 1, flexShrink: 0, userSelect: "none" }} title="Přetáhnout pro změnu pořadí">⠿</span>
             <div style={{ width: 14, height: 14, borderRadius: 3, background: f.barva || "#3b82f6" }} />
             <span style={{ color: itemText, fontSize: 13 }}>{f.hodnota}</span>
           </div>
@@ -2762,7 +2826,7 @@ export default function App() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const { pos: helpPos, onMouseDown: onHelpDragStart } = useDraggable(680, 500);
+  const { pos: helpPos, onMouseDown: onHelpDragStart, reset: resetHelp } = useDraggable(680, 500);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // ── Graf ──────────────────────────────────────────────────
   const [showGraf, setShowGraf] = useState(false);
@@ -2802,8 +2866,13 @@ export default function App() {
   const tooltipTimer = useRef(null);
   const showTooltip = (e, text) => {
     const r = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom;
+    const above = spaceBelow < 40;
+    const approxW = Math.max(text.length * 7, 80);
+    const xCenter = r.left + r.width / 2;
+    const xClamped = Math.max(8, Math.min(xCenter - approxW / 2, window.innerWidth - approxW - 8));
     tooltipTimer.current = setTimeout(() => {
-      setTooltip({ visible: true, text, x: r.left + r.width / 2, y: r.bottom + 6 });
+      setTooltip({ visible: true, text, x: xClamped, y: above ? r.top - 34 : r.bottom + 6, above });
     }, 600);
   };
   const hideTooltip = () => { clearTimeout(tooltipTimer.current); setTooltip(t => ({ ...t, visible: false })); };
@@ -3130,7 +3199,7 @@ export default function App() {
   // ── Upozornění na blížící se termíny ──────────────────────
   const [deadlineWarnings, setDeadlineWarnings] = useState([]);
   const [showDeadlines, setShowDeadlines] = useState(false);
-  const { pos: deadlinesPos, onMouseDown: onDeadlinesDragStart } = useDraggable(820, 500);
+  const { pos: deadlinesPos, onMouseDown: onDeadlinesDragStart, reset: resetDeadlines } = useDraggable(820, 500);
   const [showOrphanWarning, setShowOrphanWarning] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showFilterRow2, setShowFilterRow2] = useState(false);
@@ -3183,6 +3252,7 @@ export default function App() {
   useEffect(() => {
     if (user && user.email !== "demo" && !shownDeadlineOnce.current && deadlineWarnings.length > 0) {
       shownDeadlineOnce.current = true;
+      resetDeadlines();
       setShowDeadlines(true);
     }
   }, [deadlineWarnings, user]);
@@ -3476,27 +3546,29 @@ export default function App() {
   const zalohaJSON = async () => {
     const datum = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
     try {
-      const [stavbyRes, cisRes, uzRes] = await Promise.all([
+      const [stavbyRes, cisRes, uzRes, logRes] = await Promise.all([
         sb("stavby?order=id"),
         sb("ciselniky?order=typ,poradi"),
         sb("uzivatele?order=id"),
+        sb("log_aktivit?order=id"),
       ]);
       const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
       const payload = {
-        version: 1,
+        version: 2,
         created: new Date().toISOString(),
         prostredi,
         sb_url: SB_URL,
         stavby: stavbyRes || [],
         ciselniky: cisRes || [],
         uzivatele: (uzRes || []).map(u => ({ id: u.id, jmeno: u.jmeno, email: u.email, role: u.role })), // bez hesel
+        log_aktivit: logRes || [],
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `zaloha_DB_${datum}.json`;
       a.click();
-      logAkce(user?.email, "Záloha", `${payload.stavby.length} staveb + ciselniky + uzivatele (JSON)`);
+      logAkce(user?.email, "Záloha", `${payload.stavby.length} staveb + ciselniky + uzivatele + ${payload.log_aktivit.length} logů (JSON)`);
     } catch(e) { showToast("Chyba zálohy: " + e.message, "error"); }
   };
 
@@ -3619,8 +3691,29 @@ export default function App() {
         }
       }
       await loadAll();
-      logAkce(user?.email, "Import JSON", `${ok} staveb importováno z ${fileName}`);
-      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb z "${fileName}"` });
+      // Import logů pokud jsou v záloze
+      let okLogy = 0;
+      if (payload.log_aktivit && Array.isArray(payload.log_aktivit) && payload.log_aktivit.length > 0) {
+        try {
+          await sb("log_aktivit?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+          const SKIP_LOG = new Set(["id","created_at"]);
+          const cleanedLogy = payload.log_aktivit.map(r => {
+            const c = { ...r };
+            SKIP_LOG.forEach(k => delete c[k]);
+            if (c.hidden === null || c.hidden === undefined) c.hidden = false;
+            return c;
+          });
+          for (let i = 0; i < cleanedLogy.length; i += 100) {
+            const chunk = cleanedLogy.slice(i, i+100);
+            try {
+              await sb("log_aktivit", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+              okLogy += chunk.length;
+            } catch(e) { chyby.push(`Logy řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+          }
+        } catch(e) { chyby.push(`Chyba importu logů: ${e.message}`); }
+      }
+      logAkce(user?.email, "Import JSON", `${ok} staveb + ${okLogy} logů importováno z ${fileName}`);
+      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb + ${okLogy} logů z "${fileName}"` });
     } catch(e) {
       setImportLog({ ok: 0, chyby: ["Chyba importu: " + e.message] });
     }
@@ -3978,15 +4071,15 @@ export default function App() {
         {/* Pravá část: desktop = vše, mobil = Termíny + ☰ */}
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10 }}>
           {!isDemo && deadlineWarnings.length > 0 && (
-            <button onClick={() => setShowDeadlines(true)} style={{ padding: isMobile ? "4px 8px" : "5px 12px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: isMobile ? 11 : 12, fontWeight: 600 }}>⚠️ Termíny ({deadlineWarnings.length})</button>
+            <button onClick={() => { resetDeadlines(); setShowDeadlines(true); }} style={{ padding: isMobile ? "4px 8px" : "5px 12px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: isMobile ? 11 : 12, fontWeight: 600 }}>⚠️ Termíny ({deadlineWarnings.length})</button>
           )}
           {!isMobile && !isDemo && (() => { const firmyNames = firmy.map(f => f.hodnota); const count = data.filter(s => s.firma && !firmyNames.includes(s.firma)).length; return count > 0 ? <button onClick={() => setShowOrphanWarning(true)} style={{ padding: "5px 12px", background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 7, color: "#fbbf24", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🏚️ Bez firmy ({count})</button> : null; })()}
           {!isMobile && <>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: "rgba(15,23,42,0.6)", border: "1px solid rgba(168,85,247,0.25)", color: "rgba(192,132,252,0.55)", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0131</span>}
-            <button onClick={() => setShowHelp(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0143</span>}
+            <button onClick={() => { resetHelp(); setShowHelp(true); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -4063,7 +4156,7 @@ export default function App() {
                 <input type="range" min="10" max="100" step="5" value={lgStrength} onChange={e => changeLgStrength(Number(e.target.value))} style={{ flex: 1, accentColor: "#a78bfa", cursor: "pointer" }} />
               </div>
             )}
-            <button onClick={() => { setShowHelp(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>❓ Nápověda</button>
+            <button onClick={() => { resetHelp(); setShowHelp(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); setShowMobileMenu(false); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => { setShowLog(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>📜 Log</button>}
             {!isDemo && (() => { const firmyNames = firmy.map(f => f.hodnota); const count = data.filter(s => s.firma && !firmyNames.includes(s.firma)).length; return count > 0 ? <button onClick={() => { setShowOrphanWarning(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 7, color: "#fbbf24", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🏚️ Bez firmy ({count})</button> : null; })()}
@@ -4439,24 +4532,47 @@ export default function App() {
             </div>
             <div style={{ padding: "11px 22px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)" }}>
               <button onClick={() => {
-                const content = document.getElementById("help-print-content");
-                if (!content) return;
+                const helpItems = [
+                  ["🏗️","Přidání stavby","Klikněte na zelené tlačítko + Přidat stavbu v hlavičce. Vyplňte název stavby (povinný) a ostatní pole dle potřeby. Klávesa Enter přeskočí na další pole. Uložte tlačítkem Uložit — stavba se okamžitě zobrazí v tabulce."],
+                  ["✏️","Editace stavby","Klikněte na modré tlačítko ✏️ v levém sloupci u řádku stavby. Otevře se formulář s předvyplněnými hodnotami — změňte co potřebujete a uložte. Všechny změny se automaticky zaznamenají do Historie změn."],
+                  ["🗑️","Smazání stavby","Klikněte na červené tlačítko 🗑️ v levém sloupci. Systém požádá o potvrzení — musíte kliknout dvakrát (ochrana proti náhodnému smazání). Smazanou stavbu nelze obnovit."],
+                  ["📋","Kopírování stavby","Tlačítko 📋 vedle editace otevře formulář s předvyplněnými daty dané stavby. Číslo stavby dostane příponu (kopie). Po uložení se vytvoří nový samostatný záznam — původní zůstane nezměněn."],
+                  ["🕐","Historie změn stavby","Fialové tlačítko 🕐 v levém sloupci otevře historii změn — kdo, kdy a která pole změnil. Červená tečka na ikoně = stavba má záznamy v historii. Export jako Excel nebo PDF."],
+                  ["📜","Log zakázek","Tlačítko 📜 Log v hlavičce (pouze admin) otevře kompletní přehled všech akcí na zakázkách — přidání, editace i smazání. Záznamy lze filtrovat podle uživatele, typu akce a datumového rozsahu."],
+                  ["💬","Poznámka ke stavbě","V editačním formuláři najdete fialovou sekci 💬 POZNÁMKA. Ikona 💬 se zobrazí vedle názvu stavby pokud poznámka existuje — najeďte myší pro zobrazení textu."],
+                  ["🎨","Barevné řádky","Každá firma má přiřazenou barvu (nastavitelnou v Nastavení). Zelený řádek = stavba má fakturu, částku i datum splatnosti — kompletně vyfakturována."],
+                  ["⚠️","Termíny ukončení","Pole Ukončení se zobrazí červeně ⚠️ pokud je termín v minulosti a stavba nemá fakturu. Tlačítko ⚠️ Termíny v hlavičce zobrazí přehled staveb s termínem do 30 dní."],
+                  ["🔍","Filtry a vyhledávání","Vyhledávejte podle názvu nebo čísla stavby. Filtrujte podle firmy, objednatele nebo stavbyvedoucího. Tlačítko Filtr▼ otevře rozšířený filtr: rok, rozsah částky, prošlé termíny, fakturace, kategorie."],
+                  ["📊","Graf nákladů","Tlačítko 📊 Graf otevře interaktivní sloupcový graf. Tři přepínače: Firma, Měsíc, Kat. I / II. Graf vždy odráží aktuální filtr."],
+                  ["📤","Export dat","CSV, Excel, Barevný Excel, PDF. Vše pracuje s aktuálním filtrem."],
+                  ["📥","Import staveb","Tlačítko 📥 Import (pouze superadmin) načte stavby z Excelu nebo JSON zálohy."],
+                  ["💾","Záloha DB","Tlačítko Záloha DB (pouze superadmin) stáhne kompletní zálohu celé databáze."],
+                  ["↔️","Šířky a pořadí sloupců","Superadmin: Táhněte ⟺ pro změnu šířky, ⠿ pro změnu pořadí sloupců. Ukládá se automaticky."],
+                  ["🪟","Plovoucí okna","Všechna okna jsou plovoucí — přetáhněte je za záhlaví kamkoliv na plochu."],
+                  ["⚙️","Nastavení","Správa firem, číselníků, uživatelů a aplikace. Role: USER, USER EDITOR, ADMIN, SUPERADMIN."],
+                  ["🌙","Tmavý / světlý režim","Přepínejte mezi 🌞 světlým a 🌙 tmavým režimem. Tlačítko 💎 aktivuje Liquid Glass efekt."],
+                  ["⏱️","Automatické odhlášení","Aplikace se odhlásí po 15 minutách nečinnosti. Před odhlášením zobrazí varování s odpočítáváním."],
+                  ["📱","Mobilní zobrazení","Na mobilu se zobrazí kartičky místo tabulky. Tlačítko ▦/☰ přepíná mezi kartičkami a tabulkou."],
+                ];
+                const rows = helpItems.map(([icon, title, text]) => `
+                  <div class="item">
+                    <div class="item-title">${icon} ${title}</div>
+                    <div class="item-text">${text}</div>
+                  </div>`).join("");
                 const w = window.open("", "_blank");
                 w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Znojmo</title><style>
                   @page { size: A4; margin: 12mm; }
-                  body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; }
-                  h1 { font-size: 16px; margin: 0 0 4px; }
+                  body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
+                  h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
                   .subtitle { color: #64748b; font-size: 10px; margin-bottom: 14px; }
                   .item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; break-inside: avoid; }
                   .item-title { font-weight: 700; font-size: 12px; color: #1e3a8a; margin-bottom: 3px; }
-                  .item-text { color: #475569; font-size: 11px; line-height: 1.5; }
-                  .role-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
-                  .role-badge { font-weight: 700; font-size: 9px; border: 1px solid #94a3b8; border-radius: 3px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0; }
+                  .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
                 <h1>❓ Nápověda — Stavby Znojmo</h1>
                 <div class="subtitle">Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")}</div>
-                ${content.innerHTML}
+                ${rows}
                 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
                 </body></html>`);
                 w.document.close();
@@ -4469,9 +4585,8 @@ export default function App() {
 
       {/* TOOLTIP */}
       {tooltip.visible && (
-        <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y, transform: "translateX(-50%)", background: "rgba(15,23,42,0.95)", color: "#e2e8f0", fontSize: 12, padding: "5px 10px", borderRadius: 6, pointerEvents: "none", zIndex: 9999, whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}>
+        <div style={{ position: "fixed", left: tooltip.x, top: tooltip.y, background: "rgba(15,23,42,0.95)", color: "#e2e8f0", fontSize: 12, padding: "5px 10px", borderRadius: 6, pointerEvents: "none", zIndex: 9999, whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}>
           {tooltip.text}
-          <div style={{ position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)", width: 8, height: 8, background: "rgba(15,23,42,0.95)", border: "1px solid rgba(255,255,255,0.12)", borderBottom: "none", borderRight: "none", rotate: "45deg" }} />
         </div>
       )}
 
@@ -4934,6 +5049,12 @@ export default function App() {
                   <span style={{ color: "rgba(255,255,255,0.45)" }}>Staveb v záloze:</span>
                   <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{payload.stavby.length}</span>
                 </div>
+                {payload.log_aktivit && (
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "rgba(255,255,255,0.45)" }}>Logů v záloze:</span>
+                    <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{payload.log_aktivit.length}</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "rgba(255,255,255,0.45)" }}>Staveb aktuálně v DB:</span>
                   <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{stavbyVDB}</span>
