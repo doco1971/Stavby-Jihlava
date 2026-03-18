@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0146
+// BUILD: 2026_03_18_build0147
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -163,6 +163,7 @@ import * as XLSX from "xlsx";
 // BUILD0144 — Automatická záloha při prvním přihlášení dne (superadmin)
 //   Dialog odhlášení: tlačítko "💾 Zálohovat a odhlásit" (superadmin)
 // BUILD0145 — Dialog odhlášení: záloha pro admin i superadmin
+// BUILD0147 — Tlačítko 💡 složka zakázky + nastavení role
 // BUILD0146 — Aktualizace hlavičky: kompletní dokumentace stavu aplikace
 //
 // ============================================================
@@ -251,6 +252,7 @@ const COLUMNS = [
   { key: "cislo_faktury_2", label: "Č. faktury 2", width: 105, hidden: true },
   { key: "castka_bez_dph_2", label: "Č. bez DPH 2", width: 105, type: "number", hidden: true },
   { key: "splatna_2", label: "Splatná 2", width: 88, hidden: true },
+  { key: "slozka_url", label: "Složka", width: 60, hidden: true },
 
 ];
 
@@ -1587,6 +1589,16 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
                 <FormSelectField label="Objednatel" value={form["objednatel"]} onChange={v => set("objednatel", v)} options={objednatele} allowEmpty />
                 <FormSelectField label="Stavbyvedoucí" value={form["stavbyvedouci"]} onChange={v => set("stavbyvedouci", v)} options={svList} allowEmpty />
               </div>
+              <div style={{ marginTop: 10 }}>
+                <Lbl>💡 Cesta ke složce <span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 400 }}>\\\\server\\zakazky\\... nebo http://...</span></Lbl>
+                <input
+                  type="text"
+                  value={form["slozka_url"] || ""}
+                  onChange={e => set("slozka_url", e.target.value)}
+                  placeholder="\\\\server\zakazky\ZN-2025-001 nebo http://..."
+                  style={{ ...inputSx, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
             </div>
           </div>
 
@@ -1839,7 +1851,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -1932,6 +1944,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [confirmResetCols, setConfirmResetCols] = useState(false);
   const [editDatum, setEditDatum] = useState(appDatum);
   const [editNotifyEmails, setEditNotifyEmails] = useState(notifyEmails || "");
+  const [editSlozkaRole, setEditSlozkaRole] = useState(slozkaRole || "admin");
 
   const modalBg = isDark ? "#1e293b" : "#ffffff";
   const modalBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -2059,6 +2072,16 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                 <button onClick={() => { onSaveAppInfo(editVerze, editDatum); onClose(); }} style={{ padding: "10px 20px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>💾 Uložit a zavřít</button>
                 <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>
                   Zobrazí se ve footeru: © {editDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI | v{editVerze}
+                </div>
+                <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
+                  <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>💡 TLAČÍTKO SLOŽKA</div>
+                  <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Kdo vidí tlačítko 💡 pro kopírování cesty ke složce zakázky.</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[["none","Nikdo"],["admin","Admin+"],["user_e","Editor+"],["user","Všichni"]].map(([val, label]) => (
+                      <button key={val} onClick={() => { setEditSlozkaRole(val); onSaveSlozkaRole(val); }} style={{ padding: "7px 14px", background: editSlozkaRole === val ? "rgba(251,191,36,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"), border: `1px solid ${editSlozkaRole === val ? "rgba(251,191,36,0.6)" : modalBorder}`, borderRadius: 7, color: editSlozkaRole === val ? "#fbbf24" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: editSlozkaRole === val ? 700 : 400 }}>{label}</button>
+                    ))}
+                  </div>
+                  <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>Cesta ke složce se nastavuje v editaci každé stavby (sekce Ostatní).</div>
                 </div>
                 <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
                   <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ŠÍŘKY SLOUPCŮ</div>
@@ -2663,6 +2686,34 @@ export default function App() {
       setNotifyEmails(val);
     } catch {}
   };
+
+  // Složka — minimální role pro zobrazení tlačítka 💡
+  // Hodnoty: "user" | "user_e" | "admin" | "superadmin" | "none"
+  const [slozkaRole, setSlozkaRole] = useState("admin");
+  useEffect(() => {
+    if (isDemo) return;
+    sb("nastaveni?klic=eq.slozka_role").then(res => {
+      if (res && res[0]) setSlozkaRole(res[0].hodnota || "admin");
+    }).catch(() => {});
+  }, [isDemo]);
+
+  const saveSlozkaRole = async (val) => {
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "slozka_role", hodnota: val }), prefer: "resolution=merge-duplicates,return=minimal" });
+      setSlozkaRole(val);
+    } catch {}
+  };
+
+  // Zobrazit tlačítko 💡 pro aktuálního uživatele?
+  const showSlozka = (() => {
+    if (slozkaRole === "none") return false;
+    if (slozkaRole === "user") return true;
+    if (slozkaRole === "user_e") return isEditor;
+    if (slozkaRole === "admin") return isAdmin;
+    if (slozkaRole === "superadmin") return isSuperAdmin;
+    return false;
+  })();
 
   const saveAppInfo = async (verze, datum) => {
     if (isDemo) { setAppVerze(verze); setAppDatum(datum); return; }
@@ -3962,6 +4013,20 @@ export default function App() {
                     {!isDemo && <button onClick={() => setHistorieRow(row)} onMouseEnter={e => showTooltip(e, historieNovinky[String(row.id)] ? "Historie změn — obsahuje záznamy" : "Historie změn stavby")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: 5, color: "#c084fc", cursor: "pointer", fontSize: 11, marginLeft: 5, position: "relative" }}>
                       🕐{historieNovinky[String(row.id)] && <span style={{ position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 6px #ef4444, 0 0 12px rgba(239,68,68,0.7)", display: "block" }}/>}
                     </button>}
+                    {showSlozka && (
+                      <button
+                        onClick={() => {
+                          if (row.slozka_url) {
+                            navigator.clipboard.writeText(row.slozka_url);
+                            showToast("Cesta zkopírována do schránky", "ok");
+                          }
+                        }}
+                        onMouseEnter={e => showTooltip(e, row.slozka_url ? `Kopírovat cestu: ${row.slozka_url}` : "Složka není nastavena — upravte v editaci stavby")}
+                        onMouseLeave={hideTooltip}
+                        style={{ padding: "3px 7px", background: row.slozka_url ? "rgba(251,191,36,0.15)" : "rgba(100,116,139,0.1)", border: `1px solid ${row.slozka_url ? "rgba(251,191,36,0.4)" : "rgba(100,116,139,0.2)"}`, borderRadius: 5, color: row.slozka_url ? "#fbbf24" : "rgba(100,116,139,0.4)", cursor: row.slozka_url ? "pointer" : "default", fontSize: 13, marginLeft: 5 }}
+                        title={row.slozka_url ? "Kopírovat cestu do schránky" : "Složka není nastavena"}
+                      >💡</button>
+                    )}
                   </td>
                 )}
                 {orderedCols.map(col => {
@@ -4421,7 +4486,7 @@ export default function App() {
       {adding && <FormModal title="➕ Nová stavba" initial={emptyRow} onSave={handleAdd} onClose={() => setAdding(false)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {editRow && <FormModal title={`✏️ Editace stavby #${editRow.id}`} initial={editRow} onSave={handleSave} onClose={() => setEditRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {copyRow && <FormModal title="📋 Kopírovat stavbu" initial={copyRow} onSave={handleCopySave} onClose={() => setCopyRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} />}
+      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} />}
 
       {showOrphanWarning && (() => {
         const firmyNames = firmy.map(f => f.hodnota);
