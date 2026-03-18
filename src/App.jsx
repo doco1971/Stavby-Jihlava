@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0125
+// BUILD: 2026_03_18_build0131
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -262,7 +262,21 @@ import * as XLSX from "xlsx";
 // BUILD0068 — brightness(2) + bílý glow — příliš agresivní
 // BUILD0069 — nadpisová ikona brightness(1.4), ikony v textu bez filtru
 // BUILD0070 — všechny ikony brightness(1.4)
-// BUILD0125 — FIX: dialog "Nevyplněná položka" — zIndex zvýšen na 9500 (tlačítka nereagovala)
+// BUILD0131 — FIX: RLS hláška zmizí pro superadmina + loadLog předává isSuperAdmin
+//   1) RLS varování skryto pro superadmina (ten vidí 1 uživatele legitimně)
+//   2) loadLog() přijímá parametr superAdmin — volá se s isSuperAdmin hodnotou
+//      Příčina: useCallback nemá přístup k isSuperAdmin (definován níže)
+// BUILD0130 — FIX: skryté záznamy nevidí admin ani po znovuotevření logu
+//   Příčina: DB dotaz načítal vše vč. hidden=true, filtr byl jen v state
+//   Oprava: hidden=eq.false přidán do DB dotazu pro non-superadmin
+//   Opraveno ve: HistorieModal, LogModal, Nastavení→Log aktivit (loadLog)
+// BUILD0129 — Počet řádků na stránku uložen do localStorage
+//   PAGE_SIZE se pamatuje mezi session na stejném zařízení
+//   Každé zařízení (PC, tablet) má vlastní nastavení
+// BUILD0128 — FIX: dialog "Nevyplněná položka" — pointerEvents:"all" přímo na dialog
+//   Správné řešení: dialog zůstává uvnitř SettingsModal, ale má pointerEvents:"all"
+//   Předchozí pokusy (build0125-0127) měly buď špatný zIndex nebo syntax chybu
+// BUILD0127 — FIX: dialog "Nevyplněná položka" — syntax chyba (nešlo buildovat) (tlačítka nereagovala)
 // BUILD0124 — Skrývání záznamů logů (hidden=true místo DELETE) + přepínač Aktivní/Skryté/Vše
 //   DB migrace nutná: ALTER TABLE log_aktivit ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT false;
 //   🕐 Historie změn: admin/superadmin skryje (hidden=true), superadmin obnoví (↩)
@@ -788,7 +802,8 @@ function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, on
     if (isDemo) { setLoading(false); return; }
     const load = async () => {
       try {
-        const res = await sb(`log_aktivit?order=cas.desc&limit=500`);
+        const hiddenFilter = isSuperAdmin ? "" : "&hidden=eq.false";
+        const res = await sb(`log_aktivit?order=cas.desc&limit=500${hiddenFilter}`);
         const idStr = String(row.id);
         const filtered = (res || []).filter(r => {
           if (!r.detail) return false;
@@ -1036,7 +1051,8 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
     if (isDemo) { setLoading(false); return; }
     const load = async () => {
       try {
-        const res = await sb(`log_aktivit?order=cas.desc&limit=10000`);
+        const hiddenFilter = isSuperAdmin ? "" : "&hidden=eq.false";
+        const res = await sb(`log_aktivit?order=cas.desc&limit=10000${hiddenFilter}`);
         const all = res || [];
         setTotalLoaded(all.length);
         setZaznamy(all.filter(r => AKCE_ZAKÁZKY.includes(r.akce)));
@@ -1169,7 +1185,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
         {/* RLS varování pokud se zdá že vidíme jen své záznamy */}
         {!loading && totalLoaded > 0 && zaznamy.length > 0 && (() => {
           const uniqueUsers = new Set(zaznamy.map(r => r.uzivatel).filter(Boolean));
-          if (uniqueUsers.size <= 1) return (
+          if (uniqueUsers.size <= 1 && !isSuperAdmin) return (
             <div style={{ margin: "10px 22px 0", padding: "10px 14px", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.4)", borderRadius: 8, fontSize: 11, color: "#fbbf24", display: "flex", gap: 10, alignItems: "flex-start" }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
               <div style={{ flex: 1 }}>
@@ -2192,7 +2208,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const handleLoadLog = async () => {
     if (isDemo) { setLocalLogData([]); return; }
     try {
-      const res = await onLoadLog();
+      const res = await onLoadLog(isSuperAdmin);
       setLocalLogData(Array.isArray(res) ? res : []);
     } catch(e) { setLocalLogData([]); }
   };
@@ -2563,7 +2579,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
 
       {/* Varování – nevyplněná položka */}
       {pendingWarn && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9500, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9500, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif", pointerEvents: "all" }}>
           <div style={{ background: isDark ? "#1e293b" : "#fff", borderRadius: 14, padding: "28px 32px", width: 380, border: `1px solid ${isDark ? "rgba(255,165,0,0.3)" : "rgba(255,165,0,0.4)"}`, boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
             <div style={{ color: isDark ? "#f8fafc" : "#1e293b", fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Nevyplněná položka</div>
@@ -2884,9 +2900,10 @@ export default function App() {
 
   const isDarkComputed = (t) => t === "dark" || (t === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  const loadLog = useCallback(async () => {
+  const loadLog = useCallback(async (superAdmin = false) => {
     try {
-      const res = await sb("log_aktivit?order=cas.desc&limit=1000");
+      const hiddenFilter = superAdmin ? "" : "&hidden=eq.false";
+      const res = await sb(`log_aktivit?order=cas.desc&limit=1000${hiddenFilter}`);
       setLogData(res);
       return res;
     } catch (e) { console.warn("Log load error:", e); return []; }
@@ -3411,8 +3428,17 @@ export default function App() {
   const paginationRef = useRef(null);
   const footerRef = useRef(null);
 
-  // PAGE_SIZE: fixní hodnota, uživatel může měnit tlačítky v paginaci
-  const [PAGE_SIZE, setPageSize] = useState(7);
+  // PAGE_SIZE: fixní hodnota, uživatel může měnit tlačítky v paginaci — uloženo v localStorage
+  const [PAGE_SIZE, setPageSizeState] = useState(() => {
+    try { return parseInt(localStorage.getItem("pageSize") || "7", 10); } catch { return 7; }
+  });
+  const setPageSize = (fn) => {
+    setPageSizeState(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      try { localStorage.setItem("pageSize", String(next)); } catch {}
+      return next;
+    });
+  };
   const [viewMode, setViewMode] = useState("page"); // "page" | "scroll"
   const [page, setPage] = useState(0);
   useEffect(() => { setPage(0); }, [filterFirma, filterText, filterObjed, filterSV, filterRok, filterCastkaOd, filterCastkaDo, filterProslé, filterFakturace, filterKat]);
@@ -3959,9 +3985,9 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: "rgba(15,23,42,0.6)", border: "1px solid rgba(168,85,247,0.25)", color: "rgba(192,132,252,0.55)", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0125</span>}
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700, background: "rgba(15,23,42,0.6)", border: "1px solid rgba(168,85,247,0.25)", color: "rgba(192,132,252,0.55)", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0131</span>}
             <button onClick={() => setShowHelp(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
-            {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
+            {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               {[["🌞","light","Světlý"],["🌙","dark","Tmavý"]].map(([icon, val, label]) => (
@@ -4038,7 +4064,7 @@ export default function App() {
               </div>
             )}
             <button onClick={() => { setShowHelp(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>❓ Nápověda</button>
-            {isAdmin && <button onClick={() => { setShowSettings(true); setShowMobileMenu(false); if (!isDemo) loadLog(); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>⚙️ Nastavení</button>}
+            {isAdmin && <button onClick={() => { setShowSettings(true); setShowMobileMenu(false); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => { setShowLog(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 13 }}>📜 Log</button>}
             {!isDemo && (() => { const firmyNames = firmy.map(f => f.hodnota); const count = data.filter(s => s.firma && !firmyNames.includes(s.firma)).length; return count > 0 ? <button onClick={() => { setShowOrphanWarning(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 7, color: "#fbbf24", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🏚️ Bez firmy ({count})</button> : null; })()}
             <button onClick={() => { setShowLogoutConfirm(true); setShowMobileMenu(false); }} style={{ padding: "6px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Odhlásit</button>
