@@ -2797,16 +2797,25 @@ export default function App() {
       return;
     }
 
-    // Metoda 1: localhost helper
-    fetch(`http://localhost:47891/open?path=${encodeURIComponent(path)}`)
+    // Metoda 1: localhost helper (timeout 3s)
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    fetch(`http://localhost:47891/open?path=${encodeURIComponent(path)}`, { signal: controller.signal })
       .then(r => {
+        clearTimeout(timer);
         if (r.ok) {
           setProtokolReady(true);
+          showToast("📂 Složka otevřena", "ok");
         } else {
           throw new Error("Helper chyba");
         }
       })
-      .catch(() => {
+      .catch((e) => {
+        clearTimeout(timer);
+        if (e.name === "AbortError") {
+          // Timeout — helper mozna bezi ale pomalu, nezobrazuj chybu
+          return;
+        }
         // Metoda 2: rozšíření prohlížeče
         if (extensionReady) {
           window.postMessage({ type: "STAVBY_OPEN_FOLDER", path }, "*");
