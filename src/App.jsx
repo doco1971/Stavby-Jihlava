@@ -24,16 +24,19 @@ import * as XLSX from "xlsx";
 // TRANSCRIPT: /mnt/transcripts/ — přečíst pro kontext předchozích session
 //
 // ============================================================
-// AKTUÁLNÍ STAV APLIKACE (session 2026-03-18, build0153)
+// AKTUÁLNÍ STAV APLIKACE (session 2026-03-19, build0156)
 // ============================================================
 //
-// ✅ Poslední nasazený build: build0152 (staging)
+// ✅ Poslední nasazený build: build0156 (staging)
 // ✅ Supabase staging: wgrdhqkkjhtrkweiqxvo.supabase.co
 // ✅ GitHub heartbeat: .github/workflows/supabase-heartbeat.yml
 //    Schedule: 45 4 * * * (probouzí SB 15 min před pg_cron emailem)
 // ✅ Email notifikace: pg_cron job "stavby-deadline-emails-v2" (jobid=2)
 //    Schedule: 0 5 * * * = 5:00 UTC = 6:00 CZ zimní / 7:00 CZ letní
 // ✅ vercel.json + index.html no-cache headers
+// ✅ Stavby Helper: localhost:47891 (PowerShell, autostart)
+//    Instalace: Nastavení → 💡 → Stáhnout instalátor → install.bat
+//    Port: 47891 (3210 byl obsazen Windows System procesem PID 4)
 //
 // ============================================================
 // TLAČÍTKO 💡 — SLOŽKA ZAKÁZKY
@@ -160,7 +163,8 @@ import * as XLSX from "xlsx";
 // ============================================================
 // PENDING FUNKCE
 // ============================================================
-// [PENDING] 💡 Helper bez Pythonu — přepsat stavby_opener.py na .exe
+// [HOTOVO] 💡 Otevírání složek — localhost helper (stavby-helper.ps1, port 47891)
+// [PENDING] 💡 Helper — otestovat na Chrome, Firefox, Edge
 // [PENDING] 📱 iOS klávesnice — přihlašovací obrazovka se roztáhne při psaní
 // [PENDING] 📈 Dashboard — KPI karty + grafy
 // [PENDING] 🗓️ Kalendářní pohled — termíny ukončení v měsíčním kalendáři
@@ -176,7 +180,7 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
-// BUILD0156 — openFolder: localhost helper (http://localhost:3210/open?path=...)
+// BUILD0156 — openFolder: localhost helper (http://localhost:47891/open?path=...)
 //   Nahrazuje stavby:// protokol a rozšíření prohlížeče
 //   Funguje ve všech prohlížečích bez problémů s elevated právy
 //   Helper: stavby-helper.ps1 (PowerShell, autostart po přihlášení)
@@ -2777,12 +2781,12 @@ export default function App() {
 
   // Detekce localhost helperu — ping při načtení
   useEffect(() => {
-    fetch("http://localhost:3210/ping")
+    fetch("http://localhost:47891/ping")
       .then(r => { if (r.ok) setProtokolReady(true); })
       .catch(() => {});
   }, []);
 
-  // Otevření složky — localhost helper na http://localhost:3210
+  // Otevření složky — localhost helper na http://localhost:47891
   // Funguje ve všech prohlížečích, žádné problémy s elevated právy
   const openFolder = (path) => {
     if (!path) return;
@@ -2794,7 +2798,7 @@ export default function App() {
     }
 
     // Metoda 1: localhost helper
-    fetch(`http://localhost:3210/open?path=${encodeURIComponent(path)}`)
+    fetch(`http://localhost:47891/open?path=${encodeURIComponent(path)}`)
       .then(r => {
         if (r.ok) {
           setProtokolReady(true);
