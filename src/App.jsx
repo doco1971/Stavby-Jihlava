@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_19_build0158
+// BUILD: 2026_03_19_build0159
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -185,7 +185,8 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
-// BUILD0158 — tooltips na toolbar tlačítka, fix ořezaného okna přidání stavby
+// BUILD0159 — tooltips Stránky/Vše, fix okna přidání stavby calc(100vh-20px)
+// BUILD0158 — tooltips na toolbar tlačítka (Termíny, Nápověda, Nastavení, Log)
 // BUILD0157 — ping helperu každých 30s, pravidlo #1 do hlavičky
 // BUILD0156 — openFolder: localhost helper (http://localhost:47891/open?path=...)
 //   Nahrazuje stavby:// protokol a rozšíření prohlížeče
@@ -1571,7 +1572,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
-      <div ref={modalRef} style={{ position: "fixed", left: pos.x, top: Math.max(10, Math.min(pos.y, window.innerHeight - 100)), pointerEvents: "all", background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "95vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
+      <div ref={modalRef} style={{ position: "fixed", left: pos.x, top: Math.max(10, pos.y), pointerEvents: "all", background: "#1e293b", borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "calc(100vh - 20px)", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
 
         {/* Header — táhlo */}
         <div onMouseDown={onDragStart} style={dragHeaderStyle({ gap: 16 })}>
@@ -3899,7 +3900,7 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0158</span>}
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0159</span>}
             <button onClick={() => { resetHelp(); setShowHelp(true); }} onMouseEnter={e => showTooltip(e, "Nápověda k aplikaci")} onMouseLeave={hideTooltip} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} onMouseEnter={e => showTooltip(e, "Nastavení aplikace — firmy, číselníky, uživatelé, emaily")} onMouseLeave={hideTooltip} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} onMouseEnter={e => showTooltip(e, "Log aktivit uživatelů")} onMouseLeave={hideTooltip} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
@@ -4007,8 +4008,8 @@ export default function App() {
           {!isMobile && (
             <>
               <div style={{ display: "flex", gap: 2, flexShrink: 0, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", borderRadius: 7, padding: 2, border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.12)"}` }}>
-                {[["page","📋 Stránky"],["scroll","📜 Vše"]].map(([vm, lbl]) => (
-                  <button key={vm} onClick={() => setViewMode(vm)} style={{ padding: "0 7px", height: 28, background: viewMode === vm ? (isDark ? "rgba(37,99,235,0.4)" : "#2563eb") : "transparent", border: "none", borderRadius: 5, color: viewMode === vm ? "#fff" : T.textMuted, cursor: "pointer", fontSize: 11, fontWeight: viewMode === vm ? 700 : 400, whiteSpace: "nowrap" }}>{lbl}</button>
+                {[["page","📋 Stránky","Stránkované zobrazení s ovládáním počtu řádků"],["scroll","📜 Vše","Zobrazit všechny záznamy najednou se scrollem"]].map(([vm, lbl, tip]) => (
+                  <button key={vm} onClick={() => setViewMode(vm)} onMouseEnter={e => showTooltip(e, tip)} onMouseLeave={hideTooltip} style={{ padding: "0 7px", height: 28, background: viewMode === vm ? (isDark ? "rgba(37,99,235,0.4)" : "#2563eb") : "transparent", border: "none", borderRadius: 5, color: viewMode === vm ? "#fff" : T.textMuted, cursor: "pointer", fontSize: 11, fontWeight: viewMode === vm ? 700 : 400, whiteSpace: "nowrap" }}>{lbl}</button>
                 ))}
               </div>
               <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
