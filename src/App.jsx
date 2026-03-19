@@ -2789,45 +2789,21 @@ export default function App() {
       return;
     }
 
-    // Metoda 1: stavby:// vlastní protokol (doporučeno — funguje bez rozšíření)
-    // Zakóduj cestu pro URL: \ → %5C, mezery → %20 atd.
+    // Metoda 1: stavby:// vlastní protokol — VŽDY přes iframe (nikdy window.location.href!)
+    // iframe trik nezavírá záložku v žádném prohlížeči
     const encodedPath = encodeURIComponent(path);
     const protokolUrl = `stavby://open?path=${encodedPath}`;
 
-    if (protokolReady) {
-      // Protokol byl detekován jako funkční — otevři přímo
-      window.location.href = protokolUrl;
-      return;
-    }
-
-    // Zkus protokol i bez detekce (uživatel ho možná má)
-    // Použij iframe trik — nezavírá záložku (funguje v Chrome, Opera, Firefox)
     const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
+    iframe.style.cssText = "display:none;width:0;height:0;border:0;position:fixed;";
     document.body.appendChild(iframe);
-    try {
-      iframe.src = protokolUrl;
-      // Označíme protokol jako "použitý" — příštím klikem půjde přímo
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        setProtokolReady(true);
-      }, 500);
-      showToast("📂 Otevírám složku…", "ok");
-      return;
-    } catch {
-      document.body.removeChild(iframe);
-    }
-
-    // Metoda 2: rozšíření prohlížeče
-    if (extensionReady) {
-      window.postMessage({ type: "STAVBY_OPEN_FOLDER", path }, "*");
-      return;
-    }
-
-    // Metoda 3: clipboard fallback
-    navigator.clipboard.writeText(path)
-      .then(() => showToast("📋 Cesta zkopírována — nainstalujte stavby:// protokol pro přímé otevírání (viz README)", "ok"))
-      .catch(() => showToast("Nepodařilo se zkopírovat cestu", "error"));
+    iframe.src = protokolUrl;
+    setTimeout(() => {
+      try { document.body.removeChild(iframe); } catch {}
+      setProtokolReady(true);
+    }, 800);
+    showToast("📂 Otevírám složku… (při prvním použití potvrďte dialog prohlížeče)", "ok");
+    return;
   };
 
   // Zobrazit tlačítko 💡 pro aktuálního uživatele?
