@@ -1,10 +1,15 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_19_build0155
+// BUILD: 2026_03_19_build0156
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
+// PRAVIDLO #0 — PŘED KAŽDÝM NOVÝM ROZŠÍŘENÍM FUNKCIONALITY:
+//   Nejprve důkladně prohledat internet, nabídnout min. 3-5 možností
+//   s vysvětlením výhod/nevýhod, teprve pak implementovat zvolenou.
+//   NESPOUŠTĚT implementaci bez průzkumu a výběru uživatelem!
+//
 // PRAVIDLO: Každá změna = dva soubory:
 //   stavby-app_DATUM_buildXXXX.jsx
 //   stavby-app_DATUM_buildXXXX_changelog.txt
@@ -171,6 +176,11 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
+// BUILD0156 — openFolder: localhost helper (http://localhost:3210/open?path=...)
+//   Nahrazuje stavby:// protokol a rozšíření prohlížeče
+//   Funguje ve všech prohlížečích bez problémů s elevated právy
+//   Helper: stavby-helper.ps1 (PowerShell, autostart po přihlášení)
+//   Instalace: stavby-helper-installer.zip → install.bat (bez admin práv!)
 // BUILD0155 — openFolder: stavby:// protokol jako primární metoda
 //   Nová priorita: stavby:// protokol → rozšíření → clipboard
 //   Detekce protokolu: ping test při načtení stránky
@@ -2098,7 +2108,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                   {/* Stav protokolu + download tlačítko */}
                   <div style={{ padding: "12px 14px", background: protokolReady ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.06)", border: `1px solid ${protokolReady ? "rgba(16,185,129,0.3)" : "rgba(251,191,36,0.2)"}`, borderRadius: 8, marginBottom: 8 }}>
                     <div style={{ color: protokolReady ? "#34d399" : "#fbbf24", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
-                      {protokolReady ? "✅ Protokol stavby:// aktivní — klik otevře složku" : "⚠️ Nutná jednorázová instalace na každém PC"}
+                      {protokolReady ? "✅ Stavby Helper aktivní — klik otevře složku" : "⚠️ Nutná jednorázová instalace Stavby Helper"}
                     </div>
                     <div style={{ color: modalMuted, fontSize: 11, marginBottom: protokolReady ? 0 : 10 }}>
                       {protokolReady
@@ -2107,8 +2117,8 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                     </div>
                     {!protokolReady && (
                       <a
-                        href="/installer.zip"
-                        download="installer.zip"
+                        href="/stavby-helper-installer.zip"
+                        download="stavby-helper-installer.zip"
                         style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, textDecoration: "none" }}
                       >
                         🖥 Stáhnout instalátor (Windows)
@@ -2765,21 +2775,15 @@ export default function App() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // Detekce stavby:// protokolu — ping test při načtení
+  // Detekce localhost helperu — ping při načtení
   useEffect(() => {
-    const testProtokol = () => {
-      // Zkusíme otevřít stavby://ping — pokud handler existuje, nezahlásí chybu
-      // Detekci dělá iframe trik: vytvoříme skrytý iframe, nastavíme src, počkáme
-      // Pokud prohlížeč zná protokol, iframe tiše selže (bez chyby v konzoli)
-      // Pokud nezná, nic se nestane — v obou případech to vypadá stejně z JS
-      // Proto používáme heuristiku: zkusíme otevřít a nastavíme příznak
-      // Skutečná detekce není možná z bezpečnostních důvodů — příznak nastavíme
-      // pokud uživatel klikne a složka se otevře (viz openFolder níže)
-    };
-    testProtokol();
+    fetch("http://localhost:3210/ping")
+      .then(r => { if (r.ok) setProtokolReady(true); })
+      .catch(() => {});
   }, []);
 
-  // Otevření složky — priorita: stavby:// protokol → rozšíření → clipboard
+  // Otevření složky — localhost helper na http://localhost:3210
+  // Funguje ve všech prohlížečích, žádné problémy s elevated právy
   const openFolder = (path) => {
     if (!path) return;
 
@@ -2789,33 +2793,26 @@ export default function App() {
       return;
     }
 
-    // Metoda 1: stavby:// vlastní protokol
-    // Použij window.open s about:blank — otevře nové okno, spustí protokol, okno se zavře
-    // Toto je jediná metoda která spolehlivě NEzavírá původní záložku v Chrome/Opera/Firefox
-    const encodedPath = encodeURIComponent(path);
-    const protokolUrl = `stavby://open?path=${encodedPath}`;
-
-    try {
-      const w = window.open("about:blank", "_blank", "width=1,height=1,left=-100,top=-100");
-      if (w) {
-        w.location.href = protokolUrl;
-        setTimeout(() => { try { w.close(); } catch {} }, 1000);
-        setProtokolReady(true);
-        showToast("📂 Otevírám složku…", "ok");
-        return;
-      }
-    } catch {}
-
-    // Metoda 2: rozšíření prohlížeče
-    if (extensionReady) {
-      window.postMessage({ type: "STAVBY_OPEN_FOLDER", path }, "*");
-      return;
-    }
-
-    // Metoda 3: clipboard fallback
-    navigator.clipboard.writeText(path)
-      .then(() => showToast("📋 Cesta zkopírována — nainstalujte stavby:// protokol (viz Nastavení → 💡)", "ok"))
-      .catch(() => showToast("Nepodařilo se zkopírovat cestu", "error"));
+    // Metoda 1: localhost helper
+    fetch(`http://localhost:3210/open?path=${encodeURIComponent(path)}`)
+      .then(r => {
+        if (r.ok) {
+          setProtokolReady(true);
+        } else {
+          throw new Error("Helper chyba");
+        }
+      })
+      .catch(() => {
+        // Metoda 2: rozšíření prohlížeče
+        if (extensionReady) {
+          window.postMessage({ type: "STAVBY_OPEN_FOLDER", path }, "*");
+          return;
+        }
+        // Metoda 3: clipboard fallback
+        navigator.clipboard.writeText(path)
+          .then(() => showToast("📋 Cesta zkopírována — nainstalujte Stavby Helper pro přímé otevírání (Nastavení → 💡)", "ok"))
+          .catch(() => showToast("Nepodařilo se zkopírovat cestu", "error"));
+      });
   };
 
   // Zobrazit tlačítko 💡 pro aktuálního uživatele?
@@ -3875,7 +3872,7 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0155</span>}
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0156</span>}
             <button onClick={() => { resetHelp(); setShowHelp(true); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
