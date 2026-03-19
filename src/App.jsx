@@ -2779,11 +2779,16 @@ export default function App() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // Detekce localhost helperu — ping při načtení
+  // Detekce localhost helperu — ping každých 30 sekund
   useEffect(() => {
-    fetch("http://localhost:47891/ping")
-      .then(r => { if (r.ok) setProtokolReady(true); })
-      .catch(() => {});
+    const checkHelper = () => {
+      fetch("http://localhost:47891/ping")
+        .then(r => { setProtokolReady(r.ok); })
+        .catch(() => { setProtokolReady(false); });
+    };
+    checkHelper();
+    const interval = setInterval(checkHelper, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Otevření složky — localhost helper na http://localhost:47891
