@@ -4174,6 +4174,8 @@ export default function App() {
   };
 
 
+  const isDark = isDarkComputed(theme);
+
   // ── Cache barev firem – useMemo, přepočítá se jen při změně firem/tématu ──
   const firmaColorCache = useMemo(() => {
     const cache = {};
@@ -4267,8 +4269,6 @@ export default function App() {
     const b = Math.round(255 - themeS * (255 - 232));
     return `rgb(${r},${g},${b})`;
   })();
-
-  const isDark = isDarkComputed(theme);
 
   const T = isDark ? {
     appBg: darkAppBg,
