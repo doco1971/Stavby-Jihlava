@@ -2402,7 +2402,6 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   };
 
   useEffect(() => { if (tab === "log") handleLoadLog(); }, [tab]);
-  useEffect(() => { resetSettingsPos(); }, [tab, appCardsCols]);
 
   const fmtCas = (cas) => {
     const d = new Date(cas);
@@ -2481,6 +2480,8 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const modalCardBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
   const settingsWidth = tab === "aplikace" ? Math.max(1000, appCardsCols * 320) : 1000;
   const { pos, onMouseDown: onDragStart, reset: resetSettingsPos } = useDraggable(settingsWidth, 560);
+
+  useEffect(() => { resetSettingsPos(); }, [tab, appCardsCols]);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1100, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
