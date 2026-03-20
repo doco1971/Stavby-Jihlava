@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0189
+// BUILD: 2026_03_20_build0190
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0190 — Název aplikace z DB, počet dní termínů z DB, demo max stavby z DB
 // BUILD0189 — Výchozí motiv světlý, timeout odhlášení z DB (auto_logout_minutes)
 // BUILD0188 — Nastavení Aplikace: 3 sloupce, Složka role Superadmin+, Import XLS potvrzovací dialog
 // BUILD0187 — Toolbar: Export+Tisk odděleny, Data roletka (Záloha+Obnova JSON), Import XLS→Nastavení, Export logu→Log modal, Graf: +Koláč +Trend
@@ -480,7 +481,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0189";
+const APP_BUILD = "build0190";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -531,7 +532,7 @@ const DEMO_CISELNIKY = {
   objednatele: ["Město Znojmo", "Jihomoravský kraj", "MO ČR", "Správa silnic"],
   stavbyvedouci: ["Jan Novák", "Petr Svoboda", "Marie Horáková", "Tomáš Blaha"],
 };
-const DEMO_MAX_STAVBY = 15;
+const DEMO_MAX_STAVBY_DEFAULT = 15;
 const DEMO_USERS = [
   { id: 1, email: "admin@demo.cz",   password: "demo", role: "admin",      name: "Admin Demo",    heslo: "demo" },
   { id: 2, email: "editor@demo.cz",  password: "demo", role: "user_e",     name: "Editor Demo",   heslo: "demo" },
@@ -1767,7 +1768,7 @@ function Login({ onLogin, users, onLogAction }) {
             <circle cx="65" cy="56" r="2" fill="#facc15" opacity="0.4" />
             <circle cx="15" cy="58" r="1.6" fill="#facc15" opacity="0.5" />
           </svg>
-          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 800, margin: 0 }}>Stavby Znojmo</h1>
+          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 800, margin: 0 }}>{appNazev}</h1>
           <p style={{ color: "rgba(255,255,255,0.5)", margin: "6px 0 0", fontSize: 15, letterSpacing: 2, textTransform: "uppercase" }}>kategorie 1 & 2</p>
         </div>
 
@@ -2313,7 +2314,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Znojmo", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -2408,6 +2409,9 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [editNotifyEmails, setEditNotifyEmails] = useState(notifyEmails || "");
   const [editSlozkaRole, setEditSlozkaRole] = useState(slozkaRole || "admin");
   const [editAutoLogout, setEditAutoLogout] = useState(String(autoLogoutMinutesProp || 15));
+  const [editAppNazev, setEditAppNazev] = useState(appNazevProp || "Stavby Znojmo");
+  const [editDeadlineDays, setEditDeadlineDays] = useState(String(deadlineDaysProp || 30));
+  const [editDemoMax, setEditDemoMax] = useState(String(demoMaxStavbyProp ?? 15));
 
   const modalBg = isDark ? "#1e293b" : "#ffffff";
   const modalBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -2610,8 +2614,22 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                       💾 Uložit verzi
                     </button>
                     <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>
-                      Footer: © {editDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI | v{editVerze}
+                      Footer: © {editDatum} {appNazev} – Martin Dočekal &amp; Claude AI | v{editVerze}
                     </div>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>🏷️ NÁZEV APLIKACE</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Zobrazí se v hlavičce, na přihlašovací obrazovce a ve footeru.</div>
+                    <input
+                      value={editAppNazev}
+                      onChange={e => setEditAppNazev(e.target.value)}
+                      placeholder="Stavby Znojmo"
+                      style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box", marginBottom: 8 }}
+                    />
+                    <button onClick={() => onSaveAppNazev(editAppNazev)} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      💾 Uložit název
+                    </button>
                   </div>
 
                 </div>
@@ -2655,6 +2673,52 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                       💾 Uložit
                     </button>
                     <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Výchozí: 15 minut. Rozsah: 1–480 minut.</div>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>⚠️ DNY PRO UPOZORNĚNÍ TERMÍNŮ</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Stavby s termínem ukončení do N dní se zobrazí v ⚠️ Termíny. Platí okamžitě.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={editDeadlineDays}
+                        onChange={e => setEditDeadlineDays(e.target.value)}
+                        style={{ width: 80, padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box" }}
+                      />
+                      <span style={{ color: modalMuted, fontSize: 12 }}>dní</span>
+                    </div>
+                    <button onClick={() => {
+                      const v = parseInt(editDeadlineDays);
+                      if (!isNaN(v) && v > 0) onSaveDeadlineDays(v);
+                    }} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#dc2626,#b91c1c)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      💾 Uložit
+                    </button>
+                    <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Výchozí: 30 dní. Rozsah: 1–365 dní.</div>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>🎮 DEMO — MAX. POČET STAVEB</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Maximální počet staveb v demo režimu.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={editDemoMax}
+                        onChange={e => setEditDemoMax(e.target.value)}
+                        style={{ width: 80, padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box" }}
+                      />
+                      <span style={{ color: modalMuted, fontSize: 12 }}>staveb</span>
+                    </div>
+                    <button onClick={() => {
+                      const v = parseInt(editDemoMax);
+                      if (!isNaN(v) && v >= 0 && v <= 50) onSaveDemoMaxStavby(v);
+                    }} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      💾 Uložit
+                    </button>
+                    <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Výchozí: 15. Rozsah: 0–50 staveb.</div>
                   </div>
 
                 </div>
@@ -3057,6 +3121,9 @@ export default function App() {
   const autoLogoutTimer = useRef(null);
   const autoLogoutCountdownTimer = useRef(null);
   const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(15);
+  const [appNazev, setAppNazev] = useState("Stavby Znojmo");
+  const [deadlineDays, setDeadlineDays] = useState(30);
+  const [demoMaxStavby, setDemoMaxStavby] = useState(15);
   // ── Browser notifikace ───────────────────────────────────
   const notifPermission = useRef(null);
   const notifSentRef = useRef(false);
@@ -3261,6 +3328,15 @@ export default function App() {
     sb("nastaveni?klic=eq.auto_logout_minutes").then(res => {
       if (res && res[0]) { const v = parseInt(res[0].hodnota); if (!isNaN(v) && v > 0) setAutoLogoutMinutes(v); }
     }).catch(() => {});
+    sb("nastaveni?klic=eq.app_nazev").then(res => {
+      if (res && res[0] && res[0].hodnota) setAppNazev(res[0].hodnota);
+    }).catch(() => {});
+    sb("nastaveni?klic=eq.deadline_days").then(res => {
+      if (res && res[0]) { const v = parseInt(res[0].hodnota); if (!isNaN(v) && v > 0) setDeadlineDays(v); }
+    }).catch(() => {});
+    sb("nastaveni?klic=eq.demo_max_stavby").then(res => {
+      if (res && res[0]) { const v = parseInt(res[0].hodnota); if (!isNaN(v) && v >= 0) setDemoMaxStavby(v); }
+    }).catch(() => {});
   }, [isDemo]);
 
   const saveZalohaRole = async (val) => {
@@ -3276,6 +3352,30 @@ export default function App() {
     if (isDemo) return;
     try {
       await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "auto_logout_minutes", hodnota: String(val) }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const saveAppNazev = async (val) => {
+    setAppNazev(val || "Stavby Znojmo");
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "app_nazev", hodnota: val }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const saveDeadlineDays = async (val) => {
+    setDeadlineDays(val);
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "deadline_days", hodnota: String(val) }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const saveDemoMaxStavby = async (val) => {
+    setDemoMaxStavby(val);
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "demo_max_stavby", hodnota: String(val) }), prefer: "resolution=merge-duplicates,return=minimal" });
     } catch {}
   };
 
@@ -3585,7 +3685,7 @@ export default function App() {
         const datum = parseDatum(r.ukonceni);
         if (!datum || datum < dnes) return null;
         const dni = pracovniDny(dnes, datum);
-        if (dni > 30) return null;
+        if (dni > deadlineDays) return null;
         return { ...r, dniDo: dni, datumUkonceni: datum };
       })
       .filter(Boolean)
@@ -3723,8 +3823,8 @@ export default function App() {
     const { id, nabidka, rozdil, ...fields } = newRow;
     NUM_FIELDS.forEach(k => { if (fields[k] === "" || fields[k] == null) fields[k] = 0; else fields[k] = Number(fields[k]) || 0; });
     if (isDemo) {
-      if (data.length >= DEMO_MAX_STAVBY) {
-        showToast(`Demo verze: maximum ${DEMO_MAX_STAVBY} staveb.`, "error");
+      if (data.length >= demoMaxStavby) {
+        showToast(`Demo verze: maximum ${demoMaxStavby} staveb.`, "error");
         return;
       }
       const demoId = data.length > 0 ? data.reduce((m, r) => Math.max(m, r.id), 0) + 1 : 1;
@@ -3749,8 +3849,8 @@ export default function App() {
     const { id, nabidka, rozdil, ...fields } = newRow;
     NUM_FIELDS.forEach(k => { if (fields[k] === "" || fields[k] == null) fields[k] = 0; else fields[k] = Number(fields[k]) || 0; });
     if (isDemo) {
-      if (data.length >= DEMO_MAX_STAVBY) {
-        showToast(`Demo verze: maximum ${DEMO_MAX_STAVBY} staveb.`, "error");
+      if (data.length >= demoMaxStavby) {
+        showToast(`Demo verze: maximum ${demoMaxStavby} staveb.`, "error");
         return;
       }
       const demoId = data.length > 0 ? data.reduce((m, r) => Math.max(m, r.id), 0) + 1 : 1;
@@ -4445,7 +4545,7 @@ export default function App() {
       )}
       {isDemo && (
         <div style={{ background: "linear-gradient(90deg,#b45309,#d97706)", color: "#fff", textAlign: "center", padding: "6px 16px", fontSize: 12, fontWeight: 700, letterSpacing: 0.5, flexShrink: 0 }}>
-          🎮 DEMO VERZE — plný přístup admin, data se neukládají, maximum {DEMO_MAX_STAVBY} staveb ({data.length}/{DEMO_MAX_STAVBY})
+          🎮 DEMO VERZE — plný přístup admin, data se neukládají, maximum {demoMaxStavby} staveb ({data.length}/{demoMaxStavby})
         </div>
       )}
       {isStaging && !isDemo && (
@@ -4467,7 +4567,7 @@ export default function App() {
           </svg>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22 }}>Stavby Znojmo</div>
+              <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22 }}>{appNazev}</div>
               {!isMobile && <div style={{ color: T.textMuted, fontSize: 16, textAlign: "center", letterSpacing: 1 }}>kategorie 1 & 2</div>}
             </div>
             {isStaging && !isDemo && (
@@ -4613,7 +4713,7 @@ export default function App() {
                 )}
                 <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{ display: "none" }} />
                 <input ref={importRef2} type="file" accept=".json" onChange={handleImportJSON} style={{ display: "none" }} />
-                {isEditor && <button onMouseEnter={e => showTooltip(e, "Přidat novou stavbu")} onMouseLeave={hideTooltip} onClick={() => { if (isDemo && data.length >= DEMO_MAX_STAVBY) { showToast(`Demo verze: maximum ${DEMO_MAX_STAVBY} staveb.`, "error"); return; } setAdding(true); }} style={{ padding: "0 14px", height: 28, background: isDemo && data.length >= DEMO_MAX_STAVBY ? "rgba(100,116,139,0.4)" : "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: isDemo && data.length >= DEMO_MAX_STAVBY ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600 }}>{isDemo ? `+ Přidat stavbu (${data.length}/${DEMO_MAX_STAVBY})` : "+ Přidat stavbu"}</button>}
+                {isEditor && <button onMouseEnter={e => showTooltip(e, "Přidat novou stavbu")} onMouseLeave={hideTooltip} onClick={() => { if (isDemo && data.length >= demoMaxStavby) { showToast(`Demo verze: maximum ${demoMaxStavby} staveb.`, "error"); return; } setAdding(true); }} style={{ padding: "0 14px", height: 28, background: isDemo && data.length >= demoMaxStavby ? "rgba(100,116,139,0.4)" : "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: isDemo && data.length >= demoMaxStavby ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600 }}>{isDemo ? `+ Přidat stavbu (${data.length}/${demoMaxStavby})` : "+ Přidat stavbu"}</button>}
               </div>
             </>
           )}
@@ -4632,7 +4732,7 @@ export default function App() {
             <button onClick={() => setShowGraf(true)} style={{ padding: "0 8px", height: 28, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: T.text, cursor: "pointer", fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>📊</button>
             <NativeSelect value="⬇" onChange={v => { if (v === "📄 CSV (.csv)") exportCSV(); else if (v === "📊 Excel (.xlsx)") exportXLS(); else if (v === "🎨 Barevný Excel") exportXLSColor(); else if (v === "🖨️ Tisk") exportPDF(); }} options={["⬇", "📄 CSV (.csv)", "📊 Excel (.xlsx)", "🎨 Barevný Excel", "🖨️ Tisk"]} isDark={isDark} style={{ flexShrink: 0, width: 55 }} />
             {isEditor && (
-              <button onClick={() => { if (isDemo && data.length >= DEMO_MAX_STAVBY) { showToast(`Demo: max ${DEMO_MAX_STAVBY} staveb.`, "error"); return; } setAdding(true); }} style={{ marginLeft: "auto", padding: "0 12px", height: 28, background: isDemo && data.length >= DEMO_MAX_STAVBY ? "rgba(100,116,139,0.4)" : "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>+ Přidat</button>
+              <button onClick={() => { if (isDemo && data.length >= demoMaxStavby) { showToast(`Demo: max ${demoMaxStavby} staveb.`, "error"); return; } setAdding(true); }} style={{ marginLeft: "auto", padding: "0 12px", height: 28, background: isDemo && data.length >= demoMaxStavby ? "rgba(100,116,139,0.4)" : "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>+ Přidat</button>
             )}
           </div>
         )}
@@ -4848,7 +4948,7 @@ export default function App() {
       </div>
 
       <div ref={footerRef} className="no-print" style={{ textAlign: "center", padding: "4px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11, flexShrink: 0 }}>
-        © {appDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
+        © {appDatum} {appNazev} – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
       </div>
 
       {/* HELP MODAL */}
@@ -5213,7 +5313,7 @@ export default function App() {
       {adding && <FormModal title="➕ Nová stavba" initial={emptyRow} onSave={handleAdd} onClose={() => setAdding(false)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {editRow && <FormModal title={`✏️ Editace stavby #${editRow.id}`} initial={editRow} onSave={handleSave} onClose={() => setEditRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {copyRow && <FormModal title="📋 Kopírovat stavbu" initial={copyRow} onSave={handleCopySave} onClose={() => setCopyRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} extensionReady={extensionReady} protokolReady={protokolReady} autoZaloha={autoZaloha} onSaveAutoZaloha={(v) => { setAutoZaloha(v); try { localStorage.setItem("autoZaloha", v ? "true" : "false"); } catch {} }} zalohaRole={zalohaRole} onSaveZalohaRole={saveZalohaRole} onImportXLS={() => importRef.current?.click()} autoLogoutMinutesProp={autoLogoutMinutes} onSaveAutoLogoutMinutes={saveAutoLogoutMinutes} />}
+      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} extensionReady={extensionReady} protokolReady={protokolReady} autoZaloha={autoZaloha} onSaveAutoZaloha={(v) => { setAutoZaloha(v); try { localStorage.setItem("autoZaloha", v ? "true" : "false"); } catch {} }} zalohaRole={zalohaRole} onSaveZalohaRole={saveZalohaRole} onImportXLS={() => importRef.current?.click()} autoLogoutMinutesProp={autoLogoutMinutes} onSaveAutoLogoutMinutes={saveAutoLogoutMinutes} appNazevProp={appNazev} onSaveAppNazev={saveAppNazev} deadlineDaysProp={deadlineDays} onSaveDeadlineDays={saveDeadlineDays} demoMaxStavbyProp={demoMaxStavby} onSaveDemoMaxStavby={saveDemoMaxStavby} />}
 
       {showOrphanWarning && (() => {
         const firmyNames = firmy.map(f => f.hodnota);
