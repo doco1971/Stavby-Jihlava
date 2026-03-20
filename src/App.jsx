@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0190
+// BUILD: 2026_03_20_build0191
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0191 — Povinná pole (cislo_stavby, nazev, ukonceni, sod, ze_dne) + Prefix číslování staveb
 // BUILD0190 — Název aplikace z DB, počet dní termínů z DB, demo max stavby z DB
 // BUILD0189 — Výchozí motiv světlý, timeout odhlášení z DB (auto_logout_minutes)
 // BUILD0188 — Nastavení Aplikace: 3 sloupce, Složka role Superadmin+, Import XLS potvrzovací dialog
@@ -481,7 +482,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0190";
+const APP_BUILD = "build0191";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -1971,7 +1972,7 @@ function FormSelectField({ label, value, onChange, options, allowEmpty }) {
   );
 }
 
-function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavbyvedouci: svList }) {
+function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavbyvedouci: svList, povinnaPole = {} }) {
   const [form, setForm] = useState({ ...initial });
   const [saveErr, setSaveErr] = useState("");
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -1993,7 +1994,16 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
         return;
       }
     }
-    if (!form.nazev_stavby?.trim()) { setSaveErr("Název stavby je povinný!"); return; }
+    // Povinná pole — vždy nazev_stavby + dynamická konfigurace
+    const povinnaLabels = { cislo_stavby: "Číslo stavby", nazev_stavby: "Název stavby", ukonceni: "Ukončení", sod: "SOD", ze_dne: "Ze dne" };
+    for (const [k, label] of Object.entries(povinnaLabels)) {
+      if (k === "nazev_stavby" || povinnaPole[k]) {
+        if (!form[k] || !String(form[k]).trim()) {
+          setSaveErr(`Pole "${label}" je povinné!`);
+          return;
+        }
+      }
+    }
     setSaveErr("");
     onSave(computeRow(form));
   };
@@ -2314,7 +2324,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Znojmo", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Znojmo", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby, povinnaPole = {}, onSavePovinnaPole, prefixEnabled = false, prefixValue = "ZN-", onSaveCisloPrefix }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -2412,6 +2422,9 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [editAppNazev, setEditAppNazev] = useState(appNazevProp || "Stavby Znojmo");
   const [editDeadlineDays, setEditDeadlineDays] = useState(String(deadlineDaysProp || 30));
   const [editDemoMax, setEditDemoMax] = useState(String(demoMaxStavbyProp ?? 15));
+  const [editPovinnaPole, setEditPovinnaPole] = useState({ ...povinnaPole });
+  const [editPrefixEnabled, setEditPrefixEnabled] = useState(prefixEnabled);
+  const [editPrefixValue, setEditPrefixValue] = useState(prefixValue || "ZN-");
 
   const modalBg = isDark ? "#1e293b" : "#ffffff";
   const modalBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -2575,6 +2588,57 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                         <div style={{ color: modalMuted, fontSize: 11 }}>Při prvním přihlášení superadmina každý den.</div>
                       </div>
                     </div>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>✅ POVINNÁ POLE</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Název stavby je vždy povinný. Ostatní pole lze zapnout/vypnout.</div>
+                    {[
+                      ["nazev_stavby", "Název stavby", true],
+                      ["cislo_stavby", "Číslo stavby", false],
+                      ["ukonceni", "Ukončení", false],
+                      ["sod", "SOD", false],
+                      ["ze_dne", "Ze dne", false],
+                    ].map(([key, label, locked]) => (
+                      <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${modalBorder}` }}>
+                        <span style={{ color: locked ? modalMuted : modalText, fontSize: 12 }}>{label}{locked && <span style={{ color: modalMuted, fontSize: 10, marginLeft: 6 }}>(vždy)</span>}</span>
+                        <button
+                          disabled={locked}
+                          onClick={() => {
+                            const next = { ...editPovinnaPole, [key]: !editPovinnaPole[key] };
+                            setEditPovinnaPole(next);
+                            onSavePovinnaPole(next);
+                          }}
+                          style={{ padding: "4px 12px", background: (locked || editPovinnaPole[key]) ? "linear-gradient(135deg,#059669,#047857)" : (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"), border: `1px solid ${(locked || editPovinnaPole[key]) ? "#059669" : modalBorder}`, borderRadius: 6, color: (locked || editPovinnaPole[key]) ? "#fff" : modalMuted, cursor: locked ? "default" : "pointer", fontSize: 11, fontWeight: 600 }}
+                        >
+                          {(locked || editPovinnaPole[key]) ? "✅ Ano" : "⚪ Ne"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>🔢 PREFIX ČÍSLOVÁNÍ STAVEB</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Automaticky předvyplní číslo stavby při přidání nové zakázky.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                      <button
+                        onClick={() => { const next = !editPrefixEnabled; setEditPrefixEnabled(next); onSaveCisloPrefix(next, editPrefixValue); }}
+                        style={{ padding: "7px 14px", background: editPrefixEnabled ? "linear-gradient(135deg,#059669,#047857)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"), border: `1px solid ${editPrefixEnabled ? "#059669" : modalBorder}`, borderRadius: 7, color: editPrefixEnabled ? "#fff" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                        {editPrefixEnabled ? "✅ Zapnut" : "⚪ Vypnut"}
+                      </button>
+                    </div>
+                    {editPrefixEnabled && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <input
+                          value={editPrefixValue}
+                          onChange={e => setEditPrefixValue(e.target.value)}
+                          placeholder="ZN-"
+                          style={{ width: 100, padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box" }}
+                        />
+                        <button onClick={() => onSaveCisloPrefix(editPrefixEnabled, editPrefixValue)} style={{ padding: "8px 14px", background: "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>💾 Uložit</button>
+                        <span style={{ color: modalMuted, fontSize: 11 }}>např. ZN-I-2025-</span>
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -3124,6 +3188,11 @@ export default function App() {
   const [appNazev, setAppNazev] = useState("Stavby Znojmo");
   const [deadlineDays, setDeadlineDays] = useState(30);
   const [demoMaxStavby, setDemoMaxStavby] = useState(15);
+  // Povinná pole: objekt { cislo_stavby: false, nazev_stavby: true, ukonceni: false, sod: false, ze_dne: false }
+  const [povinnaPole, setPovinnaPole] = useState({ cislo_stavby: false, nazev_stavby: true, ukonceni: false, sod: false, ze_dne: false });
+  // Prefix číslování
+  const [prefixEnabled, setPrefixEnabled] = useState(false);
+  const [prefixValue, setPrefixValue] = useState("ZN-");
   // ── Browser notifikace ───────────────────────────────────
   const notifPermission = useRef(null);
   const notifSentRef = useRef(false);
@@ -3337,6 +3406,12 @@ export default function App() {
     sb("nastaveni?klic=eq.demo_max_stavby").then(res => {
       if (res && res[0]) { const v = parseInt(res[0].hodnota); if (!isNaN(v) && v >= 0) setDemoMaxStavby(v); }
     }).catch(() => {});
+    sb("nastaveni?klic=eq.povinna_pole").then(res => {
+      if (res && res[0]) { try { const v = JSON.parse(res[0].hodnota); setPovinnaPole(prev => ({ ...prev, ...v, nazev_stavby: true })); } catch {} }
+    }).catch(() => {});
+    sb("nastaveni?klic=eq.cislo_prefix").then(res => {
+      if (res && res[0]) { try { const v = JSON.parse(res[0].hodnota); setPrefixEnabled(!!v.enabled); setPrefixValue(v.value || "ZN-"); } catch {} }
+    }).catch(() => {});
   }, [isDemo]);
 
   const saveZalohaRole = async (val) => {
@@ -3376,6 +3451,24 @@ export default function App() {
     if (isDemo) return;
     try {
       await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "demo_max_stavby", hodnota: String(val) }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const savePovinnaPole = async (pole) => {
+    const next = { ...pole, nazev_stavby: true }; // nazev_stavby vždy povinný
+    setPovinnaPole(next);
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "povinna_pole", hodnota: JSON.stringify(next) }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const saveCisloPrefix = async (enabled, value) => {
+    setPrefixEnabled(enabled);
+    setPrefixValue(value);
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "cislo_prefix", hodnota: JSON.stringify({ enabled, value }) }), prefer: "resolution=merge-duplicates,return=minimal" });
     } catch {}
   };
 
@@ -4447,7 +4540,7 @@ export default function App() {
   };
 
   const nextId = data.length > 0 ? data.reduce((max, r) => Math.max(max, r.id), 0) + 1 : 1;
-  const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", cislo_faktury_2: "", castka_bez_dph_2: 0, splatna_2: "", poznamka: "" };
+  const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: prefixEnabled ? prefixValue : "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", cislo_faktury_2: "", castka_bez_dph_2: 0, splatna_2: "", poznamka: "" };
 
   const getFirmaColor = (firmaName) => firmaColorCache[firmaName] || { bg: isDark ? "#1a2744" : "#e2e8f0", badge: "rgba(59,130,246,0.25)", badgeBorder: "rgba(59,130,246,0.6)", text: "#3b82f6", hex: "#3b82f6" };
 
@@ -5310,10 +5403,10 @@ export default function App() {
           </div>
         </div>
       )}
-      {adding && <FormModal title="➕ Nová stavba" initial={emptyRow} onSave={handleAdd} onClose={() => setAdding(false)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {editRow && <FormModal title={`✏️ Editace stavby #${editRow.id}`} initial={editRow} onSave={handleSave} onClose={() => setEditRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {copyRow && <FormModal title="📋 Kopírovat stavbu" initial={copyRow} onSave={handleCopySave} onClose={() => setCopyRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} extensionReady={extensionReady} protokolReady={protokolReady} autoZaloha={autoZaloha} onSaveAutoZaloha={(v) => { setAutoZaloha(v); try { localStorage.setItem("autoZaloha", v ? "true" : "false"); } catch {} }} zalohaRole={zalohaRole} onSaveZalohaRole={saveZalohaRole} onImportXLS={() => importRef.current?.click()} autoLogoutMinutesProp={autoLogoutMinutes} onSaveAutoLogoutMinutes={saveAutoLogoutMinutes} appNazevProp={appNazev} onSaveAppNazev={saveAppNazev} deadlineDaysProp={deadlineDays} onSaveDeadlineDays={saveDeadlineDays} demoMaxStavbyProp={demoMaxStavby} onSaveDemoMaxStavby={saveDemoMaxStavby} />}
+      {adding && <FormModal title="➕ Nová stavba" initial={emptyRow} onSave={handleAdd} onClose={() => setAdding(false)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} povinnaPole={povinnaPole} />}
+      {editRow && <FormModal title={`✏️ Editace stavby #${editRow.id}`} initial={editRow} onSave={handleSave} onClose={() => setEditRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} povinnaPole={povinnaPole} />}
+      {copyRow && <FormModal title="📋 Kopírovat stavbu" initial={copyRow} onSave={handleCopySave} onClose={() => setCopyRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} povinnaPole={povinnaPole} />}
+      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} extensionReady={extensionReady} protokolReady={protokolReady} autoZaloha={autoZaloha} onSaveAutoZaloha={(v) => { setAutoZaloha(v); try { localStorage.setItem("autoZaloha", v ? "true" : "false"); } catch {} }} zalohaRole={zalohaRole} onSaveZalohaRole={saveZalohaRole} onImportXLS={() => importRef.current?.click()} autoLogoutMinutesProp={autoLogoutMinutes} onSaveAutoLogoutMinutes={saveAutoLogoutMinutes} appNazevProp={appNazev} onSaveAppNazev={saveAppNazev} deadlineDaysProp={deadlineDays} onSaveDeadlineDays={saveDeadlineDays} demoMaxStavbyProp={demoMaxStavby} onSaveDemoMaxStavby={saveDemoMaxStavby} povinnaPole={povinnaPole} onSavePovinnaPole={savePovinnaPole} prefixEnabled={prefixEnabled} prefixValue={prefixValue} onSaveCisloPrefix={saveCisloPrefix} />}
 
       {showOrphanWarning && (() => {
         const firmyNames = firmy.map(f => f.hodnota);
