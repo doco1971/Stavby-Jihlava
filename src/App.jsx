@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0183
+// BUILD: 2026_03_20_build0184
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -225,6 +225,7 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
+// BUILD0184 — Tisk: obnoveny barvy firem a radku (odstranen background-color:transparent)
 // BUILD0183 — Tisk: zoom 0.55 (vsechny sloupce), skryty symboly hlavicek
 // BUILD0182 — Tisk: skryty sloupce AKCE (print-hide-col), tabulka na sirku stranky
 // BUILD0181 — Fix tisk PDF: setTimeout 50ms před window.print() (INP issue)
@@ -270,7 +271,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0183";
+const APP_BUILD = "build0184";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -3981,8 +3982,8 @@ export default function App() {
         /* Světlý motiv při tisku — přepíše tmavý theme */
         html.printing, html.printing body { background: white !important; color: black !important; overflow: visible !important; height: auto !important; }
         html.printing .no-print { display: none !important; }
-        html.printing * { background-color: transparent !important; color: black !important; border-color: #cccccc !important; overflow: visible !important; }
-        /* Zachovat barvy firem a zvýraznění buněk */
+        html.printing * { color: black !important; border-color: #cccccc !important; overflow: visible !important; }
+        /* Zachovat barvy firem a zvýraznění buněk — nepřepisovat background */
         html.printing [style*="color:#3b82f6"], html.printing [style*="color: #3b82f6"] { color: #1d4ed8 !important; }
         html.printing [style*="color:#10b981"], html.printing [style*="color: #10b981"] { color: #047857 !important; }
         html.printing [style*="color:#f59e0b"], html.printing [style*="color: #f59e0b"] { color: #b45309 !important; }
@@ -3991,13 +3992,7 @@ export default function App() {
         html.printing [style*="color:#4ade80"], html.printing [style*="color: #4ade80"] { color: #166534 !important; }
         html.printing [style*="color:#fbbf24"], html.printing [style*="color: #fbbf24"] { color: #854d0e !important; }
         html.printing [style*="color:#60a5fa"], html.printing [style*="color: #60a5fa"] { color: #1d4ed8 !important; }
-        html.printing [style*="background:rgba(34,197,94"]  { background-color: #dcfce7 !important; }
-        html.printing [style*="background:rgba(239,68,68"]  { background-color: #fee2e2 !important; }
-        html.printing [style*="background:rgba(251,191,36"] { background-color: #fef9c3 !important; }
-        html.printing [style*="background:rgba(59,130,246"] { background-color: #dbeafe !important; }
-        html.printing [style*="background:rgba(37,99,235"]  { background-color: #dbeafe !important; }
-        html.printing [style*="background:rgba(16,185,129"] { background-color: #d1fae5 !important; }
-        html.printing [style*="background:rgba(139,92,246"] { background-color: #ede9fe !important; }
+        /* Tmavé pozadí aplikace → bílé */
         html.printing [style*="background:#1e293b"], html.printing [style*="background: #1e293b"] { background-color: #f8fafc !important; }
         html.printing [style*="background:#0f172a"], html.printing [style*="background: #0f172a"] { background-color: white !important; }
       `}</style>
