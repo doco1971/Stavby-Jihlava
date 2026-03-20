@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0181
+// BUILD: 2026_03_20_build0182
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -225,6 +225,7 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
+// BUILD0182 — Tisk: skryty sloupce AKCE (print-hide-col), tabulka na sirku stranky
 // BUILD0181 — Fix tisk PDF: setTimeout 50ms před window.print() (INP issue)
 // BUILD0180 — Tisk/PDF: window.print() + @media print, žádné nové okno
 // BUILD0179 — sb() AbortController timeout 10s + useDraggable memory leak fix
@@ -268,7 +269,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0181";
+const APP_BUILD = "build0182";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -3969,7 +3970,10 @@ export default function App() {
         @media print {
           @page { size: A4 landscape; margin: 6mm; }
           .no-print { display: none !important; }
+          .print-hide-col { display: none !important; }
           * { overflow: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          table { width: 100% !important; table-layout: auto !important; font-size: 8px !important; }
+          td, th { padding: 3px 4px !important; white-space: nowrap !important; }
         }
         /* Světlý motiv při tisku — přepíše tmavý theme */
         html.printing, html.printing body { background: white !important; color: black !important; overflow: visible !important; height: auto !important; }
@@ -4252,19 +4256,16 @@ export default function App() {
         <table style={{ borderCollapse: "collapse", fontSize: 12.5, tableLayout: "fixed", width: "max-content" }}>
           <colgroup>
             <col style={{ width: 40 }} />
-            {(isAdmin || isEditor) && <col style={{ width: 90 }} />}
+            {(isAdmin || isEditor) && <col className="print-hide-col" style={{ width: 90 }} />}
             {orderedCols.map(col => (
               <col key={col.key} style={{ width: getColWidth(col) }} />
             ))}
-            {(isAdmin || isEditor) && <col style={{ width: 120 }} />}
+            {(isAdmin || isEditor) && <col className="print-hide-col" style={{ width: 120 }} />}
           </colgroup>
           <thead>
             <tr style={{ background: T.theadBg }}>
               <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
-              {(isAdmin || isEditor) && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
-              {orderedCols.map(col => (
-                <th key={col.key}
-                  draggable={isSuperAdmin}
+              {(isAdmin || isEditor) && <th className="print-hide-col" style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
                   onDragStart={isSuperAdmin ? e => handleColDragStart(e, col.key) : undefined}
                   onDragOver={isSuperAdmin ? e => handleColDragOver(e, col.key) : undefined}
                   onDragLeave={isSuperAdmin ? handleColDragLeave : undefined}
@@ -4298,7 +4299,7 @@ export default function App() {
                   </div>
                 </th>
               ))}
-              {(isAdmin || isEditor) && <th style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
+              {(isAdmin || isEditor) && <th className="print-hide-col" style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
             </tr>
           </thead>
           <tbody>
@@ -4319,7 +4320,7 @@ export default function App() {
                 </td>
                 {/* AKCE vlevo */}
                 {(isAdmin || isEditor) && (
-                  <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
+                  <td className="print-hide-col" style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
                     {isAdmin && <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} onMouseEnter={e => showTooltip(e, "Smazat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11, marginRight: 5 }}>🗑️</button>}
                     <button onClick={() => setEditRow(row)} onMouseEnter={e => showTooltip(e, "Editovat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11 }}>✏️</button>
                     {!isDemo && <button onClick={() => setHistorieRow(row)} onMouseEnter={e => showTooltip(e, historieNovinky[String(row.id)] ? "Historie změn — obsahuje záznamy" : "Historie změn stavby")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: 5, color: "#c084fc", cursor: "pointer", fontSize: 11, marginLeft: 5, position: "relative" }}>
@@ -4398,7 +4399,7 @@ export default function App() {
                 })}
                 {/* AKCE vpravo */}
                 {(isAdmin || isEditor) && (
-                  <td style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
+                  <td className="print-hide-col" style={{ padding: "7px 11px", whiteSpace: "nowrap", border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>
                     <button onClick={() => setEditRow(row)} onMouseEnter={e => showTooltip(e, "Editovat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(37,99,235,0.2)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: 5, color: "#60a5fa", cursor: "pointer", fontSize: 11, marginRight: 5 }}>✏️ Editovat</button>
                     <button onClick={() => handleCopy(row)} onMouseEnter={e => showTooltip(e, "Kopírovat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 5, color: "#34d399", cursor: "pointer", fontSize: 11, marginRight: isAdmin ? 5 : 0 }}>📋</button>
                     {isAdmin && <button onClick={() => setDeleteConfirm({ id: row.id, step: 1 })} onMouseEnter={e => showTooltip(e, "Smazat stavbu")} onMouseLeave={hideTooltip} style={{ padding: "3px 9px", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 5, color: "#f87171", cursor: "pointer", fontSize: 11 }}>🗑️</button>}
