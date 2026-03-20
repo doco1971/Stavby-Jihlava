@@ -1714,7 +1714,7 @@ function GrafModal({ data, firmy, isDark, onClose }) {
 // ============================================================
 // LOGIN
 // ============================================================
-function Login({ onLogin, users, onLogAction }) {
+function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
@@ -2614,7 +2614,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                       💾 Uložit verzi
                     </button>
                     <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>
-                      Footer: © {editDatum} {appNazev} – Martin Dočekal &amp; Claude AI | v{editVerze}
+                      Footer: © {editDatum} {appNazevProp} – Martin Dočekal &amp; Claude AI | v{editVerze}
                     </div>
                   </div>
 
@@ -4361,7 +4361,7 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Login onLogin={setUser} users={users} onLogAction={logAkce} />;
+  if (!user) return <Login onLogin={setUser} users={users} onLogAction={logAkce} appNazev={appNazev} />;
 
   const changeTheme = (t) => {
     setTheme(t);
