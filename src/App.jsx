@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0194
+// BUILD: 2026_03_20_build0195
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0195 — FIX: useDraggable reset s overrideW, useEffect pořadí v SettingsModal
 // BUILD0194 — Nastavení Aplikace: volitelný počet sloupců 1–5 (localStorage)
 // BUILD0193 — Nastavení Aplikace: optimální 3 sloupce, drag&drop karet, reset pořadí
 // BUILD0192 — Viditelnost sloupců per role (sloupce_role) v Nastavení → Aplikace
@@ -485,7 +486,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0194";
+const APP_BUILD = "build0195";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -597,16 +598,17 @@ const hexToRgbaGlobal = (hex, alpha) => `rgba(${hexToRgb(hex)},${alpha})`;
 // ── useDraggable hook — jednotný drag pro všechna plovoucí okna ───────────────
 // w, h = šířka a výška okna v px (pro výpočet středu); lze předat 0 pokud neznáme
 function useDraggable(w = 600, h = 500) {
-  const calcPos = () => {
+  const calcPos = (overrideW) => {
     const iW = typeof window !== "undefined" ? window.innerWidth : 1200;
+    const effectiveW = overrideW ?? w;
     return {
-      x: Math.max(10, Math.round(iW / 2 - Math.min(w, iW * 0.97) / 2)),
+      x: Math.max(10, Math.round(iW / 2 - Math.min(effectiveW, iW * 0.97) / 2)),
       y: 10,
     };
   };
   const [pos, setPos] = useState(calcPos);
   useEffect(() => { setPos(calcPos()); }, []);
-  const reset = useCallback(() => setPos(calcPos()), []);
+  const reset = useCallback((overrideW) => setPos(calcPos(overrideW)), [w]);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const posRef = useRef(pos);
@@ -2481,7 +2483,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const settingsWidth = tab === "aplikace" ? Math.max(1000, appCardsCols * 320) : 1000;
   const { pos, onMouseDown: onDragStart, reset: resetSettingsPos } = useDraggable(settingsWidth, 560);
 
-  useEffect(() => { resetSettingsPos(); }, [tab, appCardsCols]);
+  useEffect(() => { resetSettingsPos(settingsWidth); }, [tab, appCardsCols, settingsWidth]);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1100, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
