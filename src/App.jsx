@@ -2482,7 +2482,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1100, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
-      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: "min(1000px, 96vw)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: tab === "aplikace" ? `min(${Math.max(1000, appCardsCols * 260)}px, 98vw)` : "min(1000px, 96vw)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
 
         {/* header — táhlo */}
         <div onMouseDown={onDragStart} style={dragHeaderStyle()}>
