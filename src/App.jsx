@@ -4266,6 +4266,9 @@ export default function App() {
             <tr style={{ background: T.theadBg }}>
               <th style={{ padding: "9px 11px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, whiteSpace: "nowrap", minWidth: 40, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}` }}>#</th>
               {(isAdmin || isEditor) && <th className="print-hide-col" style={{ padding: "9px 11px", color: T.textMuted, fontWeight: 700, fontSize: 10.5, position: "sticky", top: 0, background: T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, textAlign: "center" }}>AKCE</th>}
+              {orderedCols.map(col => (
+                <th key={col.key}
+                  draggable={isSuperAdmin}
                   onDragStart={isSuperAdmin ? e => handleColDragStart(e, col.key) : undefined}
                   onDragOver={isSuperAdmin ? e => handleColDragOver(e, col.key) : undefined}
                   onDragLeave={isSuperAdmin ? handleColDragLeave : undefined}
