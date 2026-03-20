@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0184
+// BUILD: 2026_03_20_build0185
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -225,6 +225,7 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
+// BUILD0185 — Tisk: svetly vizual - bgLight pro radky, td transparent, th modra
 // BUILD0184 — Tisk: obnoveny barvy firem a radku (odstranen background-color:transparent)
 // BUILD0183 — Tisk: zoom 0.55 (vsechny sloupce), skryty symboly hlavicek
 // BUILD0182 — Tisk: skryty sloupce AKCE (print-hide-col), tabulka na sirku stranky
@@ -271,7 +272,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0184";
+const APP_BUILD = "build0185";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -3818,8 +3819,11 @@ export default function App() {
       const [r, g, b] = parts;
       const br = isDark ? 15 : 241, bg2 = isDark ? 23 : 245, bb = isDark ? 42 : 249;
       const mix = isDark ? 0.18 : 0.15;
+      // světlá varianta vždy (pro tisk)
+      const mixL = 0.15;
       cache[name] = {
         bg: `rgb(${Math.round(r*mix+br*(1-mix))},${Math.round(g*mix+bg2*(1-mix))},${Math.round(b*mix+bb*(1-mix))})`,
+        bgLight: `rgb(${Math.round(r*mixL+241*(1-mixL))},${Math.round(g*mixL+245*(1-mixL))},${Math.round(b*mixL+249*(1-mixL))})`,
         badge: hexToRgbaGlobal(hex, 0.25),
         badgeBorder: hexToRgbaGlobal(hex, 0.6),
         text: hex,
@@ -3983,6 +3987,10 @@ export default function App() {
         html.printing, html.printing body { background: white !important; color: black !important; overflow: visible !important; height: auto !important; }
         html.printing .no-print { display: none !important; }
         html.printing * { color: black !important; border-color: #cccccc !important; overflow: visible !important; }
+        /* Řádky tabulky — světlé barvy firem */
+        html.printing tr { background: var(--print-bg, #f8fafc) !important; }
+        html.printing td { background: transparent !important; }
+        html.printing th { background: #1e3a8a !important; color: white !important; }
         /* Zachovat barvy firem a zvýraznění buněk — nepřepisovat background */
         html.printing [style*="color:#3b82f6"], html.printing [style*="color: #3b82f6"] { color: #1d4ed8 !important; }
         html.printing [style*="color:#10b981"], html.printing [style*="color: #10b981"] { color: #047857 !important; }
@@ -3992,9 +4000,8 @@ export default function App() {
         html.printing [style*="color:#4ade80"], html.printing [style*="color: #4ade80"] { color: #166534 !important; }
         html.printing [style*="color:#fbbf24"], html.printing [style*="color: #fbbf24"] { color: #854d0e !important; }
         html.printing [style*="color:#60a5fa"], html.printing [style*="color: #60a5fa"] { color: #1d4ed8 !important; }
-        /* Tmavé pozadí aplikace → bílé */
-        html.printing [style*="background:#1e293b"], html.printing [style*="background: #1e293b"] { background-color: #f8fafc !important; }
-        html.printing [style*="background:#0f172a"], html.printing [style*="background: #0f172a"] { background-color: white !important; }
+        /* Firma badge — zachovat barvy */
+        html.printing .firma-badge { color: inherit !important; }
       `}</style>
 
       {/* Liquid Glass — animované orby na pozadí */}
@@ -4309,9 +4316,10 @@ export default function App() {
               const isFaktura = row.cislo_faktury && row.cislo_faktury.trim() !== "" && row.castka_bez_dph && Number(row.castka_bez_dph) !== 0 && row.splatna && row.splatna.trim() !== "";
               const isFaktura2 = !!(row.cislo_faktury_2 || row.castka_bez_dph_2 || row.splatna_2);
               const baseBg = isFaktura ? "rgba(22,163,74,0.45)" : rowBg(row.firma);
+              const printBg = isFaktura ? "#dcfce7" : (getFirmaColor(row.firma).bgLight || "#f8fafc");
               return (
               <tr key={row.id}
-                style={{ background: baseBg, transition: "background 0.1s", color: T.text, minHeight: 34 }}
+                style={{ background: baseBg, transition: "background 0.1s", color: T.text, minHeight: 34, "--print-bg": printBg }}
                 onMouseEnter={e => e.currentTarget.style.background = isFaktura ? "rgba(22,163,74,0.60)" : T.hoverBg}
                 onMouseLeave={e => e.currentTarget.style.background = baseBg}
               >
