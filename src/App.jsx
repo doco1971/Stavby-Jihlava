@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0182
+// BUILD: 2026_03_20_build0183
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -225,6 +225,7 @@ import * as XLSX from "xlsx";
 // BUILD0152 — Chrome/Opera rozšíření pro otevírání složek bez zavření záložky
 //   Detekce extensionReady, openFolder() s fallback na clipboard
 //   stavby-rozsireni.zip: extension + native helper (Python)
+// BUILD0183 — Tisk: zoom 0.55 (vsechny sloupce), skryty symboly hlavicek
 // BUILD0182 — Tisk: skryty sloupce AKCE (print-hide-col), tabulka na sirku stranky
 // BUILD0181 — Fix tisk PDF: setTimeout 50ms před window.print() (INP issue)
 // BUILD0180 — Tisk/PDF: window.print() + @media print, žádné nové okno
@@ -269,7 +270,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0182";
+const APP_BUILD = "build0183";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -3968,12 +3969,14 @@ export default function App() {
 
         /* ── TISK / PDF ─────────────────────────────────────── */
         @media print {
-          @page { size: A4 landscape; margin: 6mm; }
+          @page { size: A4 landscape; margin: 4mm; }
           .no-print { display: none !important; }
           .print-hide-col { display: none !important; }
+          .print-hide-symbol { display: none !important; }
           * { overflow: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          table { width: 100% !important; table-layout: auto !important; font-size: 8px !important; }
-          td, th { padding: 3px 4px !important; white-space: nowrap !important; }
+          .table-wrapper { overflow: visible !important; width: 100% !important; }
+          table { table-layout: auto !important; font-size: 7px !important; zoom: 0.55; }
+          td, th { padding: 2px 3px !important; white-space: nowrap !important; }
         }
         /* Světlý motiv při tisku — přepíše tmavý theme */
         html.printing, html.printing body { background: white !important; color: black !important; overflow: visible !important; height: auto !important; }
@@ -4278,7 +4281,7 @@ export default function App() {
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, width: "100%", minWidth: 0 }}>
                     {isSuperAdmin && (
-                      <span style={{ color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)", fontSize: 11, flexShrink: 0, cursor: "grab", lineHeight: 1 }} title="Táhni pro přesun sloupce">⠿</span>
+                      <span className="print-hide-symbol" style={{ color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)", fontSize: 11, flexShrink: 0, cursor: "grab", lineHeight: 1 }} title="Táhni pro přesun sloupce">⠿</span>
                     )}
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, textAlign: "center", minWidth: 0 }}>{col.label.toUpperCase()}</span>
                     {isSuperAdmin && (
@@ -4292,7 +4295,7 @@ export default function App() {
                             style={{ width: 50, fontSize: 10, padding: "1px 3px", background: "#1e3a8a", color: "#fff", border: "1px solid #60a5fa", borderRadius: 3, flexShrink: 0 }}
                             onClick={e => e.stopPropagation()}
                           />
-                        : <span
+                        : <span className="print-hide-symbol"
                             onMouseDown={e => { e.preventDefault(); e.stopPropagation(); startDrag(e, col.key, getColWidth(col)); }}
                             onClick={e => { e.preventDefault(); e.stopPropagation(); setEditingColWidth(col.key); }}
                             style={{ cursor: "col-resize", color: isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.5)", fontSize: 12, padding: "1px 3px", userSelect: "none", flexShrink: 0, display: "inline-flex", alignItems: "center", borderRadius: 3, background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)", lineHeight: 1 }}
