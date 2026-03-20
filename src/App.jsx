@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0195
+// BUILD: 2026_03_20_build0196
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0196 — Drag&drop karet: drop zóna na konci neprázdného sloupce
 // BUILD0195 — FIX: useDraggable reset s overrideW, useEffect pořadí v SettingsModal
 // BUILD0194 — Nastavení Aplikace: volitelný počet sloupců 1–5 (localStorage)
 // BUILD0193 — Nastavení Aplikace: optimální 3 sloupce, drag&drop karet, reset pořadí
@@ -486,7 +487,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0195";
+const APP_BUILD = "build0196";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -2824,29 +2825,34 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: `repeat(${appCardsCols}, 1fr)`, gap: 16, alignItems: "start" }}>
                     {cols.map((col, ci) => (
-                      <div key={ci}
-                        style={{ minHeight: 60 }}
-                        onDragOver={e => { e.preventDefault(); if (col.length === 0) setDragOverCard(`empty-${ci}`); }}
-                        onDrop={e => {
-                          e.preventDefault();
-                          if (col.length === 0) {
-                            const srcId = dragCardRef.current;
-                            if (!srcId) return;
-                            setCardsOrder(prev => {
-                              const next = prev.filter(id => id !== srcId);
-                              // Vložit na konec tohoto sloupce = na pozici ci * každý N-tý
-                              const insertAt = ci; // vložit na začátek sloupce ci
-                              next.splice(insertAt, 0, srcId);
-                              try { localStorage.setItem("aplikace_layout", JSON.stringify(next)); } catch {}
-                              return next;
-                            });
-                            dragCardRef.current = null; setDragOverCard(null);
-                          }
-                        }}
-                        onDragLeave={() => setDragOverCard(null)}
-                      >
+                      <div key={ci} style={{ minHeight: 60, display: "flex", flexDirection: "column" }}>
                         {col.length === 0 && (
-                          <div style={{ border: `2px dashed ${dragOverCard === `empty-${ci}` ? "#3b82f6" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)")}`, borderRadius: 10, minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center", color: modalMuted, fontSize: 12, transition: "border-color 0.15s" }}>
+                          <div
+                            style={{ border: `2px dashed ${dragOverCard === `empty-${ci}` ? "#3b82f6" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)")}`, borderRadius: 10, minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center", color: modalMuted, fontSize: 12, transition: "border-color 0.15s", flex: 1 }}
+                            onDragOver={e => { e.preventDefault(); setDragOverCard(`empty-${ci}`); }}
+                            onDragLeave={() => setDragOverCard(null)}
+                            onDrop={e => {
+                              e.preventDefault();
+                              const srcId = dragCardRef.current;
+                              if (!srcId) return;
+                              setCardsOrder(prev => {
+                                const next = prev.filter(id => id !== srcId);
+                                // Najdi pozici kde začíná tento sloupec a vlož na konec
+                                const colStartPositions = Array.from({ length: appCardsCols }, (_, i) => i);
+                                const targetPos = colStartPositions[ci];
+                                // Přidej na konec sloupce ci — najdi poslední prvek v tomto sloupci
+                                let insertAt = next.length;
+                                for (let i = next.length - 1; i >= 0; i--) {
+                                  const colIdx = prev.indexOf(next[i]) % appCardsCols;
+                                  if (colIdx <= ci) { insertAt = i + 1; break; }
+                                }
+                                next.splice(ci, 0, srcId);
+                                try { localStorage.setItem("aplikace_layout", JSON.stringify(next)); } catch {}
+                                return next;
+                              });
+                              dragCardRef.current = null; setDragOverCard(null);
+                            }}
+                          >
                             ⬇ přetáhni sem
                           </div>
                         )}
@@ -2870,6 +2876,37 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                             </div>
                           );
                         })}
+                        {/* Drop zóna na konci neprázdného sloupce */}
+                        {col.length > 0 && (
+                          <div
+                            style={{ border: `2px dashed ${dragOverCard === `end-${ci}` ? "#3b82f6" : "transparent"}`, borderRadius: 10, minHeight: 40, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", color: dragOverCard === `end-${ci}` ? "#60a5fa" : "transparent", fontSize: 11, transition: "all 0.15s" }}
+                            onDragOver={e => { e.preventDefault(); if (dragCardRef.current) setDragOverCard(`end-${ci}`); }}
+                            onDragLeave={() => setDragOverCard(null)}
+                            onDrop={e => {
+                              e.preventDefault();
+                              const srcId = dragCardRef.current;
+                              if (!srcId) return;
+                              setCardsOrder(prev => {
+                                const next = prev.filter(id => id !== srcId);
+                                // Najdi index posledního prvku v tomto sloupci v novém poli
+                                // Sloupec ci obsahuje prvky na indexech ci, ci+N, ci+2N, ...
+                                const colItems = col.filter(id => id !== srcId);
+                                if (colItems.length === 0) {
+                                  next.splice(ci, 0, srcId);
+                                } else {
+                                  const lastInCol = colItems[colItems.length - 1];
+                                  const lastIdx = next.indexOf(lastInCol);
+                                  next.splice(lastIdx + 1, 0, srcId);
+                                }
+                                try { localStorage.setItem("aplikace_layout", JSON.stringify(next)); } catch {}
+                                return next;
+                              });
+                              dragCardRef.current = null; setDragOverCard(null);
+                            }}
+                          >
+                            {dragOverCard === `end-${ci}` ? "⬇ přetáhni sem" : ""}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
