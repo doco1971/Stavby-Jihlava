@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0188
+// BUILD: 2026_03_20_build0189
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0189 — Výchozí motiv světlý, timeout odhlášení z DB (auto_logout_minutes)
 // BUILD0188 — Nastavení Aplikace: 3 sloupce, Složka role Superadmin+, Import XLS potvrzovací dialog
 // BUILD0187 — Toolbar: Export+Tisk odděleny, Data roletka (Záloha+Obnova JSON), Import XLS→Nastavení, Export logu→Log modal, Graf: +Koláč +Trend
 // BUILD0186 — Tisk: před tiskem přepnout na světlý motiv, po tisku vrátit zpět
@@ -479,7 +480,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0188";
+const APP_BUILD = "build0189";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -2312,7 +2313,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -2406,6 +2407,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [editDatum, setEditDatum] = useState(appDatum);
   const [editNotifyEmails, setEditNotifyEmails] = useState(notifyEmails || "");
   const [editSlozkaRole, setEditSlozkaRole] = useState(slozkaRole || "admin");
+  const [editAutoLogout, setEditAutoLogout] = useState(String(autoLogoutMinutesProp || 15));
 
   const modalBg = isDark ? "#1e293b" : "#ffffff";
   const modalBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -2630,6 +2632,29 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                     <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>📥 IMPORT Z PŮVODNÍ TABULKY (XLS)</div>
                     <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Jednorázový import staveb z původního Excel formátu. Před importem zobrazí potvrzovací dialog.</div>
                     <button onClick={() => onImportXLS()} style={{ padding: "9px 16px", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 8, color: "#f59e0b", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📥 Vybrat soubor XLS</button>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>⏱️ TIMEOUT ODHLÁŠENÍ</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Automatické odhlášení po nečinnosti. Platí okamžitě pro všechny uživatele.</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="480"
+                        value={editAutoLogout}
+                        onChange={e => setEditAutoLogout(e.target.value)}
+                        style={{ width: 80, padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box" }}
+                      />
+                      <span style={{ color: modalMuted, fontSize: 12 }}>minut</span>
+                    </div>
+                    <button onClick={() => {
+                      const v = parseInt(editAutoLogout);
+                      if (!isNaN(v) && v > 0) onSaveAutoLogoutMinutes(v);
+                    }} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      💾 Uložit
+                    </button>
+                    <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Výchozí: 15 minut. Rozsah: 1–480 minut.</div>
                   </div>
 
                 </div>
@@ -3031,7 +3056,7 @@ export default function App() {
   const [autoLogoutCountdown, setAutoLogoutCountdown] = useState(60);
   const autoLogoutTimer = useRef(null);
   const autoLogoutCountdownTimer = useRef(null);
-  const AUTO_LOGOUT_MINUTES = 15;
+  const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(15);
   // ── Browser notifikace ───────────────────────────────────
   const notifPermission = useRef(null);
   const notifSentRef = useRef(false);
@@ -3097,7 +3122,7 @@ export default function App() {
   };
   const [logData, setLogData] = useState([]);
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem("theme") || "dark"; } catch { return "dark"; }
+    try { return localStorage.getItem("theme") || "light"; } catch { return "light"; }
   });
   const [themeStrength, setThemeStrength] = useState(() => {
     try { return parseInt(localStorage.getItem("themeStrength") || "50", 10); } catch { return 50; }
@@ -3233,6 +3258,9 @@ export default function App() {
     sb("nastaveni?klic=eq.slozka_role").then(res => {
       if (res && res[0]) setSlozkaRole(res[0].hodnota || "admin");
     }).catch(() => {});
+    sb("nastaveni?klic=eq.auto_logout_minutes").then(res => {
+      if (res && res[0]) { const v = parseInt(res[0].hodnota); if (!isNaN(v) && v > 0) setAutoLogoutMinutes(v); }
+    }).catch(() => {});
   }, [isDemo]);
 
   const saveZalohaRole = async (val) => {
@@ -3240,6 +3268,14 @@ export default function App() {
     if (isDemo) return;
     try {
       await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "zaloha_role", hodnota: val }), prefer: "resolution=merge-duplicates,return=minimal" });
+    } catch {}
+  };
+
+  const saveAutoLogoutMinutes = async (val) => {
+    setAutoLogoutMinutes(val);
+    if (isDemo) return;
+    try {
+      await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic: "auto_logout_minutes", hodnota: String(val) }), prefer: "resolution=merge-duplicates,return=minimal" });
     } catch {}
   };
 
@@ -3595,7 +3631,7 @@ export default function App() {
       autoLogoutTimer.current = setTimeout(() => {
         setAutoLogoutWarning(true);
         setAutoLogoutCountdown(60);
-      }, AUTO_LOGOUT_MINUTES * 60 * 1000);
+      }, autoLogoutMinutes * 60 * 1000);
     };
     const events = ["mousemove","keydown","click","scroll","touchstart"];
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
@@ -5177,7 +5213,7 @@ export default function App() {
       {adding && <FormModal title="➕ Nová stavba" initial={emptyRow} onSave={handleAdd} onClose={() => setAdding(false)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {editRow && <FormModal title={`✏️ Editace stavby #${editRow.id}`} initial={editRow} onSave={handleSave} onClose={() => setEditRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
       {copyRow && <FormModal title="📋 Kopírovat stavbu" initial={copyRow} onSave={handleCopySave} onClose={() => setCopyRow(null)} firmy={firmy.map(f => f.hodnota)} objednatele={objednatele} stavbyvedouci={stavbyvedouci} />}
-      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} extensionReady={extensionReady} protokolReady={protokolReady} autoZaloha={autoZaloha} onSaveAutoZaloha={(v) => { setAutoZaloha(v); try { localStorage.setItem("autoZaloha", v ? "true" : "false"); } catch {} }} zalohaRole={zalohaRole} onSaveZalohaRole={saveZalohaRole} onImportXLS={() => importRef.current?.click()} />}
+      {showSettings && <SettingsModal firmy={firmy} objednatele={objednatele} stavbyvedouci={stavbyvedouci} users={users} onChange={saveSettings} onChangeUsers={saveUsers} onClose={() => setShowSettings(false)} onLoadLog={loadLog} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} isDark={isDark} appVerze={appVerze} appDatum={appDatum} onSaveAppInfo={saveAppInfo} stavbyData={data} onResetColWidths={() => { setColWidths({}); saveColWidths({}); }} onResetColOrder={resetColOrder} isDemo={isDemo} notifyEmails={notifyEmails} onSaveNotifyEmails={saveNotifyEmails} slozkaRole={slozkaRole} onSaveSlozkaRole={saveSlozkaRole} extensionReady={extensionReady} protokolReady={protokolReady} autoZaloha={autoZaloha} onSaveAutoZaloha={(v) => { setAutoZaloha(v); try { localStorage.setItem("autoZaloha", v ? "true" : "false"); } catch {} }} zalohaRole={zalohaRole} onSaveZalohaRole={saveZalohaRole} onImportXLS={() => importRef.current?.click()} autoLogoutMinutesProp={autoLogoutMinutes} onSaveAutoLogoutMinutes={saveAutoLogoutMinutes} />}
 
       {showOrphanWarning && (() => {
         const firmyNames = firmy.map(f => f.hodnota);
@@ -5599,7 +5635,7 @@ export default function App() {
             <div style={{ fontSize: 40, marginBottom: 12 }}>⏱️</div>
             <h3 style={{ color: isDark ? "#fff" : "#1e293b", margin: "0 0 8px", fontSize: 18 }}>Automatické odhlášení</h3>
             <p style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", margin: "0 0 6px", fontSize: 14 }}>
-              Detekována nečinnost ({AUTO_LOGOUT_MINUTES} minut).
+              Detekována nečinnost ({autoLogoutMinutes} minut).
             </p>
             <div style={{ fontSize: 48, fontWeight: 800, color: autoLogoutCountdown <= 10 ? "#f87171" : "#fbbf24", margin: "16px 0", fontVariantNumeric: "tabular-nums" }}>
               {autoLogoutCountdown}
@@ -5615,7 +5651,7 @@ export default function App() {
                 autoLogoutTimer.current = setTimeout(() => {
                   setAutoLogoutWarning(true);
                   setAutoLogoutCountdown(60);
-                }, AUTO_LOGOUT_MINUTES * 60 * 1000);
+                }, autoLogoutMinutes * 60 * 1000);
               }}
               style={{ padding: "11px 28px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}
             >
