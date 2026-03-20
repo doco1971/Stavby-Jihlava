@@ -4268,6 +4268,8 @@ export default function App() {
     return `rgb(${r},${g},${b})`;
   })();
 
+  const isDark = isDarkComputed(theme);
+
   const T = isDark ? {
     appBg: darkAppBg,
     headerBg: lgS > 0 ? `rgba(255,255,255,${(0.03 + lgS * 0.07).toFixed(3)})` : "rgba(255,255,255,0.03)",
