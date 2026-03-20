@@ -2402,6 +2402,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   };
 
   useEffect(() => { if (tab === "log") handleLoadLog(); }, [tab]);
+  useEffect(() => { resetSettingsPos(); }, [tab, appCardsCols]);
 
   const fmtCas = (cas) => {
     const d = new Date(cas);
@@ -2478,11 +2479,12 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const modalMuted = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
   const modalDivider = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
   const modalCardBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
-  const { pos, onMouseDown: onDragStart } = useDraggable(1000, 560);
+  const settingsWidth = tab === "aplikace" ? Math.max(1000, appCardsCols * 320) : 1000;
+  const { pos, onMouseDown: onDragStart, reset: resetSettingsPos } = useDraggable(settingsWidth, 560);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1100, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
-      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: tab === "aplikace" ? `min(${Math.max(1000, appCardsCols * 260)}px, 98vw)` : "min(1000px, 96vw)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+      <div style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: modalBg, borderRadius: 16, width: `min(${settingsWidth}px, 98vw)`, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${modalBorder}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
 
         {/* header — táhlo */}
         <div onMouseDown={onDragStart} style={dragHeaderStyle()}>
@@ -2819,7 +2821,32 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: `repeat(${appCardsCols}, 1fr)`, gap: 16, alignItems: "start" }}>
                     {cols.map((col, ci) => (
-                      <div key={ci}>
+                      <div key={ci}
+                        style={{ minHeight: 60 }}
+                        onDragOver={e => { e.preventDefault(); if (col.length === 0) setDragOverCard(`empty-${ci}`); }}
+                        onDrop={e => {
+                          e.preventDefault();
+                          if (col.length === 0) {
+                            const srcId = dragCardRef.current;
+                            if (!srcId) return;
+                            setCardsOrder(prev => {
+                              const next = prev.filter(id => id !== srcId);
+                              // Vložit na konec tohoto sloupce = na pozici ci * každý N-tý
+                              const insertAt = ci; // vložit na začátek sloupce ci
+                              next.splice(insertAt, 0, srcId);
+                              try { localStorage.setItem("aplikace_layout", JSON.stringify(next)); } catch {}
+                              return next;
+                            });
+                            dragCardRef.current = null; setDragOverCard(null);
+                          }
+                        }}
+                        onDragLeave={() => setDragOverCard(null)}
+                      >
+                        {col.length === 0 && (
+                          <div style={{ border: `2px dashed ${dragOverCard === `empty-${ci}` ? "#3b82f6" : (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)")}`, borderRadius: 10, minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center", color: modalMuted, fontSize: 12, transition: "border-color 0.15s" }}>
+                            ⬇ přetáhni sem
+                          </div>
+                        )}
                         {col.map(id => {
                           const card = CARDS[id];
                           if (!card) return null;
