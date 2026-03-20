@@ -2119,92 +2119,110 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
             </div>
           )}
 
-          {tab === "aplikace" && isSuperAdmin && (
-            <div style={{ padding: "10px 0", maxWidth: 400 }}>
-              <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 20 }}>INFORMACE O APLIKACI</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div>
-                  <div style={{ color: modalMuted, fontSize: 11, marginBottom: 6 }}>VERZE APLIKACE</div>
-                  <input value={editVerze} onChange={e => setEditVerze(e.target.value)} placeholder="např. 1.0.0" style={{ width: "100%", padding: "9px 12px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 8, color: modalText, fontSize: 14, boxSizing: "border-box" }}/>
-                </div>
-                <div>
-                  <div style={{ color: modalMuted, fontSize: 11, marginBottom: 6 }}>ROK / DATUM</div>
-                  <input value={editDatum} onChange={e => setEditDatum(e.target.value)} placeholder="např. 2025" style={{ width: "100%", padding: "9px 12px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 8, color: modalText, fontSize: 14, boxSizing: "border-box" }}/>
-                </div>
-                <button onClick={() => { onSaveAppInfo(editVerze, editDatum); onClose(); }} style={{ padding: "10px 20px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>💾 Uložit a zavřít</button>
-                <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>
-                  Zobrazí se ve footeru: © {editDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI | v{editVerze}
-                </div>
-                <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
-                  <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>💡 TLAČÍTKO SLOŽKA</div>
-                  <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Kdo vidí tlačítko 💡 u každé stavby pro otevření složky zakázky.</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                    {[["none","Nikdo"],["admin","Admin+"],["user_e","Editor+"],["user","Všichni"]].map(([val, label]) => (
-                      <button key={val} onClick={() => { setEditSlozkaRole(val); onSaveSlozkaRole(val); }} style={{ padding: "7px 14px", background: editSlozkaRole === val ? "rgba(251,191,36,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"), border: `1px solid ${editSlozkaRole === val ? "rgba(251,191,36,0.6)" : modalBorder}`, borderRadius: 7, color: editSlozkaRole === val ? "#fbbf24" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: editSlozkaRole === val ? 700 : 400 }}>{label}</button>
-                    ))}
-                  </div>
-                  {/* Stav protokolu + download tlačítko */}
-                  <div style={{ padding: "12px 14px", background: protokolReady ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.06)", border: `1px solid ${protokolReady ? "rgba(16,185,129,0.3)" : "rgba(251,191,36,0.2)"}`, borderRadius: 8, marginBottom: 8 }}>
-                    <div style={{ color: protokolReady ? "#34d399" : "#fbbf24", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
-                      {protokolReady ? "✅ Stavby Helper aktivní — klik otevře složku" : "⚠️ Nutná jednorázová instalace Stavby Helper"}
+                    {tab === "aplikace" && isSuperAdmin && (
+            <div style={{ padding: "10px 0" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+
+                {/* LEVÝ SLOUPEC: Složka + Záloha */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>💡 TLAČÍTKO SLOŽKA</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Kdo vidí tlačítko 💡 u každé stavby pro otevření složky zakázky.</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                      {[["none","Nikdo"],["admin","Admin+"],["user_e","Editor+"],["user","Všichni"]].map(([val, label]) => (
+                        <button key={val} onClick={() => { setEditSlozkaRole(val); onSaveSlozkaRole(val); }} style={{ padding: "7px 14px", background: editSlozkaRole === val ? "rgba(251,191,36,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"), border: `1px solid ${editSlozkaRole === val ? "rgba(251,191,36,0.6)" : modalBorder}`, borderRadius: 7, color: editSlozkaRole === val ? "#fbbf24" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: editSlozkaRole === val ? 700 : 400 }}>{label}</button>
+                      ))}
                     </div>
-                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: protokolReady ? 0 : 10 }}>
-                      {protokolReady
-                        ? "Protokol je nainstalován. Klik na 💡 otevře složku přímo v Průzkumníku Windows."
-                        : "Pro přímé otevření složky kliknutím na 💡 stáhněte ZIP, rozbalte a spusťte install.bat jako správce (trvá ~10 sekund). Funguje i přes VPN."}
-                    </div>
-                    {!protokolReady && (
-                      <a
-                        href="/stavby-helper-installer.zip"
-                        download="stavby-helper-installer.zip"
-                        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 18px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700, textDecoration: "none" }}
-                      >
-                        🖥 Stáhnout instalátor (Windows)
-                      </a>
-                    )}
-                    {/* Stav rozšíření — zobrazit jen pokud je aktivní */}
-                    {extensionReady && (
-                      <div style={{ marginTop: protokolReady ? 8 : 0, color: "#34d399", fontSize: 11, fontWeight: 600 }}>
-                        ✅ Rozšíření prohlížeče také aktivní (záložní metoda)
+                    <div style={{ padding: "10px 12px", background: protokolReady ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.06)", border: `1px solid ${protokolReady ? "rgba(16,185,129,0.3)" : "rgba(251,191,36,0.2)"}`, borderRadius: 8, marginBottom: 8 }}>
+                      <div style={{ color: protokolReady ? "#34d399" : "#fbbf24", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
+                        {protokolReady ? "✅ Stavby Helper aktivní — klik otevře složku" : "⚠️ Nutná jednorázová instalace Stavby Helper"}
                       </div>
-                    )}
+                      <div style={{ color: modalMuted, fontSize: 11, marginBottom: protokolReady ? 0 : 10 }}>
+                        {protokolReady ? "Protokol je nainstalován. Klik na 💡 otevře složku přímo v Průzkumníku Windows." : "Stáhněte ZIP, rozbalte a spusťte install.bat (trvá ~10 sekund). Funguje i přes VPN."}
+                      </div>
+                      {!protokolReady && (
+                        <a href="/stavby-helper-installer.zip" download="stavby-helper-installer.zip"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "linear-gradient(135deg,#d97706,#b45309)", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+                          🖥 Stáhnout instalátor (Windows)
+                        </a>
+                      )}
+                      {extensionReady && <div style={{ marginTop: 6, color: "#34d399", fontSize: 11, fontWeight: 600 }}>✅ Rozšíření prohlížeče také aktivní</div>}
+                    </div>
+                    <div style={{ color: modalMuted, fontSize: 11 }}>Cesta se zadává kliknutím na šedou 💡 nebo v editaci stavby (sekce Ostatní).</div>
                   </div>
-                  <div style={{ color: modalMuted, fontSize: 11 }}>Cesta se zadává kliknutím na šedou 💡 nebo v editaci stavby (sekce Ostatní).</div>
-                </div>
-                <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
-                  <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ŠÍŘKY SLOUPCŮ</div>
-                  <button onClick={() => setConfirmResetCols(true)} style={{ padding: "10px 20px", background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", borderRadius: 8, color: "#c084fc", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>↺ Reset šířek sloupců na výchozí</button>
-                  <button onClick={() => { onResetColOrder(); }} style={{ padding: "10px 20px", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", borderRadius: 8, color: "#60a5fa", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>↺ Reset pořadí sloupců na výchozí</button>
-                  <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>Obnoví původní šířky všech sloupců tabulky.</div>
-                </div>
-                <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
-                  <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>📧 EMAIL NOTIFIKACE — TERMÍNY</div>
-                  <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Emaily pro denní souhrn termínů (do 30 dní + prošlé). Oddělte čárkou nebo novým řádkem. Odesílá Supabase Edge Function každý den ráno.</div>
-                  <textarea
-                    value={editNotifyEmails}
-                    onChange={e => setEditNotifyEmails(e.target.value)}
-                    placeholder={"jan@firma.cz\neva@firma.cz"}
-                    rows={4}
-                    style={{ width: "100%", padding: "9px 12px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 8, color: modalText, fontSize: 13, boxSizing: "border-box", resize: "vertical", fontFamily: "monospace" }}
-                  />
-                  <button
-                    onClick={() => { onSaveNotifyEmails(editNotifyEmails); }}
-                    style={{ marginTop: 8, padding: "9px 20px", background: "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
-                  >💾 Uložit emaily</button>
-                  <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Uloženo v databázi (tabulka nastaveni, klic = notify_emails)</div>
-                </div>
-                {isSuperAdmin && (
-                  <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
-                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>💾 AUTOMATICKÁ ZÁLOHA</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button
-                        onClick={() => onSaveAutoZaloha(!autoZaloha)}
-                        style={{ padding: "7px 16px", background: autoZaloha ? "linear-gradient(135deg,#059669,#047857)" : "rgba(255,255,255,0.05)", border: `1px solid ${autoZaloha ? "#059669" : modalBorder}`, borderRadius: 8, color: autoZaloha ? "#fff" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}
-                      >{autoZaloha ? "✅ Zapnuta" : "⚪ Vypnuta"}</button>
-                      <div style={{ color: modalMuted, fontSize: 11 }}>Při prvním přihlášení superadmina každý den se automaticky stáhne záloha DB.</div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>💾 ZÁLOHA DO JSON</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Kdo může stáhnout zálohu celé DB (stavby + číselníky + uživatelé + logy).</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                      {[["superadmin","Superadmin"],["admin","Admin+"],["user_e","Editor+"],["user","Všichni"]].map(([val, label]) => (
+                        <button key={val} onClick={() => onSaveZalohaRole(val)} style={{ padding: "7px 14px", background: zalohaRole === val ? "rgba(5,150,105,0.25)" : (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"), border: `1px solid ${zalohaRole === val ? "rgba(5,150,105,0.6)" : modalBorder}`, borderRadius: 7, color: zalohaRole === val ? "#34d399" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: zalohaRole === val ? 700 : 400 }}>{label}</button>
+                      ))}
+                    </div>
+                    <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 12 }}>
+                      <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, marginBottom: 8 }}>AUTOMATICKÁ ZÁLOHA</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <button onClick={() => onSaveAutoZaloha(!autoZaloha)}
+                          style={{ padding: "7px 14px", background: autoZaloha ? "linear-gradient(135deg,#059669,#047857)" : "rgba(255,255,255,0.05)", border: `1px solid ${autoZaloha ? "#059669" : modalBorder}`, borderRadius: 8, color: autoZaloha ? "#fff" : modalMuted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                          {autoZaloha ? "✅ Zapnuta" : "⚪ Vypnuta"}
+                        </button>
+                        <div style={{ color: modalMuted, fontSize: 11 }}>Při prvním přihlášení superadmina každý den.</div>
+                      </div>
                     </div>
                   </div>
-                )}
+
+                </div>
+
+                {/* PRAVÝ SLOUPEC: Emaily + Verze + Sloupce */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>📧 EMAIL NOTIFIKACE — TERMÍNY</div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Emaily pro denní souhrn termínů. Oddělte čárkou nebo novým řádkem.</div>
+                    <textarea value={editNotifyEmails} onChange={e => setEditNotifyEmails(e.target.value)}
+                      placeholder={"jan@firma.cz\neva@firma.cz"} rows={4}
+                      style={{ width: "100%", padding: "9px 12px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 8, color: modalText, fontSize: 13, boxSizing: "border-box", resize: "vertical", fontFamily: "monospace" }} />
+                    <button onClick={() => { onSaveNotifyEmails(editNotifyEmails); }}
+                      style={{ marginTop: 8, padding: "9px 20px", background: "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                      💾 Uložit emaily
+                    </button>
+                    <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>Uloženo v DB (tabulka nastaveni, klic = notify_emails)</div>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>VERZE APLIKACE</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                      <div>
+                        <div style={{ color: modalMuted, fontSize: 10, marginBottom: 4 }}>VERZE</div>
+                        <input value={editVerze} onChange={e => setEditVerze(e.target.value)} placeholder="1.0.0"
+                          style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box" }}/>
+                      </div>
+                      <div>
+                        <div style={{ color: modalMuted, fontSize: 10, marginBottom: 4 }}>ROK / DATUM</div>
+                        <input value={editDatum} onChange={e => setEditDatum(e.target.value)} placeholder="2025"
+                          style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box" }}/>
+                      </div>
+                    </div>
+                    <button onClick={() => { onSaveAppInfo(editVerze, editDatum); }}
+                      style={{ padding: "8px 16px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      💾 Uložit verzi
+                    </button>
+                    <div style={{ color: modalMuted, fontSize: 10, marginTop: 6 }}>
+                      Footer: © {editDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI | v{editVerze}
+                    </div>
+                  </div>
+
+                  <div style={{ background: modalCardBg, borderRadius: 10, padding: "14px 16px", border: `1px solid ${modalBorder}` }}>
+                    <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ŠÍŘKY SLOUPCŮ</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button onClick={() => setConfirmResetCols(true)} style={{ padding: "9px 16px", background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.35)", borderRadius: 8, color: "#c084fc", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>↺ Reset šířek</button>
+                      <button onClick={() => { onResetColOrder(); }} style={{ padding: "9px 16px", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.35)", borderRadius: 8, color: "#60a5fa", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>↺ Reset pořadí</button>
+                    </div>
+                    <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>Obnoví původní šířky a pořadí sloupců tabulky.</div>
+                  </div>
+
+                </div>
               </div>
             </div>
           )}
