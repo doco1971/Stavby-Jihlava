@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0196
+// BUILD: 2026_03_20_build0197
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0197 — FIX: drag&drop karet — handleCardDragEnd odložen setTimeout 50ms
 // BUILD0196 — Drag&drop karet: drop zóna na konci neprázdného sloupce
 // BUILD0195 — FIX: useDraggable reset s overrideW, useEffect pořadí v SettingsModal
 // BUILD0194 — Nastavení Aplikace: volitelný počet sloupců 1–5 (localStorage)
@@ -487,7 +488,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0196";
+const APP_BUILD = "build0197";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -2468,7 +2469,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
     });
     dragCardRef.current = null; setDragOverCard(null);
   };
-  const handleCardDragEnd = () => { dragCardRef.current = null; setDragOverCard(null); };
+  const handleCardDragEnd = () => { setTimeout(() => { dragCardRef.current = null; }, 50); setDragOverCard(null); };
   const resetCardsOrder = () => {
     setCardsOrder(DEFAULT_CARDS_ORDER);
     setAppCardsCols(3);
