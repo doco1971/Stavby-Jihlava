@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0206
+// BUILD: 2026_03_20_build0207
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -245,6 +245,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0207 — FIX: colItems sestaveno z next pomocí colsFromNext algoritmu (stejný jako render)
 // BUILD0206 — FIX: colItems počítán z next pomocí appCardsCols (ne z col closure)
 // BUILD0205 — DEBUG: log do setCardsOrder, oprava colItems filter
 // BUILD0204 — FIX: dragCardRef vyčistit až v onDrop (ne v onDragEnd), setTimeout 100ms
@@ -497,7 +498,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0206";
+const APP_BUILD = "build0207";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -2931,8 +2932,10 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                               if (!srcId) { console.log("[Drop-placeholder] ABORT - srcId je null"); return; }
                               setCardsOrder(prev => {
                                 const next = prev.filter(id => id !== srcId);
-                                // Najdi poslední kartu v sloupci ci podle appCardsCols
-                                const colItems = next.filter((_, idx) => idx % appCardsCols === ci);
+                                // Sestavit cols ze next stejným algoritmem jako render
+                                const colsFromNext = Array.from({ length: appCardsCols }, () => []);
+                                next.forEach((id, i) => colsFromNext[i % appCardsCols].push(id));
+                                const colItems = colsFromNext[ci] || [];
                                 console.log("[Drop-placeholder] next=", next, "colItems=", colItems, "ci=", ci, "appCardsCols=", appCardsCols);
                                 if (colItems.length === 0) {
                                   next.splice(Math.min(ci, next.length), 0, srcId);
