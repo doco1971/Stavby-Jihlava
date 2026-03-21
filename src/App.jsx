@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0219
+// BUILD: 2026_03_20_build0220
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -248,6 +248,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0220 — Odstraněny console.log z sbUpsertNastaveni (debug hotov)
 // BUILD0219 — DEBUG: console.log v sbUpsertNastaveni
 // BUILD0218 — FIX: sbUpsertNastaveni — PATCH vrací [] (ne výjimku) → kontrola res.length
 // BUILD0217 — FIX: sbUpsertNastaveni helper — PATCH pokud existuje, POST pokud ne
@@ -513,7 +514,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0219";
+const APP_BUILD = "build0220";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -546,15 +547,9 @@ const sb = async (path, options = {}) => {
 
 // Upsert do tabulky nastaveni — PATCH pokud řádek existuje, POST pokud ne
 const sbUpsertNastaveni = async (klic, hodnota) => {
-  console.log("[upsert] START klic=", klic, "hodnota=", hodnota);
-  // PATCH vrátí [] pokud řádek neexistuje (HTTP 200 ale prázdné pole)
   const res = await sb(`nastaveni?klic=eq.${klic}`, { method: "PATCH", body: JSON.stringify({ hodnota }) });
-  console.log("[upsert] PATCH res=", res);
   if (!res || (Array.isArray(res) && res.length === 0)) {
-    console.log("[upsert] řádek neexistuje → INSERT");
     await sb("nastaveni", { method: "POST", body: JSON.stringify({ klic, hodnota }), prefer: "return=minimal" });
-  } else {
-    console.log("[upsert] PATCH OK");
   }
 };
 
