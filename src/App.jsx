@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_20_build0213
+// BUILD: 2026_03_20_build0214
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -248,6 +248,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0214 — FIX: render cols — normalizovat na appCardsCols bez round-robin
 // BUILD0213 — FIX: saveSlozkaRole — setSlozkaRole přesunuto před await (jako ostatní save fce)
 // BUILD0212 — Přidáno pravidlo #1b: po 2-3 neúspěšných opravách = architektura
 // BUILD0211 — REFACTOR: cardsOrder string[] → string[][] (pole polí), drag&drop bez modulo
@@ -507,7 +508,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0213";
+const APP_BUILD = "build0214";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -2853,16 +2854,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
               };
 
               // Rozdělení do N sloupců (dle cardsOrder - pole polí)
-              // Při změně počtu sloupců přerozdělit karty rovnoměrně
-              const allCards = cardsOrder.flat();
-              const cols = Array.from({ length: appCardsCols }, () => []);
-              // Pokud cardsOrder má správný počet sloupců, použij přímo
-              if (cardsOrder.length === appCardsCols) {
-                cardsOrder.forEach((col, i) => cols[i] = [...col]);
-              } else {
-                // Jinak přerozdělit rovnoměrně (round-robin)
-                allCards.forEach((id, i) => cols[i % appCardsCols].push(id));
-              }
+              const cols = Array.from({ length: appCardsCols }, (_, i) => cardsOrder[i] ? [...cardsOrder[i]] : []);
 
               const cardStyle = (id) => ({
                 background: modalCardBg,
