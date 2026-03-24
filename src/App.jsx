@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_23_build0222
+// BUILD: 2026_03_24_build0223
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -248,6 +248,7 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
+// BUILD0223 — FIX: Popup Termíny zobrazuje i prošlé termíny bez faktury (stejně jako e-mail)
 // BUILD0222 — Smazaná firma: oranžový pulzující badge + přeškrtnutý text + tooltip
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
 // BUILD0220 — Odstraněny console.log, ukládání nastavení potvrzeno funkční
@@ -516,7 +517,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0222";
+const APP_BUILD = "build0223";
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -3996,7 +3997,14 @@ export default function App() {
       .filter(r => r.ukonceni)
       .map(r => {
         const datum = parseDatum(r.ukonceni);
-        if (!datum || datum < dnes) return null;
+        if (!datum) return null;
+        const isFaktura = r.cislo_faktury && r.cislo_faktury.trim() !== "" && Number(r.castka_bez_dph) !== 0 && r.splatna;
+        if (datum < dnes) {
+          // Prošlý termín — zobrazit jen pokud nemá fakturu
+          if (isFaktura) return null;
+          const dniPo = pracovniDny(datum, dnes);
+          return { ...r, dniDo: -dniPo, datumUkonceni: datum };
+        }
         const dni = pracovniDny(dnes, datum);
         if (dni > deadlineDays) return null;
         return { ...r, dniDo: dni, datumUkonceni: datum };
@@ -4004,7 +4012,7 @@ export default function App() {
       .filter(Boolean)
       .sort((a, b) => a.dniDo - b.dniDo);
     setDeadlineWarnings(warnings);
-  }, [data]);
+  }, [data, deadlineDays]);
 
   const shownDeadlineOnce = useRef(false);
   // Reset při změně uživatele
@@ -5704,8 +5712,12 @@ export default function App() {
             {/* header — táhlo */}
             <div onMouseDown={onDeadlinesDragStart} style={{ padding: "14px 18px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(239,68,68,0.1)", borderRadius: "16px 16px 0 0", gap: 10, cursor: "grab", userSelect: "none" }}>
               <div style={{ minWidth: 0 }}>
-                <span style={{ color: "#f87171", fontWeight: 700, fontSize: 15 }}>⚠️ Blížící se termíny ukončení{dragHint}</span>
-                <div style={{ color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)", fontSize: 11, marginTop: 3 }}>{deadlineWarnings.length} zakázek s termínem do 30 pracovních dní</div>
+                <span style={{ color: "#f87171", fontWeight: 700, fontSize: 15 }}>⚠️ Termíny ukončení{dragHint}</span>
+                <div style={{ color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)", fontSize: 11, marginTop: 3 }}>
+                  {deadlineWarnings.filter(w => w.dniDo < 0).length > 0 && <span style={{ color: "#f87171", fontWeight: 700 }}>{deadlineWarnings.filter(w => w.dniDo < 0).length} prošlých</span>}
+                  {deadlineWarnings.filter(w => w.dniDo < 0).length > 0 && deadlineWarnings.filter(w => w.dniDo >= 0).length > 0 && " · "}
+                  {deadlineWarnings.filter(w => w.dniDo >= 0).length > 0 && <span>{deadlineWarnings.filter(w => w.dniDo >= 0).length} blížících se (do {deadlineDays} dní)</span>}
+                </div>
               </div>
               <button onClick={() => setShowDeadlines(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)", fontSize: 22, cursor: "pointer", flexShrink: 0, padding: "0 4px" }}>✕</button>
             </div>
@@ -5726,14 +5738,16 @@ export default function App() {
                 </thead>
                 <tbody>
                   {deadlineWarnings.map((r, i) => {
-                    const urgentColor = r.dniDo <= 5 ? "#f87171" : r.dniDo <= 15 ? "#fb923c" : "#facc15";
+                    const isOverdue = r.dniDo < 0;
+                    const urgentColor = isOverdue ? "#f87171" : r.dniDo <= 5 ? "#f87171" : r.dniDo <= 15 ? "#fb923c" : "#facc15";
+                    const dniLabel = isOverdue ? `${Math.abs(r.dniDo)} dní po termínu` : `${r.dniDo} dní`;
                     return (
-                      <tr key={r.id} style={{ background: i % 2 === 0 ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)") : "transparent" }}>
+                      <tr key={r.id} style={{ background: isOverdue ? (isDark ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.05)") : i % 2 === 0 ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)") : "transparent" }}>
                         <td style={{ padding: "8px 12px", color: isDark ? "#e2e8f0" : "#1e293b", fontWeight: 600, whiteSpace: "nowrap", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>{r.cislo_stavby}</td>
                         <td style={{ padding: "8px 12px", color: isDark ? "#e2e8f0" : "#1e293b", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>{r.nazev_stavby}</td>
-                        <td style={{ padding: "8px 12px", color: isDark ? "#e2e8f0" : "#1e293b", whiteSpace: "nowrap", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>{r.ukonceni}</td>
+                        <td style={{ padding: "8px 12px", color: isOverdue ? "#f87171" : (isDark ? "#e2e8f0" : "#1e293b"), fontWeight: isOverdue ? 700 : 400, whiteSpace: "nowrap", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>{r.ukonceni}</td>
                         <td style={{ padding: "8px 12px", whiteSpace: "nowrap", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>
-                          <span style={{ background: urgentColor + "22", color: urgentColor, border: `1px solid ${urgentColor}44`, borderRadius: 5, padding: "2px 8px", fontSize: 12, fontWeight: 700 }}>{r.dniDo} dní</span>
+                          <span style={{ background: urgentColor + "22", color: urgentColor, border: `1px solid ${urgentColor}44`, borderRadius: 5, padding: "2px 8px", fontSize: 12, fontWeight: 700 }}>{dniLabel}</span>
                         </td>
                         <td style={{ padding: "8px 12px", color: isDark ? "#e2e8f0" : "#1e293b", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>{r.objednatel}</td>
                         <td style={{ padding: "8px 12px", color: isDark ? "#e2e8f0" : "#1e293b", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` }}>{r.stavbyvedouci}</td>
