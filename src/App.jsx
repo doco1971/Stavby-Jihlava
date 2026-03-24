@@ -38,19 +38,20 @@ import * as XLSX from "xlsx";
 //      UI ji zobrazí automaticky — nikde jinde se číslo buildu NEMĚNÍ!
 //   + VŽDY vytvořit changelog soubor stavby-app_DATUM_buildXXXX_changelog.txt
 //
-// DEPLOY: Vercel + GitHub (doco1971/stavby-znojmo)
+// DEPLOY: Vercel + GitHub (doco1971/stavby-jihlava)
 //   Větve: main (produkce) + staging (testování)
 //   Soubor patří do: src/App.jsx
 //   Postup: staging první → otestovat → merge do main
 //
 // TRANSCRIPT: /mnt/transcripts/ — přečíst pro kontext předchozích session
-// LOG:        stavby-znojmo-log-2026-03-20-FINAL.txt — kompletní dokumentace
+// LOG:        stavby-znojmo-log-2026-03-24.txt — kompletní dokumentace (aktualizováno 24.3.2026)
+// NAVOD:      stavby-znojmo-navod-2026-03-23-FINAL.docx — strukturovaná dokumentace projektu
 //
 // ============================================================
-// AKTUÁLNÍ STAV APLIKACE (session 2026-03-20, build0186)
+// AKTUÁLNÍ STAV APLIKACE (session 2026-03-24, build0224)
 // ============================================================
 //
-// ✅ Poslední build staging: build0186
+// ✅ Poslední build staging: build0224
 // ✅ Poslední build main (produkce): build0143 (merge pending)
 // ✅ Supabase staging: wgrdhqkkjhtrkweiqxvo.supabase.co
 // ✅ Supabase produkce: cleifbyyhpbdjbrgzrkv.supabase.co
@@ -197,15 +198,49 @@ import * as XLSX from "xlsx";
 // [HOTOVO] 💡 Otevírání složek — localhost helper port 47891
 // [HOTOVO] 🖨️  Tisk/PDF — window.print() + @media print (build0180-0186)
 // [HOTOVO] ⚡ sb() timeout + useDraggable memory leak (build0179)
-// [PENDING] ⚠️  Roletové menu za obrazovkou (user/user_e) — opravit
-// [PENDING] 💡 VPN — otestovat otevírání složek
-// [PENDING] 📈 Dashboard — KPI karty + grafy
-// [PENDING] 🗓️ Kalendářní pohled — termíny ukončení v měsíčním kalendáři
+// [HOTOVO] ⚙️  Drag & drop karet v Nastavení — cardsOrder string[][] (build0211)
+// [HOTOVO] 💾 Ukládání VŠECH 12 nastavení do DB — sbUpsertNastaveni (build0220)
+// [HOTOVO] ✅ Validace kategorií I+II — max 1 nenulové pole z KAT_FIELDS (build0221)
+// [HOTOVO] ⚠️  Smazaná firma — oranžový pulsující badge v tabulce (build0222)
+// [HOTOVO] ⏰ Popup Termíny — zobrazuje i prošlé termíny bez faktury (build0223)
+// [HOTOVO] 🔴 Prošlý termín — pulsující červený rámeček celého řádku (build0224)
+//
+// PRIORITA 1 — MERGE:
+// [PENDING] 🔀 Merge staging (build0224) → main
+//   Checklist: přihlášení, tabulka, drag&drop, uložení nastavení, e-mail notifikace
+//
+// PRIORITA 2 — BEZPEČNOST:
+// [PENDING] 🔐 Hesla plain text → Supabase Auth JWT (supabase.auth.signInWithPassword)
+//   ℹ Role (admin/user_e...) zůstat v tabulce nastaveni, propojit přes uuid
+// [PENDING] 🔐 RLS vypnuto na produkci → Edge Function proxy
+//
+// PRIORITA 3 — STABILITA:
+// [PENDING] 🧹 Refaktoring App.jsx (6100 řádků → komponenty)
+//   ℹ Návrh: src/api/db.js, src/utils/formatters.js, src/components/FormModal.jsx,
+//            src/components/SettingsModal.jsx, src/components/LogModal.jsx
+//   ℹ POZOR: dělat postupně, NIKDY najednou — Pravidlo #1b!
+// [PENDING] ⚠️  Race condition při ukládání nastavení — SLEDOVAT
+//   ℹ saveSlozkaRole a další dělají setState PŘED await sbUpsertNastaveni
+//   ℹ Pokud DB zápis selže, UI ukazuje změnu která se neuložila
+//   ℹ Oprava: setState až PO potvrzení + rollback na původní hodnotu při chybě
 // [PENDING] ☁️  Přechod Vercel → Cloudflare Pages (Hobby = nekomerční!)
-// [PENDING] 🔐 Přechod na Supabase Auth (hesla plain text → JWT)
-// [PENDING] 🔐 Hashování hesel v tabulce uzivatele
-// [PENDING] 🧹 Refaktoring App.jsx (5200 řádků → komponenty)
-// [PENDING] 🔀 Merge staging (build0186) → main
+//
+// PRIORITA 4 — NOVÉ FUNKCE:
+// [PENDING] 📈 Dashboard — KPI karty + grafy
+//   ℹ Navrhovány: počet staveb v realizaci, obrat, zisk, marže
+//   ℹ Graf cashflow predikce: osa X = měsíce, osa Y = smluvní ceny dle termínu
+//   ℹ Základ existuje v GrafModal — rozšířit, ne předělávat
+// [PENDING] 🗓️ Kalendářní pohled — termíny ukončení v měsíčním kalendáři
+//   ℹ Před implementací průzkum variant — Pravidlo #0! (Gemini zmiňuje FullCalendar)
+// [PENDING] 📱 Mobilní "výjezdový" pohled — jen termíny + poznámky pro techniky
+//   ℹ isMobile detekce již existuje — využít jako základ
+// [PENDING] 💡 VPN — otestovat otevírání složek přes VPN
+// [PENDING] 💡 Chrome — fix minimalizace okna při otevírání složek
+// [PENDING] 📧 Tlačítko "Odeslat testovací e-mail" v nastavení
+// [PENDING] 📦 Hromadné akce — označit více staveb, hromadně změnit technika/stav
+//
+// JIHLAVA:
+// [PENDING] 🏙️  Stavby Jihlava — nová větev "jihlava", nová Supabase DB, nový Vercel projekt
 //
 // ============================================================
 // HISTORY BUILDŮ
@@ -248,8 +283,15 @@ import * as XLSX from "xlsx";
 // BUILD0183 — Tisk: zoom 0.55 (všechny sloupce), skryty symboly ⠿ ⟺
 // BUILD0184 — Tisk: obnoveny barvy (odstraněn background-color:transparent)
 // BUILD0185 — Tisk: bgLight světlé barvy řádků, td transparent, th modrá
-// BUILD0224 — Tabulka: prošlé termíny bez faktury — pulsující červený rámeček celého řádku
-// BUILD0223 — FIX: Popup Termíny zobrazuje i prošlé termíny bez faktury (stejně jako e-mail)
+// BUILD0186 — (viz předchozí session)
+// BUILD0187–0194 — Nastavení Aplikace: drag&drop, 1-5 sloupců, viditelnost, prefix, povinná pole
+// BUILD0195 — FIX: useEffect pořadí + useDraggable reset(overrideW)
+// BUILD0196–0210 — FIX (15 buildů): drag&drop placeholder — modulo systém špatný
+// BUILD0211 — REFACTOR: cardsOrder string[] → string[][] — FUNKČNÍ
+// BUILD0212 — Pravidlo #1b do hlavičky
+// BUILD0213–0214 — FIX: saveSlozkaRole, render cols
+// BUILD0215–0220 — DEBUG + FIX: sbUpsertNastaveni — ukládání 12 nastavení do DB
+// BUILD0221 — Validace: max 1 pole z KAT_FIELDS (Kategorie I+II)
 // BUILD0222 — Smazaná firma: oranžový pulzující badge + přeškrtnutý text + tooltip
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
 // BUILD0220 — Odstraněny console.log, ukládání nastavení potvrzeno funkční
@@ -1147,7 +1189,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
       return `<tr><td style="padding:6px 8px;background:${st.pdfBg||rowBg};color:${st.pdfColor||"#1e293b"};font-weight:700;border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${z.akce||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${fmtCas(z.cas)}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top">${z.uzivatel||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top"><div style="font-weight:600">${nazev}</div>${zmenyHtml}</td></tr>`;
     }).join("");
     const w = window.open("","_blank");
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Znojmo</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Jihlava</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
     w.document.close();
   };
 
@@ -1761,7 +1803,7 @@ function GrafModal({ data, firmy, isDark, onClose }) {
 // ============================================================
 // LOGIN
 // ============================================================
-function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
+function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
@@ -2389,7 +2431,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Znojmo", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby, povinnaPole = {}, onSavePovinnaPole, prefixEnabled = false, prefixValue = "ZN-", onSaveCisloPrefix, sloupceRole = {}, onSaveSloupceRole }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Jihlava", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby, povinnaPole = {}, onSavePovinnaPole, prefixEnabled = false, prefixValue = "ZN-", onSaveCisloPrefix, sloupceRole = {}, onSaveSloupceRole }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -2484,7 +2526,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [editNotifyEmails, setEditNotifyEmails] = useState(notifyEmails || "");
   const [editSlozkaRole, setEditSlozkaRole] = useState(slozkaRole || "admin");
   const [editAutoLogout, setEditAutoLogout] = useState(String(autoLogoutMinutesProp || 15));
-  const [editAppNazev, setEditAppNazev] = useState(appNazevProp || "Stavby Znojmo");
+  const [editAppNazev, setEditAppNazev] = useState(appNazevProp || "Stavby Jihlava");
   const [editDeadlineDays, setEditDeadlineDays] = useState(String(deadlineDaysProp || 30));
   const [editDemoMax, setEditDemoMax] = useState(String(demoMaxStavbyProp ?? 15));
   const [editPovinnaPole, setEditPovinnaPole] = useState({ ...povinnaPole });
@@ -2760,7 +2802,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                   content: (
                     <div>
                       <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Zobrazí se v hlavičce, na přihlašovací obrazovce a ve footeru.</div>
-                      <input value={editAppNazev} onChange={e => setEditAppNazev(e.target.value)} placeholder="Stavby Znojmo" style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box", marginBottom: 8 }} />
+                      <input value={editAppNazev} onChange={e => setEditAppNazev(e.target.value)} placeholder="Stavby Jihlava" style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box", marginBottom: 8 }} />
                       <button onClick={() => onSaveAppNazev(editAppNazev)} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>💾 Uložit název</button>
                     </div>
                   )
@@ -3407,7 +3449,7 @@ export default function App() {
   const autoLogoutTimer = useRef(null);
   const autoLogoutCountdownTimer = useRef(null);
   const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(15);
-  const [appNazev, setAppNazev] = useState("Stavby Znojmo");
+  const [appNazev, setAppNazev] = useState("Stavby Jihlava");
   const [deadlineDays, setDeadlineDays] = useState(30);
   const [demoMaxStavby, setDemoMaxStavby] = useState(15);
   // Povinná pole: objekt { cislo_stavby: false, nazev_stavby: true, ukonceni: false, sod: false, ze_dne: false }
@@ -3477,7 +3519,7 @@ export default function App() {
     const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `stavby_znojmo_${ts}.xls`;
+    a.download = `stavby_jihlava_${ts}.xls`;
     a.click();
   };
   const [logData, setLogData] = useState([]);
@@ -3661,7 +3703,7 @@ export default function App() {
   };
 
   const saveAppNazev = async (val) => {
-    setAppNazev(val || "Stavby Znojmo");
+    setAppNazev(val || "Stavby Jihlava");
     if (isDemo) return;
     try { await sbUpsertNastaveni("app_nazev", val); } catch {}
   };
@@ -5315,7 +5357,7 @@ export default function App() {
             {/* Header — táhlo */}
             <div onMouseDown={onHelpDragStart} style={dragHeaderStyle()}>
               <div>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Znojmo{dragHint}</span>
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Jihlava{dragHint}</span>
               </div>
               <button onClick={() => setShowHelp(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
@@ -5323,7 +5365,7 @@ export default function App() {
             <div id="help-print-content" style={{ overflowY: "auto", padding: "18px 22px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.7 }}>
               {/* Intro */}
               <div style={{ marginBottom: 18, padding: "11px 15px", background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.35)", borderRadius: 10, fontSize: 12, color: "#93c5fd", lineHeight: 1.6 }}>
-                <strong style={{ color: "#60a5fa" }}>Stavby Znojmo</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
+                <strong style={{ color: "#60a5fa" }}>Stavby Jihlava</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
               </div>
               {[
                 { role: "editor", icon: "🏗️", title: "Přidání stavby", text: "Klikněte na zelené tlačítko + Přidat stavbu v hlavičce. Vyplňte název stavby (povinný) a ostatní pole dle potřeby. Klávesa Enter přeskočí na další pole ve formuláři. Uložte tlačítkem Uložit — stavba se okamžitě zobrazí v tabulce." },
@@ -5421,7 +5463,7 @@ export default function App() {
                     <div class="item-text">${text}</div>
                   </div>`).join("");
                 const w = window.open("", "_blank");
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Znojmo</title><style>
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Jihlava</title><style>
                   @page { size: A4; margin: 12mm; }
                   body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
                   h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
@@ -5431,7 +5473,7 @@ export default function App() {
                   .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
-                <h1>❓ Nápověda — Stavby Znojmo</h1>
+                <h1>❓ Nápověda — Stavby Jihlava</h1>
                 <div class="subtitle">Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")}</div>
                 ${rows}
                 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
@@ -5513,7 +5555,7 @@ export default function App() {
                       const ws = XLSX.utils.aoa_to_sheet(ws_data);
                       ws["!cols"] = COLUMNS.map(c => ({ wch: Math.max(c.label.length, 14) }));
                       XLSX.utils.book_append_sheet(wb, ws, "Stavby");
-                      XLSX.writeFile(wb, `stavby_znojmo_${ts}.xlsx`);
+                      XLSX.writeFile(wb, `stavby_jihlava_${ts}.xlsx`);
                     } else {
                       const BOM = "\uFEFF";
                       const h = COLUMNS.map(c => `"${c.label}"`).join(";");
@@ -5533,7 +5575,7 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Jihlava</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 9 }}>
@@ -5586,7 +5628,7 @@ export default function App() {
                   }).join("");
                   const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid #2563eb;font-size:8px">${c.label}</th>`).join("");
                   const win = window.open("","_blank");
-                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Znojmo – tisk</title>
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Jihlava – tisk</title>
                   <style>
                     @page { size: A4 landscape; margin: 10mm; }
                     body { font-family: Arial, sans-serif; font-size: 9px; color: #111; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -5596,7 +5638,7 @@ export default function App() {
                     h2 { font-size: 13px; margin: 0 0 2px; }
                     .sub { font-size: 9px; color: #666; margin-bottom: 8px; }
                   </style></head><body>
-                  <h2>Stavby Znojmo</h2>
+                  <h2>Stavby Jihlava</h2>
                   <div class="sub">kategorie 1 & 2 | Tisk: ${new Date().toLocaleDateString("cs-CZ")} | Záznamů: ${filtered.length}</div>
                   <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
                   <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()};}<\/script>
@@ -5609,7 +5651,7 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Jihlava</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <div style={{ overflowX: "auto" }}>
@@ -5697,7 +5739,7 @@ export default function App() {
                     @media print { button { display: none; } }
                   </style>
                   </head><body>
-                  <h2>🏚️ Stavby Znojmo – Stavby bez firmy</h2>
+                  <h2>🏚️ Stavby Jihlava – Stavby bez firmy</h2>
                   <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Celkem ${orphans.length} staveb bez přiřazené firmy</p>
                   <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Původní firma</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                   <tbody>${rows}</tbody></table>
@@ -5730,7 +5772,7 @@ export default function App() {
             {/* tabulka */}
             <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, padding: isMobile ? "12px" : 24 }} id="deadline-print-area">
               <div style={{ marginBottom: 16, display: "none" }} className="print-header">
-                <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Znojmo – Blížící se termíny</div>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Jihlava – Blížící se termíny</div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>Vygenerováno: {new Date().toLocaleDateString("cs-CZ")} | Zakázky s termínem do 30 pracovních dní</div>
                 <hr style={{ margin: "8px 0" }} />
               </div>
@@ -5795,7 +5837,7 @@ export default function App() {
                   @media print { button { display: none; } }
                 </style>
                 </head><body>
-                <h2>⚠️ Stavby Znojmo – Blížící se termíny ukončení</h2>
+                <h2>⚠️ Stavby Jihlava – Blížící se termíny ukončení</h2>
                 <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Zakázky s termínem do 30 pracovních dní (${deadlineWarnings.length} zakázek)</p>
                 <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Firma</th><th>Termín ukončení</th><th>Dní do termínu</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                 <tbody>${rows}</tbody></table>
