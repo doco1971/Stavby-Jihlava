@@ -1812,7 +1812,8 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
   const isLoginStaging = typeof window !== "undefined" && (
     window.location.hostname.includes("staging") ||
     window.location.hostname.includes("preview") ||
-    window.location.hostname === "localhost"
+    window.location.hostname === "localhost" ||
+    window.location.hostname.includes("vercel.app")
   );
 
   const handle = () => {
@@ -3586,7 +3587,8 @@ export default function App() {
   const isStaging = typeof window !== "undefined" && (
     window.location.hostname.includes("staging") ||
     window.location.hostname.includes("preview") ||
-    window.location.hostname === "localhost"
+    window.location.hostname === "localhost" ||
+    window.location.hostname.includes("vercel.app")
   );
 
   // ── Šířky sloupců (jen superadmin) ─────────────────────────
@@ -4376,7 +4378,8 @@ export default function App() {
         sb("uzivatele?order=id"),
         sb("log_aktivit?order=id"),
       ]);
-      const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
+      const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost" ||
+    window.location.hostname.includes("vercel.app"))) ? "STAGING" : "PRODUKCE";
       const payload = {
         version: 2,
         created: new Date().toISOString(),
@@ -4437,7 +4440,8 @@ export default function App() {
           return;
         }
         // Zjisti aktuální prostředí
-        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
+        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost" ||
+    window.location.hostname.includes("vercel.app"))) ? "STAGING" : "PRODUKCE";
         const prostrediZalohy = payload.prostredi || "NEZNÁMÉ";
         const mismatch = prostrediZalohy !== "NEZNÁMÉ" && prostrediZalohy !== prostrediAktualni;
         // Zjisti počet staveb v aktuální DB
@@ -5979,7 +5983,8 @@ export default function App() {
       {/* IMPORT XLS — POTVRZOVACÍ DIALOG */}
       {importXLSConfirm && (() => {
         const { file, stavbyVDB } = importXLSConfirm;
-        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
+        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost" ||
+    window.location.hostname.includes("vercel.app"))) ? "STAGING" : "PRODUKCE";
         const confirmed = importXLSConfirmText.trim().toUpperCase() === "POTVRDIT";
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
