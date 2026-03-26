@@ -1931,8 +1931,9 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
             <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ display: "block", margin: "0 auto 14px" }}>
               <defs>
                 <radialGradient id="lgbg" cx="50%" cy="35%" r="70%">
-                  <stop offset="0%" stopColor=TENANT.p1 />
-                  <stop offset="100%" stopColor="#0f172a" />
+               	     {/* OPRAVENO: přidány složené závorky {} kolem TENANT.p1 */}
+    							<stop offset="0%" stopColor={TENANT.p1} /> 
+		     <stop offset="100%" stopColor="#0f172a" />
                 </radialGradient>
               </defs>
               <circle cx="40" cy="40" r="38" fill="url(#lgbg)" stroke={TENANT.p1} strokeWidth="1.5" strokeOpacity="0.5" />
