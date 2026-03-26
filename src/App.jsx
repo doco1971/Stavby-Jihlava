@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0228
+// BUILD: 2026_03_26_build0229
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -297,6 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0229 — FIX: 4x #1a2744 → TENANT.p1deep + IS_JIHLAVA env fallback (VITE_IS_JIHLAVA)
 // BUILD0228 — FIX: Jihlava — všechny hardcoded modré → TENANT (tlačítka, headery, náhled tisku, HTML blob tisk, @media print, nápověda)
 // BUILD0227 — FIX: SVG atributy stopColor/fill/stroke bez {} + zbývající hardcoded modré v UI
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
@@ -566,14 +567,14 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0228";
+const APP_BUILD = "build0229";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
 // Znojmo: modrá (#2563eb), logo blesk, "kategorie 1 & 2"
 // Jihlava: zelená (#3B6D11), logo stožáry, "kategorie 2"
 // ============================================================
-const IS_JIHLAVA = typeof window !== "undefined" && window.location.hostname.includes("jihlava");
+const IS_JIHLAVA = (typeof window !== "undefined" && window.location.hostname.includes("jihlava")) || import.meta.env.VITE_IS_JIHLAVA === "true";
 const TENANT = IS_JIHLAVA ? {
   // === JIHLAVA — zelená ===
   nazev: "Stavby Jihlava",
@@ -3220,7 +3221,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                     {isSuperAdmin && !isDemo && <col style={{ width: 40 }} />}
                   </colgroup>
                   <thead>
-                    <tr style={{ background: isDark ? "#1a2744" : "#e2e8f0" }}>
+                    <tr style={{ background: isDark ? TENANT.p1deep : "#e2e8f0" }}>
                       {["Čas", "Uživatel", "Akce", "Detail", ...(isSuperAdmin && !isDemo ? [""] : [])].map(h => (
                         <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, overflow: "hidden", textOverflow: "ellipsis" }}>{h}</th>
                       ))}
@@ -4864,7 +4865,7 @@ export default function App() {
     headerBorder: lgS > 0 ? `rgba(255,255,255,${(0.08 + lgS * 0.18).toFixed(3)})` : "rgba(255,255,255,0.08)",
     cardBg: lgS > 0 ? `rgba(255,255,255,${(0.04 + lgS * 0.06).toFixed(3)})` : "rgba(255,255,255,0.04)",
     cardBorder: lgS > 0 ? `rgba(255,255,255,${(0.08 + lgS * 0.14).toFixed(3)})` : "rgba(255,255,255,0.08)",
-    theadBg: lgS > 0 ? `rgba(255,255,255,${(lgS * 0.07).toFixed(3)})` : "#1a2744",
+    theadBg: lgS > 0 ? `rgba(255,255,255,${(lgS * 0.07).toFixed(3)})` : TENANT.p1deep,
     cellBorder: lgS > 0 ? `rgba(255,255,255,${(0.07 + lgS * 0.04).toFixed(3)})` : "rgba(255,255,255,0.07)",
     filterBg: lgS > 0 ? `rgba(255,255,255,${(lgS * 0.05).toFixed(3)})` : "rgba(255,255,255,0.02)",
     text: "#e2e8f0", textMuted: "rgba(255,255,255,0.45)", textFaint: "rgba(255,255,255,0.25)",
@@ -4901,7 +4902,7 @@ export default function App() {
   const nextId = data.length > 0 ? data.reduce((max, r) => Math.max(max, r.id), 0) + 1 : 1;
   const emptyRow = { id: nextId, firma: firmy[0]?.hodnota||"", ps_i: 0, snk_i: 0, bo_i: 0, ps_ii: 0, bo_ii: 0, poruch: 0, cislo_stavby: prefixEnabled ? prefixValue : "", nazev_stavby: "", vyfakturovano: 0, ukonceni: "", zrealizovano: "", sod: "", ze_dne: "", objednatel: "", stavbyvedouci: "", nabidkova_cena: 0, cislo_faktury: "", castka_bez_dph: 0, splatna: "", cislo_faktury_2: "", castka_bez_dph_2: 0, splatna_2: "", poznamka: "" };
 
-  const getFirmaColor = (firmaName) => firmaColorCache[firmaName] || { bg: isDark ? "#1a2744" : "#e2e8f0", badge: tc2(0.25), badgeBorder: tc2(0.6), text: TENANT.p2, hex: TENANT.p2 };
+  const getFirmaColor = (firmaName) => firmaColorCache[firmaName] || { bg: isDark ? TENANT.p1deep : "#e2e8f0", badge: tc2(0.25), badgeBorder: tc2(0.6), text: TENANT.p2, hex: TENANT.p2 };
 
   const firmaBadge = (firma) => {
     const exists = firmy.some(f => f.hodnota === firma);
@@ -5889,7 +5890,7 @@ export default function App() {
               </div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: isDark ? "#1a2744" : "#e2e8f0" }}>
+                  <tr style={{ background: isDark ? TENANT.p1deep : "#e2e8f0" }}>
                     {["Č. stavby","Název stavby","Termín ukončení","Dní do termínu","Objednatel","Stavbyvedoucí"].map(h => (
                       <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)", fontWeight: 700, fontSize: 11, borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, whiteSpace: "nowrap" }}>{h}</th>
                     ))}
