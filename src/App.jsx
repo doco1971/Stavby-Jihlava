@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0232
+// BUILD: 2026_03_26_build0233
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -297,6 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0233 — FIX: vyfakturovaná stavba se nezobrazuje v blížících se termínech (isFaktura check)
 // BUILD0232 — FIX: appDarkBg Jihlava zesvětlena #070f04 → #0c1808 (podobný jas jako Znojmo #0f172a)
 // BUILD0231 — FIX: celé pozadí aplikace zelené pro Jihlavu — darkAppBg, body.background, všechny #0f172a fallbacky → TENANT.appBg
 // BUILD0230 — FIX: TENANT.modalBg + TENANT.inputBg — modaly/dropdowny zelené pro Jihlavu; opraveny hardcoded "Stavby Znojmo" texty → TENANT.nazev
@@ -570,7 +571,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0232";
+const APP_BUILD = "build0233";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
@@ -4150,6 +4151,7 @@ export default function App() {
         }
         const dni = pracovniDny(dnes, datum);
         if (dni > deadlineDays) return null;
+        if (isFaktura) return null;  // vyfakturovaná stavba — nezobrazovat v termínech
         return { ...r, dniDo: dni, datumUkonceni: datum };
       })
       .filter(Boolean)
