@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0230
+// BUILD: 2026_03_26_build0231
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -297,6 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0231 — FIX: celé pozadí aplikace zelené pro Jihlavu — darkAppBg, body.background, všechny #0f172a fallbacky → TENANT.appBg
 // BUILD0230 — FIX: TENANT.modalBg + TENANT.inputBg — modaly/dropdowny zelené pro Jihlavu; opraveny hardcoded "Stavby Znojmo" texty → TENANT.nazev
 // BUILD0229 — FIX: 4x #1a2744 → TENANT.p1deep + IS_JIHLAVA env fallback (VITE_IS_JIHLAVA)
 // BUILD0228 — FIX: Jihlava — všechny hardcoded modré → TENANT (tlačítka, headery, náhled tisku, HTML blob tisk, @media print, nápověda)
@@ -568,7 +569,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0230";
+const APP_BUILD = "build0231";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
@@ -593,6 +594,8 @@ const TENANT = IS_JIHLAVA ? {
   orbColor2: "rgba(80,160,60,0.22)",
   modalBg: "#0d1f08",
   inputBg: "#071004",
+  appDarkBg: "#070f04",
+  appLightBg: "#e8f0e0",
 } : {
   // === ZNOJMO — modrá ===
   nazev: "Stavby Znojmo",
@@ -610,6 +613,8 @@ const TENANT = IS_JIHLAVA ? {
   orbColor2: "rgba(139,92,246,0.3)",
   modalBg: "#1e293b",
   inputBg: "#0f172a",
+  appDarkBg: "#0f172a",
+  appLightBg: "#f1f5f9",
 };
 // Helper funkce pro rgba barvy podle tenantu
 // tc1(0.15) → "rgba(59,109,17,0.15)" pro Jihlavu, tc1(0.15) pro Znojmo
@@ -1992,7 +1997,7 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
 function SummaryCards({ data, firmy, isDark, firmaColors, isMobile }) {
   const sum = (firma, fields) => data.filter(r => r.firma === firma).reduce((a, r) => { fields.forEach(f => a += Number(r[f])||0); return a; }, 0);
   const sumAll = (fields) => data.reduce((a, r) => { fields.forEach(f => a += Number(r[f])||0); return a; }, 0);
-  const bg = isDark ? "#0f172a" : "#f1f5f9";
+  const bg = isDark ? TENANT.appDarkBg : TENANT.appLightBg;
   const textMuted = isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)";
   const textMain = isDark ? "#fff" : "#1e293b";
   const groupBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
@@ -2325,7 +2330,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
                 onChange={e => set("poznamka", e.target.value)}
                 placeholder="Volný komentář ke stavbě..."
                 rows={2}
-                style={{ width: "100%", padding: "7px 10px", background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 7, color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "7px 10px", background: TENANT.inputBg, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 7, color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }}
               />
             </div>
           </div>
@@ -4176,7 +4181,7 @@ export default function App() {
 
   useEffect(() => {
     const dark = isDarkComputed(theme);
-    document.body.style.background = dark ? "#0f172a" : "#f1f5f9";
+    document.body.style.background = dark ? TENANT.appDarkBg : TENANT.appLightBg;
     document.body.style.color = dark ? "#e2e8f0" : "#1e293b";
   }, [theme]);
 
@@ -4800,7 +4805,7 @@ export default function App() {
   const firmaColorMapCache = useMemo(() => Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || TENANT.p2])), [firmy]);
 
     if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: TENANT.appDarkBg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid ${tc1(0.3)}`, borderTop: `3px solid ${TENANT.p1}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Načítám data...</div>
@@ -4809,7 +4814,7 @@ export default function App() {
   );
 
   if (dbError) return (
-    <div style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: TENANT.appDarkBg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
       <div style={{ background: TENANT.modalBg, borderRadius: 16, padding: 32, maxWidth: 480, textAlign: "center", border: "1px solid rgba(239,68,68,0.3)" }}>
         <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
         <h3 style={{ color: "#f87171", margin: "0 0 8px" }}>Chyba připojení</h3>
@@ -4850,14 +4855,26 @@ export default function App() {
 
   // Interpolace barvy pozadí dle themeStrength
   // Tmavý: 0%=#060818 (skoro černá) ↔ 100%=#1e293b (výchozí slate)
-  const darkAppBg = lgS > 0 ? "#060d1a" : (() => {
+  const darkAppBg = lgS > 0 ? (IS_JIHLAVA ? "#040c02" : "#060d1a") : (() => {
+    if (IS_JIHLAVA) {
+      const r = Math.round(4 + themeS * (14 - 4));
+      const g = Math.round(8 + themeS * (24 - 8));
+      const b = Math.round(2 + themeS * (8 - 2));
+      return `rgb(${r},${g},${b})`;
+    }
     const r = Math.round(6 + themeS * (30 - 6));
     const g = Math.round(8 + themeS * (41 - 8));
     const b = Math.round(24 + themeS * (59 - 24));
     return `rgb(${r},${g},${b})`;
   })();
-  // Světlý: 0%=#ffffff (čistě bílá) ↔ 100%=#d0d8e8 (výchozí slate-200)
-  const lightAppBg = lgS > 0 ? "#e8edf5" : (() => {
+  // Světlý: 0%=#ffffff (čistě bílá) ↔ 100%=TENANT.appLightBg
+  const lightAppBg = lgS > 0 ? (IS_JIHLAVA ? "#e8f0e0" : "#e8edf5") : (() => {
+    if (IS_JIHLAVA) {
+      const r = Math.round(255 - themeS * (255 - 232));
+      const g = Math.round(255 - themeS * (255 - 240));
+      const b = Math.round(255 - themeS * (255 - 224));
+      return `rgb(${r},${g},${b})`;
+    }
     const r = Math.round(255 - themeS * (255 - 208));
     const g = Math.round(255 - themeS * (255 - 216));
     const b = Math.round(255 - themeS * (255 - 232));
@@ -4874,7 +4891,7 @@ export default function App() {
     cellBorder: lgS > 0 ? `rgba(255,255,255,${(0.07 + lgS * 0.04).toFixed(3)})` : "rgba(255,255,255,0.07)",
     filterBg: lgS > 0 ? `rgba(255,255,255,${(lgS * 0.05).toFixed(3)})` : "rgba(255,255,255,0.02)",
     text: "#e2e8f0", textMuted: "rgba(255,255,255,0.45)", textFaint: "rgba(255,255,255,0.25)",
-    inputBg: lgS > 0 ? `rgba(255,255,255,${(lgS * 0.08).toFixed(3)})` : "#0f172a",
+    inputBg: lgS > 0 ? `rgba(255,255,255,${(lgS * 0.08).toFixed(3)})` : TENANT.inputBg,
     inputBorder: lgS > 0 ? `rgba(255,255,255,${(0.15 + lgS * 0.07).toFixed(3)})` : "rgba(255,255,255,0.15)",
     modalBg: lgS > 0 ? `rgba(8,16,36,${(0.5 + lgS * 0.25).toFixed(3)})` : TENANT.modalBg,
     dropdownBg: lgS > 0 ? `rgba(8,16,36,${(0.7 + lgS * 0.2).toFixed(3)})` : TENANT.modalBg,
@@ -5234,7 +5251,7 @@ export default function App() {
 
       {/* CARD VIEW (mobil) */}
       {cardView && (
-        <div style={{ overflowY: "auto", flex: 1, minHeight: 0, padding: "10px 10px", display: "flex", flexDirection: "column", gap: 10, background: isDark ? "#0f172a" : "#f1f5f9" }}>
+        <div style={{ overflowY: "auto", flex: 1, minHeight: 0, padding: "10px 10px", display: "flex", flexDirection: "column", gap: 10, background: isDark ? TENANT.appDarkBg : TENANT.appLightBg }}>
           {displayRows.length === 0 && (
             <div style={{ textAlign: "center", padding: 48, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)", fontSize: 14 }}>Žádné záznamy</div>
           )}
@@ -6127,7 +6144,7 @@ export default function App() {
                   onChange={e => setImportXLSConfirmText(e.target.value)}
                   placeholder="POTVRDIT"
                   autoFocus
-                  style={{ width: "100%", padding: "9px 12px", background: "#0f172a", border: `1px solid ${confirmed ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", textAlign: "center", letterSpacing: 2, fontWeight: 700 }}
+                  style={{ width: "100%", padding: "9px 12px", background: TENANT.inputBg, border: `1px solid ${confirmed ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", textAlign: "center", letterSpacing: 2, fontWeight: 700 }}
                 />
               </div>
               <div style={{ display: "flex", gap: 10 }}>
@@ -6211,7 +6228,7 @@ export default function App() {
                   onChange={e => setImportConfirmText(e.target.value)}
                   placeholder="POTVRDIT"
                   autoFocus
-                  style={{ width: "100%", padding: "9px 12px", background: "#0f172a", border: `1px solid ${confirmed ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", textAlign: "center", letterSpacing: 2, fontWeight: 700 }}
+                  style={{ width: "100%", padding: "9px 12px", background: TENANT.inputBg, border: `1px solid ${confirmed ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.15)"}`, borderRadius: 8, color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", textAlign: "center", letterSpacing: 2, fontWeight: 700 }}
                 />
               </div>
 
