@@ -1780,17 +1780,17 @@ function GrafModal({ data, firmy, isDark, onClose }) {
           <line x1={PL} x2={W-PR} y1={PT+cH} y2={PT+cH} stroke={isDark?"rgba(255,255,255,0.2)":"rgba(0,0,0,0.2)"} strokeWidth={1}/>
           {/* area nabídka */}
           <polygon points={pts.map((p,i) => `${xPos(i)},${yPos(p.nabidka)}`).join(" ")+` ${xPos(pts.length-1)},${PT+cH} ${PL},${PT+cH}`}
-            fill=TENANT.p3 fillOpacity={0.1}/>
+            fill={TENANT.p3} fillOpacity={0.1}/>
           {/* area vyfakturováno */}
           <polygon points={pts.map((p,i) => `${xPos(i)},${yPos(p.vyfakturovano)}`).join(" ")+` ${xPos(pts.length-1)},${PT+cH} ${PL},${PT+cH}`}
             fill="#4ade80" fillOpacity={0.15}/>
           {/* linie nabídka */}
-          <path d={lineD("nabidka")} fill="none" stroke=TENANT.p3 strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/>
+          <path d={lineD("nabidka")} fill="none" stroke={TENANT.p3} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/>
           {/* linie vyfakturováno */}
           <path d={lineD("vyfakturovano")} fill="none" stroke="#4ade80" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/>
           {/* body */}
           {pts.map((p,i) => <g key={i}>
-            <circle cx={xPos(i)} cy={yPos(p.nabidka)} r={3.5} fill=TENANT.p3/>
+            <circle cx={xPos(i)} cy={yPos(p.nabidka)} r={3.5} fill={TENANT.p3}/>
             <circle cx={xPos(i)} cy={yPos(p.vyfakturovano)} r={3.5} fill="#4ade80"/>
             <text x={xPos(i)} y={H-PB+16} textAnchor="middle" fill={mutedC} fontSize={10}>{p.name}</text>
           </g>)}
@@ -1935,7 +1935,7 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
                   <stop offset="100%" stopColor="#0f172a" />
                 </radialGradient>
               </defs>
-              <circle cx="40" cy="40" r="38" fill="url(#lgbg)" stroke=TENANT.p1 strokeWidth="1.5" strokeOpacity="0.5" />
+              <circle cx="40" cy="40" r="38" fill="url(#lgbg)" stroke={TENANT.p1} strokeWidth="1.5" strokeOpacity="0.5" />
               <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
               <circle cx="18" cy="24" r="2.2" fill="#facc15" opacity="0.55" />
               <circle cx="62" cy="22" r="1.8" fill="#facc15" opacity="0.45" />
@@ -5047,7 +5047,7 @@ export default function App() {
             </svg>
           ) : (
             <svg width={isMobile ? 32 : 46} height={isMobile ? 32 : 46} viewBox="0 0 80 80" fill="none">
-              <circle cx="40" cy="40" r="38" fill=TENANT.p1deep />
+              <circle cx="40" cy="40" r="38" fill={TENANT.p1deep} />
               <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
             </svg>
           )}
