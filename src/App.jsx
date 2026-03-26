@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0226
+// BUILD: 2026_03_26_build0227
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -297,6 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0227 — FIX: SVG atributy stopColor/fill/stroke bez {} + zbývající hardcoded modré v UI
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
 // BUILD0220 — Odstraněny console.log, ukládání nastavení potvrzeno funkční
 // BUILD0219 — DEBUG: console.log v sbUpsertNastaveni
@@ -564,7 +565,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0226";
+const APP_BUILD = "build0227";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
@@ -1931,9 +1932,8 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
             <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ display: "block", margin: "0 auto 14px" }}>
               <defs>
                 <radialGradient id="lgbg" cx="50%" cy="35%" r="70%">
-               	     {/* OPRAVENO: přidány složené závorky {} kolem TENANT.p1 */}
-    							<stop offset="0%" stopColor={TENANT.p1} /> 
-		     <stop offset="100%" stopColor="#0f172a" />
+                  <stop offset="0%" stopColor={TENANT.p1} />
+                  <stop offset="100%" stopColor="#0f172a" />
                 </radialGradient>
               </defs>
               <circle cx="40" cy="40" r="38" fill="url(#lgbg)" stroke={TENANT.p1} strokeWidth="1.5" strokeOpacity="0.5" />
@@ -2464,7 +2464,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
           onDragLeave={() => setDragOver(null)}
           onDrop={handleDrop(i)}
           onDragEnd={() => { dragIdx.current = null; setDragOver(null); }}
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${dragOver === i ? TENANT.p3 : itemBorder}`, borderLeft: dragOver === i ? "3px solid #60a5fa" : `1px solid ${itemBorder}`, transition: "border 0.1s", cursor: "default" }}>
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", marginBottom: 5, background: itemBg, borderRadius: 6, border: `1px solid ${dragOver === i ? TENANT.p3 : itemBorder}`, borderLeft: dragOver === i ? `3px solid ${TENANT.p3}` : `1px solid ${itemBorder}`, transition: "border 0.1s", cursor: "default" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)", cursor: "grab", fontSize: 13, lineHeight: 1, flexShrink: 0, userSelect: "none" }} title="Přetáhnout pro změnu pořadí">⠿</span>
             <div style={{ width: 14, height: 14, borderRadius: 3, background: f.barva || TENANT.p2 }} />
@@ -4795,7 +4795,7 @@ export default function App() {
     if (loading) return (
     <div style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, border: `3px solid ${tc1(0.3)}`, borderTop: "3px solid #2563eb", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+        <div style={{ width: 48, height: 48, border: `3px solid ${tc1(0.3)}`, borderTop: `3px solid ${TENANT.p1}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Načítám data...</div>
       </div>
     </div>
@@ -5273,7 +5273,7 @@ export default function App() {
                   onDragLeave={isSuperAdmin ? handleColDragLeave : undefined}
                   onDrop={isSuperAdmin ? e => handleColDrop(e, col.key) : undefined}
                   onDragEnd={isSuperAdmin ? handleColDragEnd : undefined}
-                  style={{ padding: "6px 4px 6px 8px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, width: getColWidth(col), minWidth: 0, position: "sticky", top: 0, background: dragOverState === col.key ? (isDark ? tc1(0.25) : tc1(0.12)) : T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, borderLeft: dragOverState === col.key ? "2px solid #3b82f6" : `1px solid ${T.cellBorder}`, userSelect: "none", cursor: isSuperAdmin ? "grab" : "default", transition: "background 0.1s, border-left 0.1s" }}
+                  style={{ padding: "6px 4px 6px 8px", textAlign: "center", color: T.textMuted, fontWeight: 700, fontSize: 10.5, letterSpacing: 0.4, width: getColWidth(col), minWidth: 0, position: "sticky", top: 0, background: dragOverState === col.key ? (isDark ? tc1(0.25) : tc1(0.12)) : T.theadBg, zIndex: 10, border: `1px solid ${T.cellBorder}`, borderLeft: dragOverState === col.key ? `2px solid ${TENANT.p2}` : `1px solid ${T.cellBorder}`, userSelect: "none", cursor: isSuperAdmin ? "grab" : "default", transition: "background 0.1s, border-left 0.1s" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, width: "100%", minWidth: 0 }}>
                     {isSuperAdmin && (
