@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_24_build0224
+// BUILD: 2026_03_26_build0225
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -38,7 +38,7 @@ import * as XLSX from "xlsx";
 //      UI ji zobrazí automaticky — nikde jinde se číslo buildu NEMĚNÍ!
 //   + VŽDY vytvořit changelog soubor stavby-app_DATUM_buildXXXX_changelog.txt
 //
-// DEPLOY: Vercel + GitHub (doco1971/stavby-jihlava)
+// DEPLOY: Vercel + GitHub (doco1971/stavby-znojmo)
 //   Větve: main (produkce) + staging (testování)
 //   Soubor patří do: src/App.jsx
 //   Postup: staging první → otestovat → merge do main
@@ -293,6 +293,9 @@ import * as XLSX from "xlsx";
 // BUILD0215–0220 — DEBUG + FIX: sbUpsertNastaveni — ukládání 12 nastavení do DB
 // BUILD0221 — Validace: max 1 pole z KAT_FIELDS (Kategorie I+II)
 // BUILD0222 — Smazaná firma: oranžový pulzující badge + přeškrtnutý text + tooltip
+// BUILD0223 — FIX: Popup Termíny — zobrazuje i prošlé termíny bez faktury
+// BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
+// BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk (beze změny)
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
 // BUILD0220 — Odstraněny console.log, ukládání nastavení potvrzeno funkční
 // BUILD0219 — DEBUG: console.log v sbUpsertNastaveni
@@ -560,7 +563,45 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0224";
+const APP_BUILD = "build0225";
+
+// ============================================================
+// TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
+// Znojmo: modrá (#2563eb), logo blesk, "kategorie 1 & 2"
+// Jihlava: zelená (#3B6D11), logo stožáry, "kategorie 2"
+// ============================================================
+const IS_JIHLAVA = typeof window !== "undefined" && window.location.hostname.includes("jihlava");
+const TENANT = IS_JIHLAVA ? {
+  nazev: "Stavby Jihlava",
+  kategorie: "kategorie 2",
+  primary: "#3B6D11",
+  primaryDark: "#27500A",
+  primaryLight: "#639922",
+  primaryLighter: "#97C459",
+  primaryLightest: "#C0DD97",
+  loginBg: "linear-gradient(135deg,#0a1f0a 0%,#0f2d1a 50%,#071510 100%)",
+  loginGradStop1: "#3B6D11",
+  loginGradStop2: "#0a1f0a",
+  btnBg: "linear-gradient(135deg,#3B6D11,#27500A)",
+  numColor: "#3B6D11",
+  orbColor1: "rgba(57,130,57,0.32)",
+  orbColor2: "rgba(80,160,60,0.22)",
+} : {
+  nazev: "Stavby Znojmo",
+  kategorie: "kategorie 1 & 2",
+  primary: "#2563eb",
+  primaryDark: "#1d4ed8",
+  primaryLight: "#3b82f6",
+  primaryLighter: "#60a5fa",
+  primaryLightest: "#93c5fd",
+  loginBg: "linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f2027 100%)",
+  loginGradStop1: "#2563eb",
+  loginGradStop2: "#0f172a",
+  btnBg: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+  numColor: "#2563eb",
+  orbColor1: "rgba(59,130,246,0.35)",
+  orbColor2: "rgba(139,92,246,0.3)",
+};
 
 const SB_URL = import.meta.env.VITE_SB_URL;
 const SB_KEY = import.meta.env.VITE_SB_KEY;
@@ -1189,7 +1230,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
       return `<tr><td style="padding:6px 8px;background:${st.pdfBg||rowBg};color:${st.pdfColor||"#1e293b"};font-weight:700;border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${z.akce||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${fmtCas(z.cas)}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top">${z.uzivatel||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top"><div style="font-weight:600">${nazev}</div>${zmenyHtml}</td></tr>`;
     }).join("");
     const w = window.open("","_blank");
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Jihlava</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Znojmo</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
     w.document.close();
   };
 
@@ -1803,7 +1844,7 @@ function GrafModal({ data, firmy, isDark, onClose }) {
 // ============================================================
 // LOGIN
 // ============================================================
-function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
+function Login({ onLogin, users, onLogAction, appNazev = "Stavby Znojmo" }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
@@ -1812,8 +1853,7 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
   const isLoginStaging = typeof window !== "undefined" && (
     window.location.hostname.includes("staging") ||
     window.location.hostname.includes("preview") ||
-    window.location.hostname === "localhost" ||
-    window.location.hostname.includes("vercel.app")
+    window.location.hostname === "localhost"
   );
 
   const handle = () => {
@@ -1830,7 +1870,7 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f2027 100%)", display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "clamp(16px,5vh,60px) 0 24px", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+    <div style={{ position: "fixed", inset: 0, background: TENANT.loginBg, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "clamp(16px,5vh,60px) 0 24px", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
       <style>{`
         @keyframes loginStagingBlink{0%,100%{opacity:1;box-shadow:0 0 12px rgba(249,115,22,0.9)}50%{opacity:0.45;box-shadow:0 0 3px rgba(249,115,22,0.2)}}
         @keyframes loginStagingPulse{0%,100%{background:rgba(249,115,22,0.95)}50%{background:rgba(234,88,12,0.75)}}
@@ -1844,22 +1884,61 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
       )}
       <div style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: isLoginStaging ? "1px solid rgba(249,115,22,0.4)" : "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "clamp(24px,5vw,48px) clamp(18px,5vw,40px)", width: "min(380px, 94vw)", boxShadow: isLoginStaging ? "0 32px 80px rgba(0,0,0,0.5), 0 0 0 2px rgba(249,115,22,0.25)" : "0 32px 80px rgba(0,0,0,0.5)", marginTop: isLoginStaging ? 20 : 0 }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ display: "block", margin: "0 auto 14px" }}>
-            <defs>
-              <radialGradient id="lgbg" cx="50%" cy="35%" r="70%">
-                <stop offset="0%" stopColor="#2563eb" />
-                <stop offset="100%" stopColor="#0f172a" />
-              </radialGradient>
-            </defs>
-            <circle cx="40" cy="40" r="38" fill="url(#lgbg)" stroke="#2563eb" strokeWidth="1.5" strokeOpacity="0.5" />
-            <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
-            <circle cx="18" cy="24" r="2.2" fill="#facc15" opacity="0.55" />
-            <circle cx="62" cy="22" r="1.8" fill="#facc15" opacity="0.45" />
-            <circle cx="65" cy="56" r="2" fill="#facc15" opacity="0.4" />
-            <circle cx="15" cy="58" r="1.6" fill="#facc15" opacity="0.5" />
-          </svg>
-          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 800, margin: 0 }}>{appNazev}</h1>
-          <p style={{ color: "rgba(255,255,255,0.5)", margin: "6px 0 0", fontSize: 15, letterSpacing: 2, textTransform: "uppercase" }}>kategorie 1 & 2</p>
+          {IS_JIHLAVA ? (
+            <svg width="100" height="100" viewBox="0 0 100 100" fill="none" style={{ display: "block", margin: "0 auto 16px" }}>
+              {/* levý stožár */}
+              <line x1="28" y1="92" x2="28" y2="18" stroke="#97C459" strokeWidth="3" strokeLinecap="round"/>
+              {/* levý příčník horní */}
+              <line x1="12" y1="28" x2="44" y2="28" stroke="#97C459" strokeWidth="2.5" strokeLinecap="round"/>
+              {/* levý příčník dolní */}
+              <line x1="16" y1="42" x2="40" y2="42" stroke="#97C459" strokeWidth="2" strokeLinecap="round"/>
+              {/* levé izolátory horní */}
+              <circle cx="13" cy="28" r="3" fill="#C0DD97"/>
+              <circle cx="43" cy="28" r="3" fill="#C0DD97"/>
+              {/* levé izolátory dolní */}
+              <circle cx="17" cy="42" r="2.3" fill="#C0DD97"/>
+              <circle cx="39" cy="42" r="2.3" fill="#C0DD97"/>
+              {/* pravý stožár */}
+              <line x1="72" y1="92" x2="72" y2="24" stroke="#639922" strokeWidth="2.5" strokeLinecap="round"/>
+              {/* pravý příčník horní */}
+              <line x1="58" y1="34" x2="86" y2="34" stroke="#639922" strokeWidth="2" strokeLinecap="round"/>
+              {/* pravý příčník dolní */}
+              <line x1="61" y1="47" x2="83" y2="47" stroke="#639922" strokeWidth="1.8" strokeLinecap="round"/>
+              {/* pravé izolátory */}
+              <circle cx="59" cy="34" r="2.3" fill="#97C459"/>
+              <circle cx="85" cy="34" r="2.3" fill="#97C459"/>
+              <circle cx="62" cy="47" r="1.9" fill="#97C459"/>
+              <circle cx="82" cy="47" r="1.9" fill="#97C459"/>
+              {/* vedení mezi stožáry horní */}
+              <path d="M13,28 Q40,36 59,34" fill="none" stroke="#C0DD97" strokeWidth="1.6" strokeLinecap="round"/>
+              <path d="M43,28 Q60,33 85,34" fill="none" stroke="#C0DD97" strokeWidth="1.4" strokeLinecap="round"/>
+              {/* vedení dolní */}
+              <path d="M17,42 Q40,50 62,47" fill="none" stroke="#97C459" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M39,42 Q60,48 82,47" fill="none" stroke="#97C459" strokeWidth="1.1" strokeLinecap="round"/>
+              {/* hvězdičky */}
+              <circle cx="55" cy="14" r="1.3" fill="#C0DD97" opacity="0.5"/>
+              <circle cx="8" cy="58" r="1.1" fill="#97C459" opacity="0.4"/>
+              <circle cx="90" cy="62" r="1.3" fill="#C0DD97" opacity="0.35"/>
+              <circle cx="88" cy="18" r="1" fill="#97C459" opacity="0.45"/>
+            </svg>
+          ) : (
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ display: "block", margin: "0 auto 14px" }}>
+              <defs>
+                <radialGradient id="lgbg" cx="50%" cy="35%" r="70%">
+                  <stop offset="0%" stopColor="#2563eb" />
+                  <stop offset="100%" stopColor="#0f172a" />
+                </radialGradient>
+              </defs>
+              <circle cx="40" cy="40" r="38" fill="url(#lgbg)" stroke="#2563eb" strokeWidth="1.5" strokeOpacity="0.5" />
+              <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
+              <circle cx="18" cy="24" r="2.2" fill="#facc15" opacity="0.55" />
+              <circle cx="62" cy="22" r="1.8" fill="#facc15" opacity="0.45" />
+              <circle cx="65" cy="56" r="2" fill="#facc15" opacity="0.4" />
+              <circle cx="15" cy="58" r="1.6" fill="#facc15" opacity="0.5" />
+            </svg>
+          )}
+          <h1 style={{ color: "#fff", fontSize: 32, fontWeight: 800, margin: 0 }}>{appNazev}</h1>
+          <p style={{ color: "rgba(255,255,255,0.5)", margin: "6px 0 0", fontSize: 15, letterSpacing: 2, textTransform: "uppercase" }}>{TENANT.kategorie}</p>
         </div>
 
         <div style={{ marginBottom: 14 }}><Lbl>Email</Lbl><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vas@email.cz" style={inputSx} onKeyDown={e => e.key === "Enter" && handle()} /></div>
@@ -1867,7 +1946,7 @@ function Login({ onLogin, users, onLogAction, appNazev = "Stavby Jihlava" }) {
 
         {err && <div style={{ color: "#f87171", fontSize: 13, marginBottom: 14, textAlign: "center" }}>{err}</div>}
 
-        <button onClick={handle} disabled={loading} style={{ width: "100%", padding: 14, background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 10, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
+        <button onClick={handle} disabled={loading} style={{ width: "100%", padding: 14, background: TENANT.btnBg, border: "none", borderRadius: 10, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
           {loading ? "Přihlašuji..." : "Přihlásit se →"}
         </button>
         <div style={{ marginTop: 16, textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
@@ -2432,7 +2511,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   );
 }
 
-function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Jihlava", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby, povinnaPole = {}, onSavePovinnaPole, prefixEnabled = false, prefixValue = "ZN-", onSaveCisloPrefix, sloupceRole = {}, onSaveSloupceRole }) {
+function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onChangeUsers, onClose, onLoadLog, isAdmin, isSuperAdmin, isDark, appVerze, appDatum, onSaveAppInfo, stavbyData, onResetColWidths, onResetColOrder, isDemo, notifyEmails, onSaveNotifyEmails, slozkaRole, onSaveSlozkaRole, extensionReady, protokolReady = false, autoZaloha = true, onSaveAutoZaloha, zalohaRole = "superadmin", onSaveZalohaRole, onImportXLS, autoLogoutMinutesProp = 15, onSaveAutoLogoutMinutes, appNazevProp = "Stavby Znojmo", onSaveAppNazev, deadlineDaysProp = 30, onSaveDeadlineDays, demoMaxStavbyProp = 15, onSaveDemoMaxStavby, povinnaPole = {}, onSavePovinnaPole, prefixEnabled = false, prefixValue = "ZN-", onSaveCisloPrefix, sloupceRole = {}, onSaveSloupceRole }) {
   const [tab, setTab] = useState("ciselniky");
   const [f, setF] = useState([...firmy]);
   const [o, setO] = useState([...objednatele]);
@@ -2527,7 +2606,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
   const [editNotifyEmails, setEditNotifyEmails] = useState(notifyEmails || "");
   const [editSlozkaRole, setEditSlozkaRole] = useState(slozkaRole || "admin");
   const [editAutoLogout, setEditAutoLogout] = useState(String(autoLogoutMinutesProp || 15));
-  const [editAppNazev, setEditAppNazev] = useState(appNazevProp || "Stavby Jihlava");
+  const [editAppNazev, setEditAppNazev] = useState(appNazevProp || "Stavby Znojmo");
   const [editDeadlineDays, setEditDeadlineDays] = useState(String(deadlineDaysProp || 30));
   const [editDemoMax, setEditDemoMax] = useState(String(demoMaxStavbyProp ?? 15));
   const [editPovinnaPole, setEditPovinnaPole] = useState({ ...povinnaPole });
@@ -2803,7 +2882,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                   content: (
                     <div>
                       <div style={{ color: modalMuted, fontSize: 11, marginBottom: 10 }}>Zobrazí se v hlavičce, na přihlašovací obrazovce a ve footeru.</div>
-                      <input value={editAppNazev} onChange={e => setEditAppNazev(e.target.value)} placeholder="Stavby Jihlava" style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box", marginBottom: 8 }} />
+                      <input value={editAppNazev} onChange={e => setEditAppNazev(e.target.value)} placeholder="Stavby Znojmo" style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", border: `1px solid ${modalBorder}`, borderRadius: 7, color: modalText, fontSize: 13, boxSizing: "border-box", marginBottom: 8 }} />
                       <button onClick={() => onSaveAppNazev(editAppNazev)} style={{ padding: "8px 16px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>💾 Uložit název</button>
                     </div>
                   )
@@ -3450,7 +3529,7 @@ export default function App() {
   const autoLogoutTimer = useRef(null);
   const autoLogoutCountdownTimer = useRef(null);
   const [autoLogoutMinutes, setAutoLogoutMinutes] = useState(15);
-  const [appNazev, setAppNazev] = useState("Stavby Jihlava");
+  const [appNazev, setAppNazev] = useState("Stavby Znojmo");
   const [deadlineDays, setDeadlineDays] = useState(30);
   const [demoMaxStavby, setDemoMaxStavby] = useState(15);
   // Povinná pole: objekt { cislo_stavby: false, nazev_stavby: true, ukonceni: false, sod: false, ze_dne: false }
@@ -3520,7 +3599,7 @@ export default function App() {
     const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `stavby_jihlava_${ts}.xls`;
+    a.download = `stavby_znojmo_${ts}.xls`;
     a.click();
   };
   const [logData, setLogData] = useState([]);
@@ -3587,8 +3666,7 @@ export default function App() {
   const isStaging = typeof window !== "undefined" && (
     window.location.hostname.includes("staging") ||
     window.location.hostname.includes("preview") ||
-    window.location.hostname === "localhost" ||
-    window.location.hostname.includes("vercel.app")
+    window.location.hostname === "localhost"
   );
 
   // ── Šířky sloupců (jen superadmin) ─────────────────────────
@@ -3705,7 +3783,7 @@ export default function App() {
   };
 
   const saveAppNazev = async (val) => {
-    setAppNazev(val || "Stavby Jihlava");
+    setAppNazev(val || "Stavby Znojmo");
     if (isDemo) return;
     try { await sbUpsertNastaveni("app_nazev", val); } catch {}
   };
@@ -4378,8 +4456,7 @@ export default function App() {
         sb("uzivatele?order=id"),
         sb("log_aktivit?order=id"),
       ]);
-      const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost" ||
-    window.location.hostname.includes("vercel.app"))) ? "STAGING" : "PRODUKCE";
+      const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
       const payload = {
         version: 2,
         created: new Date().toISOString(),
@@ -4440,8 +4517,7 @@ export default function App() {
           return;
         }
         // Zjisti aktuální prostředí
-        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost" ||
-    window.location.hostname.includes("vercel.app"))) ? "STAGING" : "PRODUKCE";
+        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
         const prostrediZalohy = payload.prostredi || "NEZNÁMÉ";
         const mismatch = prostrediZalohy !== "NEZNÁMÉ" && prostrediZalohy !== prostrediAktualni;
         // Zjisti počet staveb v aktuální DB
@@ -4808,7 +4884,7 @@ export default function App() {
     modalBg: lgS > 0 ? `rgba(255,255,255,${(0.55 + lgS * 0.28).toFixed(3)})` : "#ffffff",
     dropdownBg: lgS > 0 ? `rgba(255,255,255,${(0.7 + lgS * 0.25).toFixed(3)})` : "#ffffff",
     hoverBg: lgS > 0 ? `rgba(255,255,255,${(0.4 + lgS * 0.35).toFixed(3)})` : "rgba(0,0,0,0.04)",
-    numColor: "#2563eb",
+    numColor: TENANT.numColor,
     backdropFilter: lgS > 0 ? `blur(${(8 + lgS * 22).toFixed(1)}px) saturate(${(130 + lgS * 60).toFixed(0)}%) brightness(${(1 + lgS * 0.05).toFixed(3)})` : "none",
     boxShadow: lgS > 0 ? `0 2px 0 rgba(255,255,255,${(0.6 + lgS * 0.38).toFixed(3)}) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 4px 24px rgba(0,0,0,${(0.04 + lgS * 0.1).toFixed(3)})` : "none",
     orbOpacity: lgS,
@@ -4942,14 +5018,37 @@ export default function App() {
         {liquidGlass && <div className="lg-shimmer-bar" style={{ position: "absolute", top: 0, left: 0, width: "40%", height: "100%", pointerEvents: "none" }} />}
         {/* Levá část: logo */}
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
-          <svg width={isMobile ? 32 : 46} height={isMobile ? 32 : 46} viewBox="0 0 80 80" fill="none">
-            <circle cx="40" cy="40" r="38" fill="#1e3a8a" />
-            <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
-          </svg>
+          {IS_JIHLAVA ? (
+            <svg width={isMobile ? 36 : 52} height={isMobile ? 36 : 52} viewBox="0 0 100 100" fill="none">
+              <line x1="28" y1="92" x2="28" y2="18" stroke="#97C459" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="12" y1="28" x2="44" y2="28" stroke="#97C459" strokeWidth="2.5" strokeLinecap="round"/>
+              <line x1="16" y1="42" x2="40" y2="42" stroke="#97C459" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="13" cy="28" r="3" fill="#C0DD97"/>
+              <circle cx="43" cy="28" r="3" fill="#C0DD97"/>
+              <circle cx="17" cy="42" r="2.3" fill="#C0DD97"/>
+              <circle cx="39" cy="42" r="2.3" fill="#C0DD97"/>
+              <line x1="72" y1="92" x2="72" y2="24" stroke="#639922" strokeWidth="2.5" strokeLinecap="round"/>
+              <line x1="58" y1="34" x2="86" y2="34" stroke="#639922" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="61" y1="47" x2="83" y2="47" stroke="#639922" strokeWidth="1.8" strokeLinecap="round"/>
+              <circle cx="59" cy="34" r="2.3" fill="#97C459"/>
+              <circle cx="85" cy="34" r="2.3" fill="#97C459"/>
+              <circle cx="62" cy="47" r="1.9" fill="#97C459"/>
+              <circle cx="82" cy="47" r="1.9" fill="#97C459"/>
+              <path d="M13,28 Q40,36 59,34" fill="none" stroke="#C0DD97" strokeWidth="1.6" strokeLinecap="round"/>
+              <path d="M43,28 Q60,33 85,34" fill="none" stroke="#C0DD97" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M17,42 Q40,50 62,47" fill="none" stroke="#97C459" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M39,42 Q60,48 82,47" fill="none" stroke="#97C459" strokeWidth="1.1" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg width={isMobile ? 32 : 46} height={isMobile ? 32 : 46} viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="38" fill="#1e3a8a" />
+              <polygon points="47,10 30,42 40,42 33,68 52,36 42,36" fill="#facc15" />
+            </svg>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div>
               <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22 }}>{appNazev}</div>
-              {!isMobile && <div style={{ color: T.textMuted, fontSize: 16, textAlign: "center", letterSpacing: 1 }}>kategorie 1 & 2</div>}
+              {!isMobile && <div style={{ color: T.textMuted, fontSize: 16, textAlign: "center", letterSpacing: 1 }}>{TENANT.kategorie}</div>}
             </div>
             {isStaging && !isDemo && (
               <div style={{ animation: "stagingBlink 1.5s ease-in-out infinite", background: "rgba(220,38,38,0.9)", color: "#fff", fontWeight: 800, fontSize: 13, padding: "4px 12px", borderRadius: 6, letterSpacing: 1, border: "1px solid rgba(220,38,38,0.6)", flexShrink: 0 }}>
@@ -5361,7 +5460,7 @@ export default function App() {
             {/* Header — táhlo */}
             <div onMouseDown={onHelpDragStart} style={dragHeaderStyle()}>
               <div>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Jihlava{dragHint}</span>
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Znojmo{dragHint}</span>
               </div>
               <button onClick={() => setShowHelp(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
@@ -5369,7 +5468,7 @@ export default function App() {
             <div id="help-print-content" style={{ overflowY: "auto", padding: "18px 22px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.7 }}>
               {/* Intro */}
               <div style={{ marginBottom: 18, padding: "11px 15px", background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.35)", borderRadius: 10, fontSize: 12, color: "#93c5fd", lineHeight: 1.6 }}>
-                <strong style={{ color: "#60a5fa" }}>Stavby Jihlava</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
+                <strong style={{ color: "#60a5fa" }}>Stavby Znojmo</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
               </div>
               {[
                 { role: "editor", icon: "🏗️", title: "Přidání stavby", text: "Klikněte na zelené tlačítko + Přidat stavbu v hlavičce. Vyplňte název stavby (povinný) a ostatní pole dle potřeby. Klávesa Enter přeskočí na další pole ve formuláři. Uložte tlačítkem Uložit — stavba se okamžitě zobrazí v tabulce." },
@@ -5467,7 +5566,7 @@ export default function App() {
                     <div class="item-text">${text}</div>
                   </div>`).join("");
                 const w = window.open("", "_blank");
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Jihlava</title><style>
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Znojmo</title><style>
                   @page { size: A4; margin: 12mm; }
                   body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
                   h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
@@ -5477,7 +5576,7 @@ export default function App() {
                   .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
-                <h1>❓ Nápověda — Stavby Jihlava</h1>
+                <h1>❓ Nápověda — Stavby Znojmo</h1>
                 <div class="subtitle">Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")}</div>
                 ${rows}
                 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
@@ -5559,7 +5658,7 @@ export default function App() {
                       const ws = XLSX.utils.aoa_to_sheet(ws_data);
                       ws["!cols"] = COLUMNS.map(c => ({ wch: Math.max(c.label.length, 14) }));
                       XLSX.utils.book_append_sheet(wb, ws, "Stavby");
-                      XLSX.writeFile(wb, `stavby_jihlava_${ts}.xlsx`);
+                      XLSX.writeFile(wb, `stavby_znojmo_${ts}.xlsx`);
                     } else {
                       const BOM = "\uFEFF";
                       const h = COLUMNS.map(c => `"${c.label}"`).join(";");
@@ -5579,7 +5678,7 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Jihlava</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 9 }}>
@@ -5632,7 +5731,7 @@ export default function App() {
                   }).join("");
                   const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid #2563eb;font-size:8px">${c.label}</th>`).join("");
                   const win = window.open("","_blank");
-                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Jihlava – tisk</title>
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Znojmo – tisk</title>
                   <style>
                     @page { size: A4 landscape; margin: 10mm; }
                     body { font-family: Arial, sans-serif; font-size: 9px; color: #111; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -5642,7 +5741,7 @@ export default function App() {
                     h2 { font-size: 13px; margin: 0 0 2px; }
                     .sub { font-size: 9px; color: #666; margin-bottom: 8px; }
                   </style></head><body>
-                  <h2>Stavby Jihlava</h2>
+                  <h2>Stavby Znojmo</h2>
                   <div class="sub">kategorie 1 & 2 | Tisk: ${new Date().toLocaleDateString("cs-CZ")} | Záznamů: ${filtered.length}</div>
                   <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
                   <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()};}<\/script>
@@ -5655,7 +5754,7 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Jihlava</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <div style={{ overflowX: "auto" }}>
@@ -5743,7 +5842,7 @@ export default function App() {
                     @media print { button { display: none; } }
                   </style>
                   </head><body>
-                  <h2>🏚️ Stavby Jihlava – Stavby bez firmy</h2>
+                  <h2>🏚️ Stavby Znojmo – Stavby bez firmy</h2>
                   <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Celkem ${orphans.length} staveb bez přiřazené firmy</p>
                   <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Původní firma</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                   <tbody>${rows}</tbody></table>
@@ -5776,7 +5875,7 @@ export default function App() {
             {/* tabulka */}
             <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, padding: isMobile ? "12px" : 24 }} id="deadline-print-area">
               <div style={{ marginBottom: 16, display: "none" }} className="print-header">
-                <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Jihlava – Blížící se termíny</div>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Znojmo – Blížící se termíny</div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>Vygenerováno: {new Date().toLocaleDateString("cs-CZ")} | Zakázky s termínem do 30 pracovních dní</div>
                 <hr style={{ margin: "8px 0" }} />
               </div>
@@ -5841,7 +5940,7 @@ export default function App() {
                   @media print { button { display: none; } }
                 </style>
                 </head><body>
-                <h2>⚠️ Stavby Jihlava – Blížící se termíny ukončení</h2>
+                <h2>⚠️ Stavby Znojmo – Blížící se termíny ukončení</h2>
                 <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Zakázky s termínem do 30 pracovních dní (${deadlineWarnings.length} zakázek)</p>
                 <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Firma</th><th>Termín ukončení</th><th>Dní do termínu</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                 <tbody>${rows}</tbody></table>
@@ -5983,8 +6082,7 @@ export default function App() {
       {/* IMPORT XLS — POTVRZOVACÍ DIALOG */}
       {importXLSConfirm && (() => {
         const { file, stavbyVDB } = importXLSConfirm;
-        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost" ||
-    window.location.hostname.includes("vercel.app"))) ? "STAGING" : "PRODUKCE";
+        const prostrediAktualni = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
         const confirmed = importXLSConfirmText.trim().toUpperCase() === "POTVRDIT";
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 9100, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
