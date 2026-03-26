@@ -297,7 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
-// BUILD0228 — FIX: Jihlava — odstraněny všechny hardcoded modré (#2563eb,#1e3a8a,#1e3a5f) → TENANT.btnBg/p1/p1deep/p1dark/nazev/kategorie (tlačítka, hlavičky tabulek, náhled tisku, HTML blob log/historie, @media print)
+// BUILD0228 — FIX: Jihlava — všechny hardcoded modré → TENANT (tlačítka, headery, náhled tisku, HTML blob tisk, @media print, nápověda)
 // BUILD0227 — FIX: SVG atributy stopColor/fill/stroke bez {} + zbývající hardcoded modré v UI
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
 // BUILD0220 — Odstraněny console.log, ukládání nastavení potvrzeno funkční
@@ -1092,7 +1092,7 @@ function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, on
 
             {/* XLSX export — jako HTML tabulka (.xls) */}
             <button onClick={() => {
-              const headers = `<tr><th style="background:#1E3A8A;color:#fff;padding:6px 10px;border:1px solid #2563EB;font-size:10px">Akce</th><th style="background:#1E3A8A;color:#fff;padding:6px 10px;border:1px solid #2563EB;font-size:10px">Datum a čas</th><th style="background:#1E3A8A;color:#fff;padding:6px 10px;border:1px solid #2563EB;font-size:10px">Uživatel</th><th style="background:#1E3A8A;color:#fff;padding:6px 10px;border:1px solid #2563EB;font-size:10px">Detail změn</th></tr>`;
+              const headers = `<tr><th style="background:${TENANT.p1deep};color:#fff;padding:6px 10px;border:1px solid ${TENANT.p1};font-size:10px">Akce</th><th style="background:${TENANT.p1deep};color:#fff;padding:6px 10px;border:1px solid ${TENANT.p1};font-size:10px">Datum a čas</th><th style="background:${TENANT.p1deep};color:#fff;padding:6px 10px;border:1px solid ${TENANT.p1};font-size:10px">Uživatel</th><th style="background:${TENANT.p1deep};color:#fff;padding:6px 10px;border:1px solid ${TENANT.p1};font-size:10px">Detail změn</th></tr>`;
               const AKCE_BG = { "Přidání stavby":"#dcfce7","Editace stavby":"#fef9c3","Smazání stavby":"#fee2e2" };
               const rows = zaznamy.map((z, i) => {
                 const cas = z.cas ? new Date(z.cas).toLocaleString("cs-CZ") : "";
@@ -1196,7 +1196,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
 
   // ── exporty ──────────────────────────────────────────────
   const doXLSX = () => {
-    const headers = `<tr><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Akce</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Datum a čas</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Uživatel</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Název stavby</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Detail změn</th></tr>`;
+    const headers = `<tr><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Akce</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Datum a čas</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Uživatel</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Název stavby</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Detail změn</th></tr>`;
     const rows = filtered.map((z, i) => {
       const diff = parseDetail(z.detail);
       const zmenyText = diff?.zmeny?.map(x => `${FIELD_LABELS[x.pole]||x.pole}: ${x.stare} → ${x.nove}`).join("; ") || z.detail || "";
@@ -1211,7 +1211,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
   };
 
   const doXLSColor = () => {
-    const headers = `<tr><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Akce</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Datum a čas</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Uživatel</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Název stavby</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Detail změn</th></tr>`;
+    const headers = `<tr><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Akce</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Datum a čas</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Uživatel</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Název stavby</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Detail změn</th></tr>`;
     const rows = filtered.map((z, i) => {
       const st = AKCE_STYLE[z.akce] || {};
       const diff = parseDetail(z.detail);
@@ -1388,7 +1388,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
             <button onClick={doXLSColor} style={{ padding: "7px 14px", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 7, color: "#fbbf24", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🎨 Barevný Excel</button>
             <button onClick={doPDF}      style={{ padding: "7px 14px", background: "rgba(239,68,68,0.12)",  border: "1px solid rgba(239,68,68,0.3)",  borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨️ PDF tisk</button>
             <button onClick={() => {
-              const headers = `<tr><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Akce</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Datum a čas</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Uživatel</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Název stavby</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB;font-size:11px">Detail změn</th></tr>`;
+              const headers = `<tr><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Akce</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Datum a čas</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Uživatel</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Název stavby</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1};font-size:11px">Detail změn</th></tr>`;
               const AKCE_BG = { "Přidání stavby":"#dcfce7","Editace stavby":"#fef9c3","Smazání stavby":"#fee2e2" };
               const rows = filtered.map((z, i) => {
                 const diff = (() => { try { const s = z.detail?.indexOf("{"); return s>=0 ? JSON.parse(z.detail.slice(s)) : null; } catch { return null; } })();
@@ -3196,10 +3196,10 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                     }).join("");
                     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>
                       <table><thead><tr>
-                        <th style="padding:8px 10px;background:#1E3A8A;color:#fff;border:1px solid #2563EB;font-size:12px">Čas</th>
-                        <th style="padding:8px 10px;background:#1E3A8A;color:#fff;border:1px solid #2563EB;font-size:12px">Uživatel</th>
-                        <th style="padding:8px 10px;background:#1E3A8A;color:#fff;border:1px solid #2563EB;font-size:12px">Akce</th>
-                        <th style="padding:8px 10px;background:#1E3A8A;color:#fff;border:1px solid #2563EB;font-size:12px">Detail</th>
+                        <th style="padding:8px 10px;background:${TENANT.p1deep};color:#fff;border:1px solid ${TENANT.p1};font-size:12px">Čas</th>
+                        <th style="padding:8px 10px;background:${TENANT.p1deep};color:#fff;border:1px solid ${TENANT.p1};font-size:12px">Uživatel</th>
+                        <th style="padding:8px 10px;background:${TENANT.p1deep};color:#fff;border:1px solid ${TENANT.p1};font-size:12px">Akce</th>
+                        <th style="padding:8px 10px;background:${TENANT.p1deep};color:#fff;border:1px solid ${TENANT.p1};font-size:12px">Detail</th>
                       </tr></thead><tbody>${rows}</tbody></table>
                     </body></html>`;
                     const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
@@ -3581,7 +3581,7 @@ export default function App() {
   const doExportXLSColor = () => {
     const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || TENANT.p2]));
     const cols = COLUMNS.filter(c => c.key !== "id");
-    const headers = cols.map(c => `<th style="padding:7px 10px;background:#1E3A8A;color:#fff;border:1px solid #2563EB;white-space:nowrap;font-size:11px">${c.label}</th>`).join("");
+    const headers = cols.map(c => `<th style="padding:7px 10px;background:${TENANT.p1deep};color:#fff;border:1px solid ${TENANT.p1};white-space:nowrap;font-size:11px">${c.label}</th>`).join("");
     const rows = filtered.map((row, i) => {
       const hex = firmaColorMap[row.firma] || TENANT.p2;
       const rgb = hexToRgb(hex);
@@ -4442,7 +4442,7 @@ export default function App() {
       const res = await sb("log_aktivit?order=cas.desc&limit=10000");
       const rows = res || [];
       const actionColors = { "Přihlášení": "#dbeafe", "Přidání stavby": "#dcfce7", "Editace stavby": "#fef9c3", "Smazání stavby": "#fee2e2", "Nastavení": "#f3e8ff", "Záloha": "#ffedd5" };
-      const headers = `<tr><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Datum a čas</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Uživatel</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Akce</th><th style="background:#1E3A8A;color:#fff;padding:7px 10px;border:1px solid #2563EB">Detail</th></tr>`;
+      const headers = `<tr><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1}">Datum a čas</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1}">Uživatel</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1}">Akce</th><th style="background:${TENANT.p1deep};color:#fff;padding:7px 10px;border:1px solid ${TENANT.p1}">Detail</th></tr>`;
       const dataRows = rows.map((r, i) => {
         const bg = actionColors[r.akce] || (i % 2 === 0 ? "#f8fafc" : "#fff");
         const cas = r.cas ? new Date(r.cas).toLocaleString("cs-CZ") : "";
@@ -5580,7 +5580,7 @@ export default function App() {
                   h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
                   .subtitle { color: #64748b; font-size: 10px; margin-bottom: 14px; }
                   .item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; break-inside: avoid; }
-                  .item-title { font-weight: 700; font-size: 12px; color: " + TENANT.p1deep + "; margin-bottom: 3px; }
+                  .item-title { font-weight: 700; font-size: 12px; color: ${TENANT.p1deep}; margin-bottom: 3px; }
                   .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
