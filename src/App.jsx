@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0231
+// BUILD: 2026_03_26_build0232
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -297,6 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0232 — FIX: appDarkBg Jihlava zesvětlena #070f04 → #0c1808 (podobný jas jako Znojmo #0f172a)
 // BUILD0231 — FIX: celé pozadí aplikace zelené pro Jihlavu — darkAppBg, body.background, všechny #0f172a fallbacky → TENANT.appBg
 // BUILD0230 — FIX: TENANT.modalBg + TENANT.inputBg — modaly/dropdowny zelené pro Jihlavu; opraveny hardcoded "Stavby Znojmo" texty → TENANT.nazev
 // BUILD0229 — FIX: 4x #1a2744 → TENANT.p1deep + IS_JIHLAVA env fallback (VITE_IS_JIHLAVA)
@@ -569,7 +570,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0231";
+const APP_BUILD = "build0232";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
@@ -594,7 +595,7 @@ const TENANT = IS_JIHLAVA ? {
   orbColor2: "rgba(80,160,60,0.22)",
   modalBg: "#0d1f08",
   inputBg: "#071004",
-  appDarkBg: "#070f04",
+  appDarkBg: "#0c1808",
   appLightBg: "#e8f0e0",
 } : {
   // === ZNOJMO — modrá ===
@@ -4855,11 +4856,11 @@ export default function App() {
 
   // Interpolace barvy pozadí dle themeStrength
   // Tmavý: 0%=#060818 (skoro černá) ↔ 100%=#1e293b (výchozí slate)
-  const darkAppBg = lgS > 0 ? (IS_JIHLAVA ? "#040c02" : "#060d1a") : (() => {
+  const darkAppBg = lgS > 0 ? (IS_JIHLAVA ? "#0a1506" : "#060d1a") : (() => {
     if (IS_JIHLAVA) {
-      const r = Math.round(4 + themeS * (14 - 4));
-      const g = Math.round(8 + themeS * (24 - 8));
-      const b = Math.round(2 + themeS * (8 - 2));
+      const r = Math.round(10 + themeS * (22 - 10));
+      const g = Math.round(18 + themeS * (34 - 18));
+      const b = Math.round(6 + themeS * (14 - 6));
       return `rgb(${r},${g},${b})`;
     }
     const r = Math.round(6 + themeS * (30 - 6));
