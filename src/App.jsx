@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0227
+// BUILD: 2026_03_26_build0228
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -297,6 +297,7 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0228 — FIX: Jihlava — odstraněny všechny hardcoded modré (#2563eb,#1e3a8a,#1e3a5f) → TENANT.btnBg/p1/p1deep/p1dark/nazev/kategorie (tlačítka, hlavičky tabulek, náhled tisku, HTML blob log/historie, @media print)
 // BUILD0227 — FIX: SVG atributy stopColor/fill/stroke bez {} + zbývající hardcoded modré v UI
 // BUILD0221 — Validace: max 1 pole z Kategorií I+II (KAT_FIELDS)
 // BUILD0220 — Odstraněny console.log, ukládání nastavení potvrzeno funkční
@@ -565,7 +566,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0227";
+const APP_BUILD = "build0228";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
@@ -1085,7 +1086,7 @@ function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, on
                 return `<tr><td style="padding:8px 10px;background:${akceBg};border:1px solid #e2e8f0;vertical-align:top;white-space:nowrap;font-size:11px;color:${akceColor};font-weight:700">${z.akce||""}</td><td style="padding:8px 10px;background:${i%2===0?"#f8fafc":"#fff"};border:1px solid #e2e8f0;vertical-align:top;white-space:nowrap;font-size:11px">${cas}</td><td style="padding:8px 10px;background:${i%2===0?"#f8fafc":"#fff"};border:1px solid #e2e8f0;vertical-align:top;font-size:11px">${z.uzivatel||""}</td><td style="padding:8px 10px;background:${i%2===0?"#f8fafc":"#fff"};border:1px solid #e2e8f0;vertical-align:top;font-size:11px">${zmenyHtml || (z.detail||"")}</td></tr>`;
               }).join("");
               const w = window.open("","_blank");
-              w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historie – ${row.nazev_stavby}</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:11px}@media print{button{display:none}}</style></head><body><h2>🕐 Historie změn – ${row.cislo_stavby||""} ${row.nazev_stavby||""}</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${zaznamy.length} záznamů</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Detail změn</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+              w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historie – ${row.nazev_stavby}</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:${TENANT.p1deep};color:#fff;padding:7px 10px;text-align:left;font-size:11px}@media print{button{display:none}}</style></head><body><h2>🕐 Historie změn – ${row.cislo_stavby||""} ${row.nazev_stavby||""}</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${zaznamy.length} záznamů</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Detail změn</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
               w.document.close();
             }} style={{ padding: "7px 14px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 7, color: "#f87171", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨️ PDF tisk</button>
 
@@ -1106,7 +1107,7 @@ function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, on
               a.download = `historie_${row.cislo_stavby||row.id}_${new Date().toISOString().slice(0,10)}.xls`; a.click();
             }} style={{ padding: "7px 14px", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 7, color: "#4ade80", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📊 Excel</button>
           </div>
-          <button onClick={onClose} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
+          <button onClick={onClose} style={{ padding: "8px 20px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
         </div>
 
         {/* POTVRZENÍ SMAZÁNÍ */}
@@ -1237,7 +1238,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
       return `<tr><td style="padding:6px 8px;background:${st.pdfBg||rowBg};color:${st.pdfColor||"#1e293b"};font-weight:700;border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${z.akce||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${fmtCas(z.cas)}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top">${z.uzivatel||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top"><div style="font-weight:600">${nazev}</div>${zmenyHtml}</td></tr>`;
     }).join("");
     const w = window.open("","_blank");
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Znojmo</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:${TENANT.p1deep};color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – ${TENANT.nazev}</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
     w.document.close();
   };
 
@@ -1403,7 +1404,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
               const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `log_zakazek_${ts}.xls`; a.click();
             }} style={{ padding: "7px 14px", background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 7, color: TENANT.p3, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📜 Export logu</button>
           </div>
-          <button onClick={onClose} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
+          <button onClick={onClose} style={{ padding: "8px 20px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
         </div>
 
         {/* POTVRZENÍ SMAZÁNÍ ZÁZNAMU LOGU */}
@@ -2221,7 +2222,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 
             {/* Základní info */}
             <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #60a5fa", paddingLeft: 8 }}>ZÁKLADNÍ INFORMACE</div>
+              <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: `3px solid ${TENANT.p3}`, paddingLeft: 8 }}>ZÁKLADNÍ INFORMACE</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} />
                 <FormSelectField label="Firma" value={form["firma"]} onChange={v => set("firma", v)} options={firmy} />
@@ -2328,7 +2329,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 
         <div style={{ padding: "14px 24px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{ padding: "9px 18px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13 }}>Zrušit</button>
-          <button onClick={handleSave} style={{ padding: "9px 22px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Uložit</button>
+          <button onClick={handleSave} style={{ padding: "9px 22px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Uložit</button>
         </div>
       </div>
     </div>
@@ -2443,7 +2444,7 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
 
   return (
     <div style={{ flex: 1 }}>
-      <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: "3px solid #60a5fa", paddingLeft: 8 }}>Firmy</div>
+      <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 10, borderLeft: `3px solid ${TENANT.p3}`, paddingLeft: 8 }}>Firmy</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
         <input value={newNazev} onChange={e => setNazev(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
           placeholder="Název firmy..." style={{ ...inputSx, flex: 1, fontSize: 12, background: isDark ? "#0f172a" : "#f8fafc", color: itemText, border: `1px solid ${itemBorder}` }} />
@@ -2723,7 +2724,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
         {/* tabs */}
         <div onMouseDown={e => e.stopPropagation()} style={{ display: "flex", gap: 4, padding: "10px 24px 0", borderBottom: `1px solid ${modalDivider}` }}>
           {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 18px", background: tab === t.key ? tc1(0.2) : "transparent", border: "none", borderBottom: tab === t.key ? "2px solid #2563eb" : "2px solid transparent", borderRadius: "6px 6px 0 0", color: tab === t.key ? TENANT.p3 : modalMuted, cursor: "pointer", fontSize: 13, fontWeight: tab === t.key ? 700 : 400 }}>
+            <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 18px", background: tab === t.key ? tc1(0.2) : "transparent", border: "none", borderBottom: tab === t.key ? `2px solid ${TENANT.p1}` : "2px solid transparent", borderRadius: "6px 6px 0 0", color: tab === t.key ? TENANT.p3 : modalMuted, cursor: "pointer", fontSize: 13, fontWeight: tab === t.key ? 700 : 400 }}>
               {t.label}
             </button>
           ))}
@@ -2743,7 +2744,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
             <div>
               {/* Přidat uživatele */}
               <div style={{ background: modalCardBg, border: `1px solid ${modalBorder}`, borderRadius: 10, padding: 16, marginBottom: 20 }}>
-                <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 12, borderLeft: "3px solid #2563eb", paddingLeft: 8 }}>PŘIDAT UŽIVATELE</div>
+                <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 12, letterSpacing: 0.5, marginBottom: 12, borderLeft: `3px solid ${TENANT.p1}`, paddingLeft: 8 }}>PŘIDAT UŽIVATELE</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 120px", gap: 10, marginBottom: 10 }}>
                   <div><Lbl>Jméno</Lbl><input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Jan Novák" style={inputSx} /></div>
                   <div><Lbl>Email</Lbl><input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="jan@firma.cz" style={inputSx} /></div>
@@ -2801,7 +2802,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                             </select>
                           </div>
                           <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={() => { setUList(uList.map(x => x.id === u.id ? { ...x, password: editUserPass.trim() || x.password, role: editUserRole } : x)); setEditUserId(null); }} style={{ padding: "6px 14px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>💾 Uložit</button>
+                            <button onClick={() => { setUList(uList.map(x => x.id === u.id ? { ...x, password: editUserPass.trim() || x.password, role: editUserRole } : x)); setEditUserId(null); }} style={{ padding: "6px 14px", background: TENANT.btnBg, border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>💾 Uložit</button>
                             <button onClick={() => setEditUserId(null)} style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 12 }}>Zrušit</button>
                           </div>
                         </div>
@@ -4807,7 +4808,7 @@ export default function App() {
         <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
         <h3 style={{ color: "#f87171", margin: "0 0 8px" }}>Chyba připojení</h3>
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, margin: "0 0 20px" }}>{dbError}</p>
-        <button onClick={loadAll} style={{ padding: "10px 24px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 600 }}>Zkusit znovu</button>
+        <button onClick={loadAll} style={{ padding: "10px 24px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 600 }}>Zkusit znovu</button>
       </div>
     </div>
   );
@@ -4951,16 +4952,16 @@ export default function App() {
         /* Řádky tabulky — světlé barvy firem */
         html.printing tr { background: var(--print-bg, #f8fafc) !important; }
         html.printing td { background: transparent !important; }
-        html.printing th { background: #1e3a8a !important; color: white !important; }
+        html.printing th { background: ${TENANT.p1deep} !important; color: white !important; }
         /* Zachovat barvy firem a zvýraznění buněk — nepřepisovat background */
-        html.printing [style*="color:#3b82f6"], html.printing [style*="color: #3b82f6"] { color: #1d4ed8 !important; }
+        html.printing [style*="color:#3b82f6"], html.printing [style*="color: #3b82f6"] { color: ${TENANT.p1dark} !important; }
         html.printing [style*="color:#10b981"], html.printing [style*="color: #10b981"] { color: #047857 !important; }
         html.printing [style*="color:#f59e0b"], html.printing [style*="color: #f59e0b"] { color: #b45309 !important; }
         html.printing [style*="color:#ef4444"], html.printing [style*="color: #ef4444"] { color: #b91c1c !important; }
         html.printing [style*="color:#f87171"], html.printing [style*="color: #f87171"] { color: #b91c1c !important; }
         html.printing [style*="color:#4ade80"], html.printing [style*="color: #4ade80"] { color: #166534 !important; }
         html.printing [style*="color:#fbbf24"], html.printing [style*="color: #fbbf24"] { color: #854d0e !important; }
-        html.printing [style*="color:#60a5fa"], html.printing [style*="color: #60a5fa"] { color: #1d4ed8 !important; }
+        html.printing [style*="color:#60a5fa"], html.printing [style*="color: #60a5fa"] { color: ${TENANT.p1dark} !important; }
         /* Firma badge — zachovat barvy */
         html.printing .firma-badge { color: inherit !important; }
         @keyframes pulse-firma-border {
@@ -5288,7 +5289,7 @@ export default function App() {
                             defaultValue={Math.round(getColWidth(col))}
                             onBlur={e => { const w = Math.max(40, Math.min(2000, parseInt(e.target.value)||40)); setColWidths(prev => { const n = {...prev, [col.key]: w}; saveColWidths(n); return n; }); setEditingColWidth(null); }}
                             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingColWidth(null); }}
-                            style={{ width: 50, fontSize: 10, padding: "1px 3px", background: TENANT.p1deep, color: "#fff", border: "1px solid #60a5fa", borderRadius: 3, flexShrink: 0 }}
+                            style={{ width: 50, fontSize: 10, padding: "1px 3px", background: TENANT.p1deep, color: "#fff", border: `1px solid ${TENANT.p3}`, borderRadius: 3, flexShrink: 0 }}
                             onClick={e => e.stopPropagation()}
                           />
                         : <span className="print-hide-symbol"
@@ -5455,7 +5456,7 @@ export default function App() {
               </div>
             )}
             <div style={{ textAlign: "center", marginTop: 8 }}>
-              <button onClick={() => setImportLog(null)} style={{ padding: "9px 28px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
+              <button onClick={() => setImportLog(null)} style={{ padding: "9px 28px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
             </div>
           </div>
         </div>
@@ -5579,7 +5580,7 @@ export default function App() {
                   h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
                   .subtitle { color: #64748b; font-size: 10px; margin-bottom: 14px; }
                   .item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; break-inside: avoid; }
-                  .item-title { font-weight: 700; font-size: 12px; color: #1e3a8a; margin-bottom: 3px; }
+                  .item-title { font-weight: 700; font-size: 12px; color: " + TENANT.p1deep + "; margin-bottom: 3px; }
                   .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
@@ -5590,7 +5591,7 @@ export default function App() {
                 </body></html>`);
                 w.document.close();
               }} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨️ Tisk nápovědy</button>
-              <button onClick={() => setShowHelp(false)} style={{ padding: "8px 20px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
+              <button onClick={() => setShowHelp(false)} style={{ padding: "8px 20px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Zavřít</button>
             </div>
           </div>
         </div>
@@ -5640,7 +5641,7 @@ export default function App() {
                 setConfirmExport(null);
                 if (t === "xls-color") { doExportXLSColor(); }
                 else { setExportPreview({ type: t }); }
-              }} style={{ padding: "9px 22px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>✅ Ano, exportovat</button>
+              }} style={{ padding: "9px 22px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>✅ Ano, exportovat</button>
             </div>
           </div>
         </div>
@@ -5676,7 +5677,7 @@ export default function App() {
                       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
                     }
                   }}
-                  style={{ padding: "7px 16px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                  style={{ padding: "7px 16px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                   ⬇ Stáhnout {exportPreview.type === "xls" ? ".xlsx" : ".csv"}
                 </button>
                 <button onClick={() => setExportPreview(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
@@ -5685,13 +5686,13 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
-                  <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: TENANT.p1deep }}>{TENANT.nazev}</div>
+                  <div style={{ fontSize: 10, color: "#666" }}>{TENANT.kategorie} | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 9 }}>
                   <thead>
-                    <tr style={{ background: "#1e3a5f" }}>
-                      {COLUMNS.map(c => <th key={c.key} style={{ color: "#fff", padding: "4px 6px", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", whiteSpace: "nowrap", border: "1px solid #2563eb", fontSize: 8 }}>{c.label}</th>)}
+                    <tr style={{ background: TENANT.p1deep }}>
+                      {COLUMNS.map(c => <th key={c.key} style={{ color: "#fff", padding: "4px 6px", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", whiteSpace: "nowrap", border: `1px solid ${TENANT.p1}`, fontSize: 8 }}>{c.label}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -5736,39 +5737,39 @@ export default function App() {
                       return `<td style="padding:3px 6px;border:1px solid #e2e8f0;white-space:nowrap;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};color:${cellColor};background:${cellBg};font-size:8px;font-weight:${cellWeight}">${display}</td>`;
                     }).join("")}</tr>`;
                   }).join("");
-                  const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid #2563eb;font-size:8px">${c.label}</th>`).join("");
+                  const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid ${TENANT.p1};font-size:8px">${c.label}</th>`).join("");
                   const win = window.open("","_blank");
-                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Znojmo – tisk</title>
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${TENANT.nazev} – tisk</title>
                   <style>
                     @page { size: A4 landscape; margin: 10mm; }
                     body { font-family: Arial, sans-serif; font-size: 9px; color: #111; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     table { border-collapse: collapse; width: 100%; }
-                    thead tr { background: #1e3a5f; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    thead tr { background: ${TENANT.p1deep}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     td, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     h2 { font-size: 13px; margin: 0 0 2px; }
                     .sub { font-size: 9px; color: #666; margin-bottom: 8px; }
                   </style></head><body>
-                  <h2>Stavby Znojmo</h2>
-                  <div class="sub">kategorie 1 & 2 | Tisk: ${new Date().toLocaleDateString("cs-CZ")} | Záznamů: ${filtered.length}</div>
+                  <h2>${TENANT.nazev}</h2>
+                  <div class="sub">${TENANT.kategorie} | Tisk: ${new Date().toLocaleDateString("cs-CZ")} | Záznamů: ${filtered.length}</div>
                   <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
                   <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()};}<\/script>
                   </body></html>`);
                   win.document.close();
-                }} style={{ padding: "7px 16px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / Uložit jako PDF</button>
+                }} style={{ padding: "7px 16px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / Uložit jako PDF</button>
                 <button onClick={() => setExportPreview(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
               </div>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
-                  <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: TENANT.p1deep }}>{TENANT.nazev}</div>
+                  <div style={{ fontSize: 10, color: "#666" }}>{TENANT.kategorie} | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ borderCollapse: "collapse", fontSize: 9 }}>
                     <thead>
-                      <tr style={{ background: "#1e3a5f" }}>
-                        {COLUMNS.map(c => <th key={c.key} style={{ color: "#fff", padding: "4px 6px", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", whiteSpace: "nowrap", border: "1px solid #2563eb", fontSize: 8 }}>{c.label}</th>)}
+                      <tr style={{ background: TENANT.p1deep }}>
+                        {COLUMNS.map(c => <th key={c.key} style={{ color: "#fff", padding: "4px 6px", textAlign: c.key === "id" ? "center" : c.type === "number" ? "right" : "left", whiteSpace: "nowrap", border: `1px solid ${TENANT.p1}`, fontSize: 8 }}>{c.label}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -5844,7 +5845,7 @@ export default function App() {
                     h2 { margin: 0 0 4px; font-size: 15px; }
                     p { margin: 0 0 12px; color: #64748b; font-size: 11px; }
                     table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                    th { background: #1e3a8a; color: #fff; padding: 7px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    th { background: ${TENANT.p1deep}; color: #fff; padding: 7px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     td { padding: 6px 10px; border: 1px solid #e2e8f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     @media print { button { display: none; } }
                   </style>
@@ -5856,7 +5857,7 @@ export default function App() {
                   <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
                   </body></html>`);
                   w.document.close();
-                }} style={{ padding: "9px 22px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / PDF</button>
+                }} style={{ padding: "9px 22px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / PDF</button>
                 <button onClick={() => setShowOrphanWarning(false)} style={{ padding: "9px 22px", background: "linear-gradient(135deg,#d97706,#b45309)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Rozumím</button>
               </div>
             </div>
@@ -5942,7 +5943,7 @@ export default function App() {
                   h2 { margin: 0 0 4px; font-size: 15px; }
                   p { margin: 0 0 12px; color: #64748b; font-size: 11px; }
                   table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                  th { background: #1e3a8a; color: #fff; padding: 7px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  th { background: ${TENANT.p1deep}; color: #fff; padding: 7px 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                   td { padding: 6px 10px; border: 1px solid #e2e8f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                   @media print { button { display: none; } }
                 </style>
@@ -5954,7 +5955,7 @@ export default function App() {
                 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
                 </body></html>`);
                 w.document.close();
-              }} style={{ padding: "9px 18px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / PDF</button>
+              }} style={{ padding: "9px 18px", background: TENANT.btnBg, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨️ Tisk / PDF</button>
               <button onClick={() => setShowDeadlines(false)} style={{ padding: "9px 18px", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 8, color: isDark ? "#fff" : "#1e293b", cursor: "pointer", fontSize: 13 }}>Zavřít</button>
             </div>
           </div>
@@ -6247,7 +6248,7 @@ export default function App() {
                   setAutoLogoutCountdown(60);
                 }, autoLogoutMinutes * 60 * 1000);
               }}
-              style={{ padding: "11px 28px", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}
+              style={{ padding: "11px 28px", background: TENANT.btnBg, border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 700 }}
             >
               ✅ Jsem tady – pokračovat
             </button>
