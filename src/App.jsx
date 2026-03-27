@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_18_build0143
+// BUILD: 2026_03_26_build0144
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -11,7 +11,7 @@ import * as XLSX from "xlsx";
 //   Třetí řádek souboru: // BUILD: DATUM_buildXXXX
 //   Po každém buildu aktualizovat sekci HISTORY níže.
 //
-// DEPLOY: Vercel + GitHub (doco1971/stavby-jihlava), branch main
+// DEPLOY: Vercel + GitHub (doco1971/stavby-znojmo), branch main
 //   Soubor patří do: src/App.jsx
 //
 // TRANSCRIPT: /mnt/transcripts/ — přečíst pro kontext předchozích session
@@ -1146,7 +1146,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
       return `<tr><td style="padding:6px 8px;background:${st.pdfBg||rowBg};color:${st.pdfColor||"#1e293b"};font-weight:700;border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${z.akce||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;white-space:nowrap;font-size:10px;vertical-align:top">${fmtCas(z.cas)}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top">${z.uzivatel||""}</td><td style="padding:6px 8px;background:${rowBg};border:1px solid #e2e8f0;font-size:10px;vertical-align:top"><div style="font-weight:600">${nazev}</div>${zmenyHtml}</td></tr>`;
     }).join("");
     const w = window.open("","_blank");
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Jihlava</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log zakázek</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;-webkit-print-color-adjust:exact;print-color-adjust:exact}h2{margin:0 0 2px;font-size:14px}p{margin:0 0 10px;color:#64748b;font-size:10px}table{width:100%;border-collapse:collapse}th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:left;font-size:10px}@media print{button{display:none}}</style></head><body><h2>📜 Log zakázek – Stavby Znojmo</h2><p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} | ${filtered.length} záznamů${filterUser?" | Uživatel: "+filterUser:""}${filterAkce?" | Akce: "+filterAkce:""}</p><table><thead><tr><th>Akce</th><th>Datum a čas</th><th>Uživatel</th><th>Název stavby / Detail</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script></body></html>`);
     w.document.close();
   };
 
@@ -1685,7 +1685,7 @@ function Login({ onLogin, users, onLogAction }) {
             <circle cx="65" cy="56" r="2" fill="#facc15" opacity="0.4" />
             <circle cx="15" cy="58" r="1.6" fill="#facc15" opacity="0.5" />
           </svg>
-          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 800, margin: 0 }}>Stavby Jihlava</h1>
+          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 800, margin: 0 }}>Stavby Znojmo</h1>
           <p style={{ color: "rgba(255,255,255,0.5)", margin: "6px 0 0", fontSize: 15, letterSpacing: 2, textTransform: "uppercase" }}>kategorie 1 & 2</p>
         </div>
 
@@ -2443,7 +2443,7 @@ function SettingsModal({ firmy, objednatele, stavbyvedouci, users, onChange, onC
                 </div>
                 <button onClick={() => { onSaveAppInfo(editVerze, editDatum); onClose(); }} style={{ padding: "10px 20px", background: "linear-gradient(135deg,#7c3aed,#6d28d9)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>💾 Uložit a zavřít</button>
                 <div style={{ color: modalMuted, fontSize: 11, marginTop: 8 }}>
-                  Zobrazí se ve footeru: © {editDatum} Stavby Jihlava – Martin Dočekal &amp; Claude AI | v{editVerze}
+                  Zobrazí se ve footeru: © {editDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI | v{editVerze}
                 </div>
                 <div style={{ borderTop: `1px solid ${modalBorder}`, paddingTop: 16, marginTop: 8 }}>
                   <div style={{ color: modalMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ŠÍŘKY SLOUPCŮ</div>
@@ -2918,7 +2918,7 @@ export default function App() {
     const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `stavby_jihlava_${ts}.xls`;
+    a.download = `stavby_znojmo_${ts}.xls`;
     a.click();
   };
   const [logData, setLogData] = useState([]);
@@ -3237,6 +3237,8 @@ export default function App() {
       .map(r => {
         const datum = parseDatum(r.ukonceni);
         if (!datum || datum < dnes) return null;
+        const isFaktura = r.cislo_faktury && r.cislo_faktury.trim() !== "" && Number(r.castka_bez_dph) !== 0 && r.splatna;
+        if (isFaktura) return null;  // vyfakturovaná stavba — nezobrazovat v termínech
         const dni = pracovniDny(dnes, datum);
         if (dni > 30) return null;
         return { ...r, dniDo: dni, datumUkonceni: datum };
@@ -4057,7 +4059,7 @@ export default function App() {
           </svg>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22 }}>Stavby Jihlava</div>
+              <div style={{ fontWeight: 800, fontSize: isMobile ? 15 : 22 }}>Stavby Znojmo</div>
               {!isMobile && <div style={{ color: T.textMuted, fontSize: 16, textAlign: "center", letterSpacing: 1 }}>kategorie 1 & 2</div>}
             </div>
             {isStaging && !isDemo && (
@@ -4078,7 +4080,7 @@ export default function App() {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80" }} />
             <span style={{ color: T.text, fontSize: 13 }}>{user.name}</span>
             <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSuperAdmin ? "rgba(168,85,247,0.2)" : isAdmin ? "rgba(245,158,11,0.2)" : isEditor ? "rgba(34,197,94,0.2)" : "rgba(100,116,139,0.2)", color: isSuperAdmin ? "#c084fc" : isAdmin ? "#fbbf24" : isEditor ? "#4ade80" : "#94a3b8" }}>{isSuperAdmin ? "SUPERADMIN" : isAdmin ? "ADMIN" : isEditor ? "USER EDITOR" : "USER"}</span>
-            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0143</span>}
+            {isSuperAdmin && <span onMouseEnter={e => showTooltip(e, "Číslo buildu aplikace")} onMouseLeave={hideTooltip} style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.5)", color: "#c084fc", letterSpacing: 0.5, cursor: "default", userSelect: "none" }}>build0144</span>}
             <button onClick={() => { resetHelp(); setShowHelp(true); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>❓ Nápověda</button>
             {isAdmin && <button onClick={() => { setShowSettings(true); if (!isDemo) loadLog(isSuperAdmin); }} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>⚙️ Nastavení</button>}
             {isAdmin && <button onClick={() => setShowLog(true)} style={{ padding: "5px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, color: T.textMuted, cursor: "pointer", fontSize: 12 }}>📜 Log</button>}
@@ -4418,7 +4420,7 @@ export default function App() {
       </div>
 
       <div ref={footerRef} style={{ textAlign: "center", padding: "4px", borderTop: `1px solid ${T.cellBorder}`, color: T.textFaint, fontSize: 11, flexShrink: 0 }}>
-        © {appDatum} Stavby Jihlava – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
+        © {appDatum} Stavby Znojmo – Martin Dočekal &amp; Claude AI &nbsp;|&nbsp; v{appVerze}
       </div>
 
       {/* HELP MODAL */}
@@ -4449,7 +4451,7 @@ export default function App() {
             {/* Header — táhlo */}
             <div onMouseDown={onHelpDragStart} style={dragHeaderStyle()}>
               <div>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Jihlava{dragHint}</span>
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>❓ Nápověda – Stavby Znojmo{dragHint}</span>
               </div>
               <button onClick={() => setShowHelp(false)} onMouseDown={e => e.stopPropagation()} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
@@ -4457,7 +4459,7 @@ export default function App() {
             <div id="help-print-content" style={{ overflowY: "auto", padding: "18px 22px", color: "#e2e8f0", fontSize: 13, lineHeight: 1.7 }}>
               {/* Intro */}
               <div style={{ marginBottom: 18, padding: "11px 15px", background: "rgba(37,99,235,0.15)", border: "1px solid rgba(37,99,235,0.35)", borderRadius: 10, fontSize: 12, color: "#93c5fd", lineHeight: 1.6 }}>
-                <strong style={{ color: "#60a5fa" }}>Stavby Jihlava</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
+                <strong style={{ color: "#60a5fa" }}>Stavby Znojmo</strong> — evidence stavebních zakázek pro kategorie I a II. Každá stavba obsahuje informace o firmě, termínech, fakturaci a realizaci. Změny se automaticky zaznamenávají v historii. Aplikace podporuje role USER, USER EDITOR, ADMIN a SUPERADMIN.
               </div>
               {[
                 { icon: "🏗️", title: "Přidání stavby", text: "Klikněte na zelené tlačítko + Přidat stavbu v hlavičce. Vyplňte název stavby (povinný) a ostatní pole dle potřeby. Klávesa Enter přeskočí na další pole ve formuláři. Uložte tlačítkem Uložit — stavba se okamžitě zobrazí v tabulce." },
@@ -4560,7 +4562,7 @@ export default function App() {
                     <div class="item-text">${text}</div>
                   </div>`).join("");
                 const w = window.open("", "_blank");
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Jihlava</title><style>
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nápověda — Stavby Znojmo</title><style>
                   @page { size: A4; margin: 12mm; }
                   body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
                   h1 { font-size: 16px; margin: 0 0 4px; color: #1e293b; }
@@ -4570,7 +4572,7 @@ export default function App() {
                   .item-text { color: #1e293b; font-size: 11px; line-height: 1.6; }
                   @media print { button { display: none; } }
                 </style></head><body>
-                <h1>❓ Nápověda — Stavby Jihlava</h1>
+                <h1>❓ Nápověda — Stavby Znojmo</h1>
                 <div class="subtitle">Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")}</div>
                 ${rows}
                 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()}}<\/script>
@@ -4644,7 +4646,7 @@ export default function App() {
                       const ws = XLSX.utils.aoa_to_sheet(ws_data);
                       ws["!cols"] = COLUMNS.map(c => ({ wch: Math.max(c.label.length, 14) }));
                       XLSX.utils.book_append_sheet(wb, ws, "Stavby");
-                      XLSX.writeFile(wb, `stavby_jihlava_${ts}.xlsx`);
+                      XLSX.writeFile(wb, `stavby_znojmo_${ts}.xlsx`);
                     } else {
                       const BOM = "\uFEFF";
                       const h = COLUMNS.map(c => `"${c.label}"`).join(";");
@@ -4664,7 +4666,7 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Jihlava</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 9 }}>
@@ -4717,7 +4719,7 @@ export default function App() {
                   }).join("");
                   const headers = COLUMNS.map(c => `<th style="color:#fff;padding:4px 6px;text-align:${c.key==="id"?"center":c.type==="number"?"right":"left"};white-space:nowrap;border:1px solid #2563eb;font-size:8px">${c.label}</th>`).join("");
                   const win = window.open("","_blank");
-                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Jihlava – tisk</title>
+                  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stavby Znojmo – tisk</title>
                   <style>
                     @page { size: A4 landscape; margin: 10mm; }
                     body { font-family: Arial, sans-serif; font-size: 9px; color: #111; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -4727,7 +4729,7 @@ export default function App() {
                     h2 { font-size: 13px; margin: 0 0 2px; }
                     .sub { font-size: 9px; color: #666; margin-bottom: 8px; }
                   </style></head><body>
-                  <h2>Stavby Jihlava</h2>
+                  <h2>Stavby Znojmo</h2>
                   <div class="sub">kategorie 1 & 2 | Tisk: ${new Date().toLocaleDateString("cs-CZ")} | Záznamů: ${filtered.length}</div>
                   <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
                   <script>window.onload=function(){window.print();window.onafterprint=function(){window.close()};}<\/script>
@@ -4740,7 +4742,7 @@ export default function App() {
             <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#fff" }}>
               <div style={{ fontFamily: "Arial,sans-serif", fontSize: 10, color: "#111" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Jihlava</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: "#1e3a5f" }}>Stavby Znojmo</div>
                   <div style={{ fontSize: 10, color: "#666" }}>kategorie 1 & 2 | Export: {new Date().toLocaleDateString("cs-CZ")} | Záznamů: {filtered.length}</div>
                 </div>
                 <div style={{ overflowX: "auto" }}>
@@ -4828,7 +4830,7 @@ export default function App() {
                     @media print { button { display: none; } }
                   </style>
                   </head><body>
-                  <h2>🏚️ Stavby Jihlava – Stavby bez firmy</h2>
+                  <h2>🏚️ Stavby Znojmo – Stavby bez firmy</h2>
                   <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Celkem ${orphans.length} staveb bez přiřazené firmy</p>
                   <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Původní firma</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                   <tbody>${rows}</tbody></table>
@@ -4857,7 +4859,7 @@ export default function App() {
             {/* tabulka */}
             <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, padding: isMobile ? "12px" : 24 }} id="deadline-print-area">
               <div style={{ marginBottom: 16, display: "none" }} className="print-header">
-                <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Jihlava – Blížící se termíny</div>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>Stavby Znojmo – Blížící se termíny</div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>Vygenerováno: {new Date().toLocaleDateString("cs-CZ")} | Zakázky s termínem do 30 pracovních dní</div>
                 <hr style={{ margin: "8px 0" }} />
               </div>
@@ -4920,7 +4922,7 @@ export default function App() {
                   @media print { button { display: none; } }
                 </style>
                 </head><body>
-                <h2>⚠️ Stavby Jihlava – Blížící se termíny ukončení</h2>
+                <h2>⚠️ Stavby Znojmo – Blížící se termíny ukončení</h2>
                 <p>Vygenerováno: ${new Date().toLocaleDateString("cs-CZ")} &nbsp;|&nbsp; Zakázky s termínem do 30 pracovních dní (${deadlineWarnings.length} zakázek)</p>
                 <table><thead><tr><th>Č. stavby</th><th>Název stavby</th><th>Firma</th><th>Termín ukončení</th><th>Dní do termínu</th><th>Objednatel</th><th>Stavbyvedoucí</th></tr></thead>
                 <tbody>${rows}</tbody></table>
