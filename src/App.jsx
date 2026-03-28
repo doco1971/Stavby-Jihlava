@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-// BUILD: 2026_03_26_build0234
+// BUILD: 2026_03_28_build0240
 // ============================================================
 // POZNÁMKY PRO CLAUDE (čti na začátku každé session)
 // ============================================================
@@ -48,23 +48,37 @@ import * as XLSX from "xlsx";
 // NAVOD:      stavby-znojmo-navod-2026-03-23-FINAL.docx — strukturovaná dokumentace projektu
 //
 // ============================================================
-// AKTUÁLNÍ STAV APLIKACE (session 2026-03-24, build0224)
+// AKTUÁLNÍ STAV APLIKACE (session 2026-03-28, build0240)
 // ============================================================
 //
-// ✅ Poslední build staging: build0224
-// ✅ Poslední build main (produkce): build0143 (merge pending)
+// ZNOJMO:
+// ✅ Poslední build staging: build0240 (Znojmo + Jihlava — stejný soubor)
+// ✅ Poslední build main (produkce): build0144
 // ✅ Supabase staging: wgrdhqkkjhtrkweiqxvo.supabase.co
 // ✅ Supabase produkce: cleifbyyhpbdjbrgzrkv.supabase.co
+//
+// JIHLAVA:
+// ✅ Poslední build staging: build0240
+// ✅ Poslední build main (produkce): build0144_j (Jihlava varianta)
+// ✅ Repo: doco1971/stavby-jihlava (Public)
+// ✅ Vercel projekt: stavby-jihlava (Deployment Protection vypnuta)
+// ✅ IS_JIHLAVA detekce: hostname.includes("jihlava") || VITE_IS_JIHLAVA=true
+//
+// TENANT SYSTÉM (build0225+):
+// ✅ TENANT objekt: p1/p1dark/p1deep/p2/p3/p4/modalBg/inputBg/appDarkBg/appLightBg
+// ✅ tc1/tc2/tc1d helpers — MUSÍ být definovány PŘED TENANT objektem! (jinak bílá obrazovka)
+// ✅ Znojmo: modrá (#2563eb), Jihlava: zelená (#3B6D11)
+// ✅ IS_JIHLAVA env fallback: VITE_IS_JIHLAVA=true v .env nebo Vercel env vars
+//
+// SPOLEČNÁ INFRASTRUKTURA:
 // ✅ GitHub heartbeat: .github/workflows/supabase-heartbeat.yml
 //    Schedule: 45 4 * * * (probouzí SB 15 min před pg_cron emailem)
 // ✅ Email notifikace: pg_cron job "stavby-deadline-emails-v3" (jobid=5)
 //    Schedule: 0 5 * * * = 5:00 UTC = 6:00 CZ zimní / 7:00 CZ letní
 // ✅ Warmup job: "stavby-warmup-edge" (jobid=6)
 //    Schedule: 50 4 * * * = 4:50 UTC = probouzí Edge Function runtime
-//    OPRAVA 2026-03-20: pg_net timeout 5s — warmup job řeší probouzení EF runtime
 // ✅ vercel.json + index.html no-cache headers
 // ✅ Stavby Helper: localhost:47891 (PowerShell, autostart)
-//    Instalace: Nastavení → 💡 → Stáhnout instalátor → install.bat
 //    Port: 47891 (3210 byl obsazen Windows System procesem PID 4)
 // ✅ Tisk/PDF: window.print() + @media print (build0180-0186)
 //    Před tiskem přepne na světlý motiv, po tisku vrátí zpět
@@ -240,7 +254,11 @@ import * as XLSX from "xlsx";
 // [PENDING] 📦 Hromadné akce — označit více staveb, hromadně změnit technika/stav
 //
 // JIHLAVA:
-// [PENDING] 🏙️  Stavby Jihlava — nová větev "jihlava", nová Supabase DB, nový Vercel projekt
+// [HOTOVO] 🏙️  Stavby Jihlava — repo doco1971/stavby-jihlava, Vercel projekt, TENANT systém
+// [PENDING] 🎨 Preset barevná schémata v Nastavení → Aplikace (superadmin)
+//   ℹ Varianta A: 3-5 předvoleb (Znojmo modrá, Jihlava zelená, Fialová, Oranžová...)
+//   ℹ Uložit do DB (nastaveni, klic=color_scheme), načíst při startu
+//   ℹ POZOR: TENANT je modul-level konstanta — pro přepínání za běhu nutný activeTenant state
 //
 // ============================================================
 // HISTORY BUILDŮ
@@ -297,7 +315,16 @@ import * as XLSX from "xlsx";
 // BUILD0224 — Tabulka: prošlé termíny bez faktury → pulsující červený rámeček řádku
 // BUILD0225 — TENANT detekce podle URL: Jihlava=zelená+stožáry, Znojmo=modrá+blesk
 // BUILD0226 — Zelené barevné schema pro Jihlavu: všechny modré barvy → TENANT.p1/p2/p3/p4 + tc1/tc2 helpers
+// BUILD0240 — NOVÁ FUNKCE: DatePickerField — 📅 mini picker u všech datumových polí (FormModal + dodatky)
+// BUILD0239 — FIX: FormModal přesně centrován CSS translate(-50%,-50%), stejná mezera ze všech stran
+// BUILD0238 — UI: FormModal svisle centrován (top:50% translateY), Faktura 1+2 pole na jeden řádek
+// BUILD0237 — UI: FormModal rozšířen na 96vw/96vh, Faktura 1+2 sloučeny na jeden řádek, menší padding sekcí
+// BUILD0236 — FIX: Dodatky — základ uložen jako poradi=-1 v tabulce dodatky, správný přepočet při smazání
+// BUILD0235 — NOVÉ FUNKCE: Záloha+import ciselniky+nastaveni (v3), kontrolka přečtení logu (DB),
+//             hromadné přiřazení firmy po smazání, dodatky stavby (nová tabulka dodatky)
 // BUILD0234 — CRITICAL FIX: tc1/tc2/tc1d přesunuty před TENANT objekt (ReferenceError = bílá obrazovka)
+// BUILD0144_j — Jihlava varianta build0144: texty/barvy Znojmo→Jihlava (bez TENANT systému)
+// BUILD0144   — FIX main Znojmo: vyfakturovaná stavba se nezobrazuje v termínech (isFaktura check)
 // BUILD0233 — FIX: vyfakturovaná stavba se nezobrazuje v blížících se termínech (isFaktura check)
 // BUILD0232 — FIX: appDarkBg Jihlava zesvětlena #070f04 → #0c1808 (podobný jas jako Znojmo #0f172a)
 // BUILD0231 — FIX: celé pozadí aplikace zelené pro Jihlavu — darkAppBg, body.background, všechny #0f172a fallbacky → TENANT.appBg
@@ -342,23 +369,7 @@ import * as XLSX from "xlsx";
 // BUILD0187 — Toolbar: Export+Tisk odděleny, Data roletka (Záloha+Obnova JSON), Import XLS→Nastavení, Export logu→Log modal, Graf: +Koláč +Trend
 // BUILD0186 — Tisk: před tiskem přepnout na světlý motiv, po tisku vrátit zpět
 //
-// ============================================================
-// AKTUÁLNÍ STAV APLIKACE (session 2026-03-19, build0156)
-// ============================================================
-//
-// ✅ Poslední nasazený build: build0156 (staging)
-// ✅ Supabase staging: wgrdhqkkjhtrkweiqxvo.supabase.co
-// ✅ GitHub heartbeat: .github/workflows/supabase-heartbeat.yml
-//    Schedule: 45 4 * * * (probouzí SB 15 min před pg_cron emailem)
-// ✅ Email notifikace: pg_cron job "stavby-deadline-emails-v3" (jobid=5)
-//    Schedule: 0 5 * * * = 5:00 UTC = 6:00 CZ zimní / 7:00 CZ letní
-// ✅ Warmup job: "stavby-warmup-edge" (jobid=6)
-//    Schedule: 50 4 * * * = 4:50 UTC = probouzí Edge Function runtime
-//    OPRAVA 2026-03-20: pg_net timeout 5s — warmup job řeší probouzení EF runtime
-// ✅ vercel.json + index.html no-cache headers
-// ✅ Stavby Helper: localhost:47891 (PowerShell, autostart)
-//    Instalace: Nastavení → 💡 → Stáhnout instalátor → install.bat
-//    Port: 47891 (3210 byl obsazen Windows System procesem PID 4)
+// (starý stav session 2026-03-19 odstraněn — viz aktuální stav výše)
 //
 // ============================================================
 // TLAČÍTKO 💡 — SLOŽKA ZAKÁZKY
@@ -572,7 +583,7 @@ import * as XLSX from "xlsx";
 // SUPABASE CONFIG
 // ============================================================
 // ⚠️ TOTO MĚNIT PŘI KAŽDÉM BUILDU — zobrazuje se v UI u uživatele (superadmin)
-const APP_BUILD = "build0234";
+const APP_BUILD = "build0240";
 
 // ============================================================
 // TENANT DETEKCE — podle URL automaticky Znojmo nebo Jihlava
@@ -904,7 +915,7 @@ const FIELD_LABELS = {
   splatna: "Splatná", poznamka: "Poznámka",
 };
 
-function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, onAllHidden }) {
+function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, onAllHidden, onPrecteno }) {
   const [zaznamy, setZaznamy] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState(null);
@@ -926,6 +937,8 @@ function HistorieModal({ row, isDark, onClose, isDemo, isAdmin, isSuperAdmin, on
           return match && match[1] === idStr;
         });
         setZaznamy(filtered);
+        // Označ jako přečtené — zhasne červenou tečku pro tuto stavbu
+        if (onPrecteno) onPrecteno(row.id);
       } catch { setZaznamy([]); }
       finally { setLoading(false); }
     };
@@ -1445,7 +1458,7 @@ function LogModal({ isDark, firmy, onClose, isDemo, isAdmin, isSuperAdmin }) {
 // ============================================================
 function GrafModal({ data, firmy, isDark, onClose }) {
   const [mode, setMode] = useState("firma"); // "firma" | "mesic" | "kat" | "kolac" | "trend"
-  const { pos, onMouseDown: onDragStart } = useDraggable(1100, 560);
+  const { pos, onMouseDown: onDragStart } = useDraggable(1400, 700);
 
   const firmaColorMap = Object.fromEntries(firmy.map(f => [f.hodnota, f.barva || TENANT.p2]));
 
@@ -2100,6 +2113,113 @@ function SummaryCards({ data, firmy, isDark, firmaColors, isMobile }) {
 // ============================================================
 // FORM MODAL (Add + Edit)
 // ============================================================
+
+// ── DatePickerField — textové pole DD.MM.RRRR + 📅 mini picker ─────────────
+function DatePickerField({ label, value, onChange, style: extraStyle }) {
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(() => {
+    if (value && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value)) {
+      const [,, y] = value.split("."); return parseInt(y);
+    }
+    return new Date().getFullYear();
+  });
+  const [viewMonth, setViewMonth] = useState(() => {
+    if (value && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value)) {
+      const [, m] = value.split("."); return parseInt(m) - 1;
+    }
+    return new Date().getMonth();
+  });
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const mesice = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"];
+
+  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const getFirstDay = (y, m) => { const d = new Date(y, m, 1).getDay(); return d === 0 ? 6 : d - 1; };
+
+  const pickDay = (day) => {
+    const d = String(day).padStart(2, "0");
+    const m = String(viewMonth + 1).padStart(2, "0");
+    onChange(`${d}.${m}.${viewYear}`);
+    setOpen(false);
+  };
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const today = new Date();
+  const selDay = value && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value) ? parseInt(value.split(".")[0]) : null;
+  const selMonth = value && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value) ? parseInt(value.split(".")[1]) - 1 : null;
+  const selYear = value && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(value) ? parseInt(value.split(".")[2]) : null;
+
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+  const firstDay = getFirstDay(viewYear, viewMonth);
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", ...extraStyle }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+        <input
+          type="text"
+          value={value ?? ""}
+          onChange={e => onChange(e.target.value)}
+          placeholder="DD.MM.RRRR"
+          style={{ ...inputSx, borderRadius: "7px 0 0 7px", flex: 1, borderRight: "none" }}
+        />
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          style={{ padding: "0 9px", height: 36, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderLeft: "none", borderRadius: "0 7px 7px 0", cursor: "pointer", fontSize: 14, color: "rgba(255,255,255,0.6)", flexShrink: 0 }}
+        >📅</button>
+      </div>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 9999, background: TENANT.modalBg, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "10px 12px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", width: 220 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <button onClick={prevMonth} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 14, padding: "2px 6px" }}>‹</button>
+            <span style={{ color: "#e2e8f0", fontSize: 12, fontWeight: 600 }}>{mesice[viewMonth]} {viewYear}</span>
+            <button onClick={nextMonth} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: 14, padding: "2px 6px" }}>›</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 4 }}>
+            {["Po","Út","St","Čt","Pá","So","Ne"].map(d => (
+              <div key={d} style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.3)", padding: "2px 0" }}>{d}</div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} />;
+              const isToday = day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+              const isSel = day === selDay && viewMonth === selMonth && viewYear === selYear;
+              return (
+                <button key={i} onClick={() => pickDay(day)}
+                  style={{ textAlign: "center", fontSize: 12, padding: "4px 2px", borderRadius: 4, border: "none", cursor: "pointer",
+                    background: isSel ? TENANT.p2 : isToday ? "rgba(255,255,255,0.1)" : "transparent",
+                    color: isSel ? "#fff" : isToday ? TENANT.p3 : "#e2e8f0",
+                    fontWeight: isSel || isToday ? 700 : 400 }}
+                >{day}</button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FormField({ label, value, onChange, full, type }) {
   const [err, setErr] = useState("");
 
@@ -2141,13 +2261,17 @@ function FormField({ label, value, onChange, full, type }) {
   return (
     <div style={full ? { gridColumn: "1 / -1" } : {}}>
       <Lbl>{label}{type === "number" && <span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 400, marginLeft: 4 }}>123</span>}{type === "date" && <span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 400, marginLeft: 4 }}>DD.MM.RRRR</span>}</Lbl>
-      <input
-        type="text"
-        value={displayValue}
-        onChange={e => handleChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        style={{ ...inputSx, borderColor: err ? "#f87171" : "rgba(255,255,255,0.15)" }}
-      />
+      {type === "date" ? (
+        <DatePickerField value={displayValue} onChange={handleChange} />
+      ) : (
+        <input
+          type="text"
+          value={displayValue}
+          onChange={e => handleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          style={{ ...inputSx, borderColor: err ? "#f87171" : "rgba(255,255,255,0.15)" }}
+        />
+      )}
       {err && <div style={{ color: "#f87171", fontSize: 11, marginTop: 3 }}>{err}</div>}
     </div>
   );
@@ -2166,6 +2290,179 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
   const [form, setForm] = useState({ ...initial });
   const [saveErr, setSaveErr] = useState("");
   const [katErr, setKatErr] = useState(""); // chyba pro kategorie I/II
+  // ── Dodatky ────────────────────────────────────────────────
+  // Základ je uložen v DB jako řádek poradi=-1, nazev="__zaklad__<pole>"
+  // Nikdy nevycházíme z initial — initial může být již přepočítaná hodnota
+  const stavbaId = initial?.id || null;
+  const KAT_POLE_LIST = ["ps_i","snk_i","bo_i","ps_ii","bo_ii","poruch"];
+
+  const [dodatky, setDodatky] = useState([]); // pouze poradi >= 0, bez základu
+  const [zakladRec, setZakladRec] = useState(null); // { pole, hodnota, termin }
+  const [dodatkyLoading, setDodatkyLoading] = useState(false);
+  const [vybranyDodatek, setVybranyDodatek] = useState("zaklad");
+  const [novyDodatekNazev, setNovyDodatekNazev] = useState("");
+  const [novyDodatekCena, setNovyDodatekCena] = useState("");
+  const [novyDodatekTermin, setNovyDodatekTermin] = useState("");
+  const [pridatDodatek, setPridatDodatek] = useState(false);
+  const [smazatDodatekId, setSmazatDodatekId] = useState(null);
+  const [editDodatekId, setEditDodatekId] = useState(null);
+  const [editDodatekNazev, setEditDodatekNazev] = useState("");
+  const [editDodatekCena, setEditDodatekCena] = useState("");
+  const [editDodatekTermin, setEditDodatekTermin] = useState("");
+
+  useEffect(() => {
+    if (!stavbaId) return;
+    setDodatkyLoading(true);
+    sb(`dodatky?stavba_id=eq.${stavbaId}&order=poradi`).then(res => {
+      const vse = res || [];
+      // Oddělit základ (poradi=-1) od normálních dodatků
+      const zRec = vse.find(d => d.poradi === -1);
+      const normalni = vse.filter(d => d.poradi >= 0);
+      if (zRec) {
+        // Základ uložen — parsuj pole z nazvu "__zaklad__ps_i"
+        const pole = zRec.nazev.replace("__zaklad__", "");
+        setZakladRec({ pole, hodnota: Number(zRec.zmena_ceny) || 0, termin: zRec.novy_termin || "" });
+      }
+      setDodatky(normalni);
+      if (normalni.length > 0) setVybranyDodatek(String(normalni.length - 1));
+    }).catch(() => {}).finally(() => setDodatkyLoading(false));
+  }, [stavbaId]);
+
+  // Základ pro přepočet — buď z DB záznamu nebo z aktuálního form (před prvním dodatkem)
+  const getZaklad = () => {
+    if (zakladRec) return zakladRec;
+    // Základ ještě není uložen — detekuj z aktuálního form
+    const pole = KAT_POLE_LIST.find(k => Number(form[k]) !== 0 && form[k] != null && form[k] !== "") || null;
+    return {
+      pole,
+      hodnota: pole ? Number(form[pole]) || 0 : 0,
+      termin: form.ukonceni || "",
+    };
+  };
+
+  // Přepočet ceny a termínu přes seznam dodatků — pro zobrazení v dropdownu
+  const getCenaTermin = (dod, doIdx) => {
+    const z = getZaklad();
+    let cena = z.hodnota;
+    let termin = z.termin;
+    for (let i = 0; i <= doIdx && i < dod.length; i++) {
+      cena += Number(dod[i].zmena_ceny) || 0;
+      if (dod[i].novy_termin) termin = dod[i].novy_termin;
+    }
+    return { cena: Math.round(cena * 100) / 100, termin };
+  };
+
+  const aktualniCenaTermin = () => {
+    const z = getZaklad();
+    if (vybranyDodatek === "zaklad" || dodatky.length === 0) return { cena: z.hodnota, termin: z.termin };
+    return getCenaTermin(dodatky, parseInt(vybranyDodatek));
+  };
+
+  // Aplikuj dodatky na stavbu — PATCH do DB + aktualizuj form
+  const aplikujDodatkyNaStavbu = async (noveDodatky, aktZaklad) => {
+    const z = aktZaklad || getZaklad();
+    const suma = noveDodatky.reduce((s, d) => s + (Number(d.zmena_ceny) || 0), 0);
+    const novaCena = Math.round((z.hodnota + suma) * 100) / 100;
+    const novyTermin = noveDodatky.reduce((t, d) => d.novy_termin || t, z.termin);
+    const patch = { nabidkova_cena: novaCena, ukonceni: novyTermin };
+    if (z.pole) patch[z.pole] = novaCena;
+    try {
+      await sb(`stavby?id=eq.${stavbaId}`, { method: "PATCH", body: JSON.stringify(patch), prefer: "return=minimal" });
+      setForm(prev => ({
+        ...prev,
+        nabidkova_cena: String(novaCena),
+        ukonceni: novyTermin,
+        ...(z.pole ? { [z.pole]: String(novaCena) } : {}),
+      }));
+    } catch(e) { alert("Chyba uložení do DB: " + e.message); }
+  };
+
+  const handlePridatDodatek = async () => {
+    const nazev = novyDodatekNazev.trim();
+    if (!nazev) return;
+    const zmena = Number(novyDodatekCena.replace(",", ".").replace(/\s+/g, "")) || 0;
+    const termin = novyDodatekTermin.trim();
+    try {
+      // Pokud ještě není základ uložen — uložíme ho jako poradi=-1
+      let aktZaklad = zakladRec;
+      if (!zakladRec) {
+        const z = getZaklad();
+        await sb("dodatky", {
+          method: "POST",
+          body: JSON.stringify({ stavba_id: stavbaId, nazev: `__zaklad__${z.pole || "nabidkova_cena"}`, zmena_ceny: z.hodnota, novy_termin: z.termin || null, poradi: -1 }),
+          prefer: "return=minimal"
+        });
+        aktZaklad = z;
+        setZakladRec(z);
+      }
+      // Přidej nový dodatek
+      const res = await sb("dodatky", {
+        method: "POST",
+        body: JSON.stringify({ stavba_id: stavbaId, nazev, zmena_ceny: zmena, novy_termin: termin || null, poradi: dodatky.length }),
+        prefer: "return=representation"
+      });
+      const noveDodatky = [...dodatky, ...(res || [])];
+      setDodatky(noveDodatky);
+      setVybranyDodatek(String(noveDodatky.length - 1));
+      await aplikujDodatkyNaStavbu(noveDodatky, aktZaklad);
+      setNovyDodatekNazev(""); setNovyDodatekCena(""); setNovyDodatekTermin("");
+      setPridatDodatek(false);
+    } catch(e) { alert("Chyba přidání dodatku: " + e.message); }
+  };
+
+  const handleSmazatDodatek = async (id) => {
+    try {
+      await sb(`dodatky?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+      const noveDodatky = dodatky.filter(d => d.id !== id);
+      setDodatky(noveDodatky);
+      setVybranyDodatek(noveDodatky.length > 0 ? String(noveDodatky.length - 1) : "zaklad");
+      if (noveDodatky.length === 0 && zakladRec) {
+        // Smazat základ z DB a vrátit původní hodnoty
+        await sb(`dodatky?stavba_id=eq.${stavbaId}&poradi=eq.-1`, { method: "DELETE", prefer: "return=minimal" });
+        const patch = { nabidkova_cena: zakladRec.hodnota, ukonceni: zakladRec.termin };
+        if (zakladRec.pole) patch[zakladRec.pole] = zakladRec.hodnota;
+        await sb(`stavby?id=eq.${stavbaId}`, { method: "PATCH", body: JSON.stringify(patch), prefer: "return=minimal" });
+        setForm(prev => ({
+          ...prev,
+          nabidkova_cena: String(zakladRec.hodnota),
+          ukonceni: zakladRec.termin,
+          ...(zakladRec.pole ? { [zakladRec.pole]: String(zakladRec.hodnota) } : {}),
+        }));
+        setZakladRec(null);
+      } else {
+        await aplikujDodatkyNaStavbu(noveDodatky);
+      }
+      setSmazatDodatekId(null);
+    } catch(e) { alert("Chyba smazání: " + e.message); }
+  };
+
+  const handleEditDodatek = (d) => {
+    setEditDodatekId(d.id);
+    setEditDodatekNazev(d.nazev);
+    setEditDodatekCena(d.zmena_ceny !== 0 ? String(d.zmena_ceny) : "");
+    setEditDodatekTermin(d.novy_termin || "");
+  };
+
+  const handleUlozitEditDodatek = async () => {
+    const nazev = editDodatekNazev.trim();
+    if (!nazev) return;
+    const zmena = Number(editDodatekCena.replace(",", ".").replace(/\s+/g, "")) || 0;
+    const termin = editDodatekTermin.trim();
+    try {
+      await sb(`dodatky?id=eq.${editDodatekId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ nazev, zmena_ceny: zmena, novy_termin: termin || null }),
+        prefer: "return=minimal"
+      });
+      const noveDodatky = dodatky.map(d => d.id === editDodatekId
+        ? { ...d, nazev, zmena_ceny: zmena, novy_termin: termin || null }
+        : d
+      );
+      setDodatky(noveDodatky);
+      await aplikujDodatkyNaStavbu(noveDodatky);
+      setEditDodatekId(null);
+    } catch(e) { alert("Chyba úpravy: " + e.message); }
+  };
   const set = (k, v) => {
     // Validace: max 1 nenulové pole z KAT_FIELDS
     if (KAT_FIELDS.includes(k) && v !== "" && v !== "0" && Number(v) !== 0) {
@@ -2219,7 +2516,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, pointerEvents: "none", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
-      <div ref={modalRef} style={{ position: "fixed", left: pos.x, top: pos.y, pointerEvents: "all", background: TENANT.modalBg, borderRadius: 16, width: "min(1100px, 97vw)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
+      <div ref={modalRef} style={{ position: "fixed", left: "50%", top: "50%", transform: "translate(-50%, -50%)", pointerEvents: "all", background: TENANT.modalBg, borderRadius: 14, width: "min(1400px, 96vw)", maxHeight: "96vh", overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 32px 80px rgba(0,0,0,0.8)" }}>
 
         {/* Header — táhlo */}
         <div onMouseDown={onDragStart} style={dragHeaderStyle({ gap: 16 })}>
@@ -2229,13 +2526,13 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
         </div>
 
         {/* Body – dva sloupce */}
-        <div style={{ padding: "10px 16px", overflowY: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <div style={{ padding: "8px 14px", overflowY: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
 
           {/* LEVÝ SLOUPEC */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
             {/* Základní info */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div style={{ color: TENANT.p3, fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: `3px solid ${TENANT.p3}`, paddingLeft: 8 }}>ZÁKLADNÍ INFORMACE</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <FormField label="Číslo stavby" value={form["cislo_stavby"]} onChange={v => set("cislo_stavby", v)} />
@@ -2244,7 +2541,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             </div>
 
             {/* Kategorie I */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: `1px solid ${katErr ? "rgba(248,113,113,0.4)" : "rgba(255,255,255,0.07)"}` }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: `1px solid ${katErr ? "rgba(248,113,113,0.4)" : "rgba(255,255,255,0.07)"}` }}>
               <div style={{ color: "#818cf8", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #818cf8", paddingLeft: 8 }}>KATEGORIE I</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                 <FormField label="Plán. stavby I" value={form["ps_i"]} onChange={v => set("ps_i", v)} type="number" />
@@ -2256,7 +2553,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             {katErr && <div style={{ color: "#f87171", fontSize: 12, padding: "6px 10px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 7 }}>⚠ {katErr}</div>}
 
             {/* Kategorie II */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: `1px solid ${katErr ? "rgba(248,113,113,0.4)" : "rgba(255,255,255,0.07)"}` }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: `1px solid ${katErr ? "rgba(248,113,113,0.4)" : "rgba(255,255,255,0.07)"}` }}>
               <div style={{ color: "#fb923c", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #fb923c", paddingLeft: 8 }}>KATEGORIE II</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                 <FormField label="Plán. stavby II" value={form["ps_ii"]} onChange={v => set("ps_ii", v)} type="number" />
@@ -2266,7 +2563,7 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
             </div>
 
             {/* Ostatní */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div style={{ color: "#f472b6", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #f472b6", paddingLeft: 8 }}>OSTATNÍ</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <FormField label="SOD" value={form["sod"]} onChange={v => set("sod", v)} />
@@ -2291,42 +2588,42 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
             {/* Realizace */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div style={{ color: "#34d399", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #34d399", paddingLeft: 8 }}>REALIZACE</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                 <FormField label="Vyfakturováno" value={form["vyfakturovano"]} onChange={v => set("vyfakturovano", v)} type="number" />
                 <FormField label="Ukončení" value={form["ukonceni"]} onChange={v => set("ukonceni", v)} type="date" />
                 <FormField label="Zrealizováno" value={form["zrealizovano"]} onChange={v => set("zrealizovano", v)} type="number" />
               </div>
-              <div style={{ marginTop: 10, background: tc1(0.08), border: `1px solid ${tc1(0.2)}`, borderRadius: 8, padding: "8px 14px", display: "flex", gap: 24 }}>
+              <div style={{ marginTop: 10, background: tc1(0.08), border: `1px solid ${tc1(0.2)}`, borderRadius: 8, padding: "8px 14px", display: "flex", gap: 24, flexWrap: "wrap" }}>
                 <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Nabídka: </span><span style={{ color: TENANT.p3, fontWeight: 700 }}>{fmt(computed.nabidka)}</span></div>
                 <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Rozdíl: </span><span style={{ color: computed.rozdil >= 0 ? "#4ade80" : "#f87171", fontWeight: 700 }}>{fmt(computed.rozdil)}</span></div>
+
               </div>
             </div>
 
             {/* Faktura 1 */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div style={{ color: "#fbbf24", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #fbbf24", paddingLeft: 8 }}>FAKTURA 1</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
                 <FormField label="Nabídková cena" value={form["nabidkova_cena"]} onChange={v => set("nabidkova_cena", v)} type="number" />
                 <FormField label="Číslo faktury" value={form["cislo_faktury"]} onChange={v => set("cislo_faktury", v)} />
                 <FormField label="Částka bez DPH" value={form["castka_bez_dph"]} onChange={v => set("castka_bez_dph", v)} type="number" />
-                <div />
                 <FormField label="Splatná" value={form["splatna"]} onChange={v => set("splatna", v)} type="date" />
               </div>
             </div>
 
             {/* Faktura 2 */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div style={{ color: "#f59e0b", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #f59e0b", paddingLeft: 8, opacity: 0.7 }}>FAKTURA 2</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                 <FormField label="Č. faktury 2" value={form["cislo_faktury_2"]} onChange={v => set("cislo_faktury_2", v)} />
                 <FormField label="Částka bez DPH 2" value={form["castka_bez_dph_2"]} onChange={v => set("castka_bez_dph_2", v)} type="number" />
                 <FormField label="Splatná 2" value={form["splatna_2"]} onChange={v => set("splatna_2", v)} type="date" />
               </div>
             </div>
             {/* Poznámka */}
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div style={{ color: "#a78bfa", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, marginBottom: 6, borderLeft: "3px solid #a78bfa", paddingLeft: 8 }}>💬 POZNÁMKA</div>
               <textarea
                 value={form["poznamka"] || ""}
@@ -2337,6 +2634,105 @@ function FormModal({ title, initial, onSave, onClose, firmy, objednatele, stavby
               />
             </div>
           </div>
+
+          {/* ── DODATKY — přes celou šířku (gridColumn span 2) ── */}
+          {stavbaId && (() => {
+            const { cena: aktCena, termin: aktTermin } = aktualniCenaTermin();
+            const inputStyle = { padding: "5px 7px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "#fff", fontSize: 12, boxSizing: "border-box", width: "100%" };
+            return (
+            <div style={{ gridColumn: "1 / -1", background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", border: "1px solid rgba(251,191,36,0.2)" }}>
+              {/* Hlavička + dropdown */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div style={{ color: "#fbbf24", fontWeight: 700, fontSize: 11, letterSpacing: 0.8, borderLeft: "3px solid #fbbf24", paddingLeft: 8, flex: 1 }}>📋 DODATKY</div>
+                {!dodatkyLoading && dodatky.length > 0 && (
+                  <select value={vybranyDodatek} onChange={e => setVybranyDodatek(e.target.value)}
+                    style={{ padding: "4px 8px", background: TENANT.modalBg, border: "1px solid rgba(251,191,36,0.4)", borderRadius: 7, color: "#e2e8f0", fontSize: 12, cursor: "pointer", outline: "none" }}>
+                    <option value="zaklad" style={{ background: TENANT.modalBg, color: "#e2e8f0" }}>📌 Základ: {(() => { const z = getZaklad(); return z.hodnota.toLocaleString("cs-CZ") + " Kč" + (z.termin ? " | " + z.termin : ""); })()}</option>
+                    {dodatky.map((d, i) => {
+                      const { cena: c, termin: t } = getCenaTermin(dodatky, i);
+                      return <option key={d.id} value={String(i)} style={{ background: TENANT.modalBg, color: "#fbbf24" }}>
+                        {`📋 Dod.${i+1} ${d.nazev}: ${c.toLocaleString("cs-CZ")} Kč${t ? " | " + t : ""}`}
+                      </option>;
+                    })}
+                  </select>
+                )}
+              </div>
+
+              {/* Aktuální přepočtená hodnota */}
+              <div style={{ display: "flex", gap: 24, marginBottom: 10, padding: "6px 12px", background: "rgba(251,191,36,0.08)", borderRadius: 8, border: "1px solid rgba(251,191,36,0.15)" }}>
+                <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Cena: </span><span style={{ color: "#fbbf24", fontWeight: 700 }}>{aktCena.toLocaleString("cs-CZ")} Kč</span></div>
+                <div><span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Termín: </span><span style={{ color: "#fbbf24", fontWeight: 700 }}>{aktTermin || "—"}</span></div>
+                {vybranyDodatek !== "zaklad" && (() => { const z = getZaklad(); return <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 11 }}>základ: {z.hodnota.toLocaleString("cs-CZ")} Kč{z.termin ? " | " + z.termin : ""}</div>; })()}
+              </div>
+
+              {/* Seznam dodatků */}
+              {dodatkyLoading ? (
+                <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginBottom: 8 }}>Načítám...</div>
+              ) : dodatky.length === 0 ? (
+                <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, marginBottom: 8 }}>Žádné dodatky</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+                  {dodatky.map((d, i) => (
+                    <div key={d.id}>
+                      {editDodatekId === d.id ? (
+                        /* Inline editace */
+                        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto auto", gap: 5, padding: "6px 8px", background: "rgba(251,191,36,0.06)", borderRadius: 7, border: "1px solid rgba(251,191,36,0.3)" }}>
+                          <input value={editDodatekNazev} onChange={e => setEditDodatekNazev(e.target.value)} placeholder="Název..." style={inputStyle} />
+                          <input value={editDodatekCena} onChange={e => setEditDodatekCena(e.target.value)} placeholder="±Kč" style={inputStyle} />
+                          <DatePickerField value={editDodatekTermin} onChange={setEditDodatekTermin} />
+                          <button onClick={handleUlozitEditDodatek} style={{ padding: "4px 10px", background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✓</button>
+                          <button onClick={() => setEditDodatekId(null)} style={{ padding: "4px 8px", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 12 }}>✕</button>
+                        </div>
+                      ) : (
+                        /* Zobrazení řádku */
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", background: "rgba(255,255,255,0.04)", borderRadius: 7, border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <span style={{ color: "#fbbf24", fontSize: 11, fontWeight: 700, minWidth: 20 }}>{i + 1}.</span>
+                          <span style={{ color: "#e2e8f0", fontSize: 12, flex: 1 }}>{d.nazev}</span>
+                          {Number(d.zmena_ceny) !== 0 && <span style={{ color: Number(d.zmena_ceny) >= 0 ? "#4ade80" : "#f87171", fontSize: 12, fontWeight: 600 }}>{Number(d.zmena_ceny) >= 0 ? "+" : ""}{Number(d.zmena_ceny).toLocaleString("cs-CZ")} Kč</span>}
+                          {d.novy_termin && <span style={{ color: "#94a3b8", fontSize: 11 }}>→ {d.novy_termin}</span>}
+                          {smazatDodatekId === d.id ? (
+                            <>
+                              <span style={{ color: "#f87171", fontSize: 11 }}>Smazat?</span>
+                              <button onClick={() => handleSmazatDodatek(d.id)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✓</button>
+                              <button onClick={() => setSmazatDodatekId(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 12 }}>✕</button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => handleEditDodatek(d)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: 12 }} title="Upravit">✏️</button>
+                              <button onClick={() => setSmazatDodatekId(d.id)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", cursor: "pointer", fontSize: 13 }} title="Smazat">🗑️</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Přidat dodatek */}
+              {!pridatDodatek ? (
+                <button onClick={() => setPridatDodatek(true)} style={{ padding: "5px 12px", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 7, color: "#fbbf24", cursor: "pointer", fontSize: 12 }}>+ Přidat dodatek</button>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto auto", gap: 6, alignItems: "end", marginTop: 6 }}>
+                  <div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 3 }}>Název</div>
+                    <input value={novyDodatekNazev} onChange={e => setNovyDodatekNazev(e.target.value)} placeholder="Název dodatku..." onKeyDown={e => e.key === "Enter" && handlePridatDodatek()} style={{ ...inputStyle }} />
+                  </div>
+                  <div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 3 }}>Změna ceny (Kč)</div>
+                    <input value={novyDodatekCena} onChange={e => setNovyDodatekCena(e.target.value)} placeholder="±částka nebo 0" style={{ ...inputStyle }} />
+                  </div>
+                  <div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 3 }}>Nový termín</div>
+                    <DatePickerField value={novyDodatekTermin} onChange={setNovyDodatekTermin} />
+                  </div>
+                  <button onClick={handlePridatDodatek} style={{ padding: "6px 12px", background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✓</button>
+                  <button onClick={() => { setPridatDodatek(false); setNovyDodatekNazev(""); setNovyDodatekCena(""); setNovyDodatekTermin(""); }} style={{ padding: "6px 10px", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 12 }}>✕</button>
+                </div>
+              )}
+            </div>
+            );
+          })()}
         </div>
 
         {saveErr && <div style={{ padding: "8px 24px", background: "rgba(239,68,68,0.15)", borderTop: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13 }}>⚠️ {saveErr}</div>}
@@ -2416,6 +2812,8 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
   const [newBarva, setNewBarva] = useState(TENANT.p2);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmStep2, setConfirmStep2] = useState(false);
+  const [priraditFirma, setPriraditFirma] = useState(""); // vybraná nová firma pro hromadné přiřazení
+  const [priraditLoading, setPriraditLoading] = useState(false);
   const [dragOver, setDragOver] = useState(null);
   const dragIdx = useRef(null);
   const PRESET_COLORS = [TENANT.p2,"#facc15","#a855f7","#ef4444","#0ea5e9","#f97316","#10b981","#ec4899","#f59e0b","#6366f1"];
@@ -2513,18 +2911,54 @@ function FirmyEditor({ list, setList, isDark, onNvChange, stavbyData }) {
       {/* Dialog 2 – co se stavbami */}
       {confirmDelete && confirmStep2 && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1500, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: isDark ? TENANT.modalBg : "#fff", borderRadius: 14, padding: "28px 32px", width: 420, border: "1px solid rgba(239,68,68,0.3)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
+          <div style={{ background: isDark ? TENANT.modalBg : "#fff", borderRadius: 14, padding: "28px 32px", width: 440, border: "1px solid rgba(239,68,68,0.3)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)", textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🏗️</div>
             <div style={{ color: isDark ? "#f8fafc" : "#1e293b", fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Co se stavbami?</div>
-            <div style={{ color: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.55)", fontSize: 13, marginBottom: 24 }}>
-              {confirmDelete.count} {confirmDelete.count === 1 ? "stavba zůstane" : "staveb zůstane"} v databázi bez přiřazené firmy.
+            <div style={{ color: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.55)", fontSize: 13, marginBottom: 16 }}>
+              {confirmDelete.count} {confirmDelete.count === 1 ? "stavba zůstane" : confirmDelete.count < 5 ? "stavby zůstanou" : "staveb zůstane"} v databázi bez přiřazené firmy.
+            </div>
+            {/* Hromadné přiřazení — výběr nové firmy */}
+            <div style={{ marginBottom: 20, textAlign: "left" }}>
+              <div style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)", fontSize: 11, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Nebo přiřadit novou firmu:</div>
+              <select
+                value={priraditFirma}
+                onChange={e => setPriraditFirma(e.target.value)}
+                style={{ width: "100%", padding: "8px 10px", background: isDark ? "rgba(255,255,255,0.07)" : "#f8fafc", border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"}`, borderRadius: 7, color: isDark ? "#e2e8f0" : "#1e293b", fontSize: 13, cursor: "pointer" }}
+              >
+                <option value="">— vyberte firmu —</option>
+                {list.filter(f => f.hodnota !== confirmDelete.hodnota).map(f => (
+                  <option key={f.hodnota} value={f.hodnota}>{f.hodnota}</option>
+                ))}
+              </select>
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              <button onClick={() => { setConfirmDelete(null); setConfirmStep2(false); }} style={{ padding: "9px 20px", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 8, color: isDark ? "#fff" : "#1e293b", cursor: "pointer", fontSize: 13 }}>Zrušit</button>
+              <button onClick={() => { setConfirmDelete(null); setConfirmStep2(false); setPriraditFirma(""); }} style={{ padding: "9px 20px", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, borderRadius: 8, color: isDark ? "#fff" : "#1e293b", cursor: "pointer", fontSize: 13 }}>Zrušit</button>
               <button onClick={() => {
                 setList(list.filter(f => f.hodnota !== confirmDelete.hodnota));
-                setConfirmDelete(null); setConfirmStep2(false);
-              }} style={{ padding: "9px 20px", background: "linear-gradient(135deg,#f97316,#ea580c)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ponechat stavby</button>
+                setConfirmDelete(null); setConfirmStep2(false); setPriraditFirma("");
+              }} style={{ padding: "9px 20px", background: "linear-gradient(135deg,#f97316,#ea580c)", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ponechat bez firmy</button>
+              {priraditFirma && (
+                <button
+                  disabled={priraditLoading}
+                  onClick={async () => {
+                    setPriraditLoading(true);
+                    try {
+                      // Hromadně přiřadit novou firmu všem stavbám smazané firmy
+                      await sb(`stavby?firma=eq.${encodeURIComponent(confirmDelete.hodnota)}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ firma: priraditFirma }),
+                        prefer: "return=minimal"
+                      });
+                      setList(list.filter(f => f.hodnota !== confirmDelete.hodnota));
+                      setConfirmDelete(null); setConfirmStep2(false); setPriraditFirma("");
+                    } catch(e) { alert("Chyba přiřazení: " + e.message); }
+                    finally { setPriraditLoading(false); }
+                  }}
+                  style={{ padding: "9px 20px", background: "linear-gradient(135deg,#059669,#047857)", border: "none", borderRadius: 8, color: "#fff", cursor: priraditLoading ? "wait" : "pointer", fontSize: 13, fontWeight: 600, opacity: priraditLoading ? 0.7 : 1 }}
+                >
+                  {priraditLoading ? "Přiřazuji…" : `Přiřadit → ${priraditFirma}`}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -3529,22 +3963,38 @@ export default function App() {
   const [historieRow, setHistorieRow] = useState(null);
   // ── Tečka v historii — svítí permanentně pokud má stavba záznamy v logu ──
   const [historieNovinky, setHistorieNovinky] = useState({});
-  useEffect(() => {
+  // logPrecteno: { stavba_id: "ISO timestamp" } — načteno z DB (nastaveni, klic=log_precteno)
+  const [logPrecteno, setLogPrecteno] = useState({});
+  const checkNovinky = useCallback(async () => {
     if (!user || user.email === "demo") return;
-    const checkNovinky = async () => {
-      try {
-        const res = await sb(`log_aktivit?order=cas.desc&limit=5000`);
-        const novinky = {};
-        (res || []).forEach(r => {
-          if (r.hidden) return; // skryté záznamy nezapočítávat
-          const match = r.detail?.match(/^ID:\s*(\d+)[,\s]/);
-          if (match) novinky[match[1]] = true;
-        });
-        setHistorieNovinky(novinky);
-      } catch { /* tiché selhání */ }
-    };
-    checkNovinky();
+    try {
+      const [logRes, prectenoRes] = await Promise.all([
+        sb(`log_aktivit?order=cas.desc&limit=5000`),
+        sb(`nastaveni?klic=eq.log_precteno`),
+      ]);
+      // Načti časy přečtení
+      let precteno = {};
+      if (prectenoRes && prectenoRes[0]) {
+        try { precteno = JSON.parse(prectenoRes[0].hodnota); } catch {}
+      }
+      setLogPrecteno(precteno);
+      // Pro každou stavbu zjisti, zda má nepřečtený záznam
+      const novinky = {};
+      (logRes || []).forEach(r => {
+        if (r.hidden) return;
+        const match = r.detail?.match(/^ID:\s*(\d+)[,\s]/);
+        if (!match) return;
+        const sid = match[1];
+        // Tečka svítí pokud záznam je novější než poslední přečtení (nebo přečtení neexistuje)
+        const prectCas = precteno[sid];
+        if (!prectCas || new Date(r.cas) > new Date(prectCas)) {
+          novinky[sid] = true;
+        }
+      });
+      setHistorieNovinky(novinky);
+    } catch { /* tiché selhání */ }
   }, [user]);
+  useEffect(() => { checkNovinky(); }, [checkNovinky]);
   // ── Auto-logout ──────────────────────────────────────────
   const [autoLogoutWarning, setAutoLogoutWarning] = useState(false);
   const [autoLogoutCountdown, setAutoLogoutCountdown] = useState(60);
@@ -4471,17 +4921,22 @@ export default function App() {
   };
 
   const zalohaJSON = async () => {
-    const datum = new Date().toISOString().slice(0,16).replace("T","_").replace(":","-");
+    const now = new Date();
+    const datum = now.toISOString().slice(0,16).replace("T","_").replace(":","-");
+    const prostrediKratky = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "TEST" : "MAIN";
+    const tenantKratky = IS_JIHLAVA ? "JI" : "ZN";
     try {
-      const [stavbyRes, cisRes, uzRes, logRes] = await Promise.all([
+      const [stavbyRes, cisRes, uzRes, logRes, nastaveniRes, dodatkyRes] = await Promise.all([
         sb("stavby?order=id"),
         sb("ciselniky?order=typ,poradi"),
         sb("uzivatele?order=id"),
         sb("log_aktivit?order=id"),
+        sb("nastaveni?order=klic"),
+        sb("dodatky?order=stavba_id,poradi"),
       ]);
       const prostredi = (typeof window !== "undefined" && (window.location.hostname.includes("staging") || window.location.hostname.includes("preview") || window.location.hostname === "localhost")) ? "STAGING" : "PRODUKCE";
       const payload = {
-        version: 2,
+        version: 3,
         created: new Date().toISOString(),
         prostredi,
         sb_url: SB_URL,
@@ -4489,13 +4944,15 @@ export default function App() {
         ciselniky: cisRes || [],
         uzivatele: (uzRes || []).map(u => ({ id: u.id, jmeno: u.jmeno, email: u.email, role: u.role })), // bez hesel
         log_aktivit: logRes || [],
+        nastaveni: nastaveniRes || [], // včetně log_precteno — přiznaky přečtení se zálohují
+        dodatky: dodatkyRes || [],
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `zaloha_DB_${datum}.json`;
+      a.download = `zaloha_DB_${datum}_${prostrediKratky}_${tenantKratky}.json`;
       a.click();
-      logAkce(user?.email, "Záloha", `${payload.stavby.length} staveb + ciselniky + uzivatele + ${payload.log_aktivit.length} logů (JSON)`);
+      logAkce(user?.email, "Záloha", `${payload.stavby.length} staveb + ciselniky + uzivatele + ${payload.log_aktivit.length} logů + nastaveni (JSON v3)`);
     } catch(e) { showToast("Chyba zálohy: " + e.message, "error"); }
   };
 
@@ -4572,7 +5029,7 @@ export default function App() {
       } catch {}
       // Spolehlivější: zjistit sloupce z prvního záznamu zálohy a odfiltrovat SKIP_FIELDS
       // + dynamicky ověřit při prvním vložení — pokud selže, vyhodit konkrétní sloupec
-      const ALWAYS_SKIP = new Set(["id","created_at","nabidka","rozdil","bez_dph_2","bez_dph"]);
+      const ALWAYS_SKIP = new Set(["created_at","nabidka","rozdil","bez_dph_2","bez_dph"]); // "id" ZÁMĚRNĚ zachováváme — dodatky na něj odkazují!
       // Smaž stávající stavby
       await sb("stavby?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
       // Zjisti platné sloupce pomocí testovacího vložení prvního záznamu
@@ -4641,8 +5098,69 @@ export default function App() {
           }
         } catch(e) { chyby.push(`Chyba importu logů: ${e.message}`); }
       }
-      logAkce(user?.email, "Import JSON", `${ok} staveb + ${okLogy} logů importováno z ${fileName}`);
-      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb + ${okLogy} logů z "${fileName}"` });
+      // Import číselníků (firmy, objednatelé, stavbyvedoucí) pokud jsou v záloze
+      let okCis = 0;
+      if (payload.ciselniky && Array.isArray(payload.ciselniky) && payload.ciselniky.length > 0) {
+        try {
+          await sb("ciselniky?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+          const SKIP_CIS = new Set(["id","created_at"]);
+          const cleanedCis = payload.ciselniky.map(r => { const c = { ...r }; SKIP_CIS.forEach(k => delete c[k]); return c; });
+          for (let i = 0; i < cleanedCis.length; i += 100) {
+            const chunk = cleanedCis.slice(i, i+100);
+            try {
+              await sb("ciselniky", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+              okCis += chunk.length;
+            } catch(e) { chyby.push(`Číselníky řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+          }
+        } catch(e) { chyby.push(`Chyba importu číselníků: ${e.message}`); }
+      }
+      // Import nastavení pokud je v záloze
+      let okNas = 0;
+      if (payload.nastaveni && Array.isArray(payload.nastaveni) && payload.nastaveni.length > 0) {
+        try {
+          // log_precteno se importuje — příznaky přečtení se zachovají ze zálohy
+          await sb("nastaveni?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+          const SKIP_NAS = new Set(["id","created_at"]);
+          const cleanedNas = payload.nastaveni
+            .map(r => { const c = { ...r }; SKIP_NAS.forEach(k => delete c[k]); return c; });
+          for (let i = 0; i < cleanedNas.length; i += 100) {
+            const chunk = cleanedNas.slice(i, i+100);
+            try {
+              await sb("nastaveni", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+              okNas += chunk.length;
+            } catch(e) { chyby.push(`Nastavení řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+          }
+        } catch(e) { chyby.push(`Chyba importu nastavení: ${e.message}`); }
+      }
+      // Import dodatků pokud jsou v záloze
+      let okDod = 0;
+      if (payload.dodatky && Array.isArray(payload.dodatky) && payload.dodatky.length > 0) {
+        try {
+          await sb("dodatky?id=gt.0", { method: "DELETE", prefer: "return=minimal" });
+          const SKIP_DOD = new Set(["id","created_at"]);
+          const cleanedDod = payload.dodatky.map(r => { const c = { ...r }; SKIP_DOD.forEach(k => delete c[k]); return c; });
+          for (let i = 0; i < cleanedDod.length; i += 100) {
+            const chunk = cleanedDod.slice(i, i+100);
+            try {
+              await sb("dodatky", { method: "POST", body: JSON.stringify(chunk), prefer: "return=minimal" });
+              okDod += chunk.length;
+            } catch(e) { chyby.push(`Dodatky řádky ${i+1}-${i+chunk.length}: ${e.message}`); }
+          }
+        } catch(e) { chyby.push(`Chyba importu dodatků: ${e.message}`); }
+      }
+      await loadAll();
+      // Reset sekvence stavby.id aby nové záznamy nedostaly kolizní ID
+      try {
+        const maxIdRes = await sb("stavby?select=id&order=id.desc&limit=1");
+        const maxId = (maxIdRes && maxIdRes[0]) ? maxIdRes[0].id : 0;
+        // Supabase RPC pro reset sekvence — vyžaduje funkci v DB
+        // Alternativa: vložit a smazat dummy záznam s vysokým ID
+        if (maxId > 0) {
+          await sb("rpc/set_stavby_seq", { method: "POST", body: JSON.stringify({ max_id: maxId }), prefer: "return=minimal" }).catch(() => {});
+        }
+      } catch {}
+      logAkce(user?.email, "Import JSON", `${ok} staveb + ${okLogy} logů + ${okCis} číselníků + ${okNas} nastavení + ${okDod} dodatků importováno z ${fileName}`);
+      setImportLog({ ok, chyby, zprava: `Importováno ${ok} staveb + ${okCis} číselníků + ${okLogy} logů + ${okDod} dodatků + ${okNas} nastavení z "${fileName}"` });
     } catch(e) {
       setImportLog({ ok: 0, chyby: ["Chyba importu: " + e.message] });
     }
@@ -6066,7 +6584,7 @@ export default function App() {
       {showLog && <LogModal isDark={isDark} firmy={firmy} onClose={() => setShowLog(false)} isDemo={isDemo} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />}
 
       {/* HISTORIE MODAL */}
-      {historieRow && <HistorieModal row={historieRow} isDark={isDark} onClose={() => setHistorieRow(null)} isDemo={isDemo} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onAllHidden={(rowId) => setHistorieNovinky(prev => { const n = {...prev}; delete n[String(rowId)]; return n; })} />}
+      {historieRow && <HistorieModal row={historieRow} isDark={isDark} onClose={() => setHistorieRow(null)} isDemo={isDemo} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onAllHidden={(rowId) => setHistorieNovinky(prev => { const n = {...prev}; delete n[String(rowId)]; return n; })} onPrecteno={async (rowId) => { if (isDemo) return; try { const sid = String(rowId); const updated = { ...logPrecteno, [sid]: new Date().toISOString() }; await sbUpsertNastaveni("log_precteno", JSON.stringify(updated)); setLogPrecteno(updated); setHistorieNovinky(prev => { const n = { ...prev }; delete n[sid]; return n; }); } catch {} }} />}
 
       {/* GRAF MODAL */}
       {showGraf && <GrafModal data={filtered} firmy={firmy} isDark={isDark} onClose={() => setShowGraf(false)} />}
